@@ -4,6 +4,7 @@ import Fleet from "./pages/Fleet.jsx";
 import Skills from "./pages/Skills.jsx";
 import Talents from "./pages/Talents.jsx";
 import Port from "./pages/Port.jsx";
+import { useGameState } from "./hooks/useGameState.js";
 
 const pages = {
   dashboard: { label: "Dashboard", component: Dashboard },
@@ -15,6 +16,7 @@ const pages = {
 
 function App() {
   const [activePage, setActivePage] = useState("dashboard");
+  const { gameState, dispatch } = useGameState();
   const ActivePage = pages[activePage].component;
 
   return (
@@ -36,7 +38,7 @@ function App() {
       </header>
 
       <main className="page-frame">
-        <ActivePage />
+        <ActivePage gameState={gameState} dispatch={dispatch} />
       </main>
     </div>
   );
