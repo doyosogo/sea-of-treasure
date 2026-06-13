@@ -1,26 +1,39 @@
-import { useState } from "react";
 import {
+  calcCannonUpgradeCost,
   calcGoldPerHour,
   calcXpPerHour,
   formatNumber,
+  getCurrentCannon,
   getCurrentShip,
+  getNextCannon,
   getXpRequired
 } from "../utils/gameEngine.js";
 
 function Dashboard({ gameState, dispatch }) {
-  const [activityLog, setActivityLog] = useState([]);
   const currentShip = getCurrentShip(gameState);
+  const currentCannon = getCurrentCannon(gameState);
+  const nextCannon = getNextCannon(gameState);
+  const upgradeCost = calcCannonUpgradeCost(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
-  const visibleActivityLog = [...activityLog, ...(gameState.activityLog ?? [])].slice(0, 5);
+  const visibleActivityLog = (gameState.activityLog ?? []).slice(0, 6);
+  const canBuyCannonballs = gameState.gold >= currentCannon.goldPer100Balls;
+  const canUpgradeCannons =
+    Boolean(nextCannon) &&
+    gameState.playerLevel >= nextCannon.unlockLevel &&
+    gameState.gold >= upgradeCost;
 
   function handleManualSink() {
-    dispatch({ type: "GAIN_GOLD", amount: currentShip.goldPerShip });
-    dispatch({ type: "GAIN_XP", amount: 5 });
-    setActivityLog((entries) => [
-      `Sank an enemy ship: +5 XP, +${formatNumber(currentShip.goldPerShip)} gold`,
-      ...entries
-    ].slice(0, 5));
+    dispatch({ type: "SINK_ENEMY_SHIP", xpAmount: 5 });
+  }
+
+  function getLogMessage(entry) {
+    return typeof entry === "string" ? entry : entry.message;
+  }
+
+  function getLogClassName(entry) {
+    const type = typeof entry === "string" ? "info" : entry.type;
+    return type === "warning" ? "warning" : "info";
   }
 
   return (
@@ -55,6 +68,10 @@ function Dashboard({ gameState, dispatch }) {
             <div className="stat-box">
               <span>Talent Points</span>
               <strong>{formatNumber(gameState.talentPoints)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Ships Sunk</span>
+              <strong>{formatNumber(gameState.totalShipsSunk)}</strong>
             </div>
           </div>
         </article>
@@ -120,12 +137,75 @@ function Dashboard({ gameState, dispatch }) {
           </div>
         </article>
 
+        <article className="pixel-panel cannon-card">
+          <div className="panel-heading-row">
+            <h2>Armoury</h2>
+            <span className="resource-counter">{formatNumber(gameState.cannonballs)} Cannonballs</span>
+          </div>
+
+          <div className="armoury-grid">
+            <div className="stat-box">
+              <span>Current Tier</span>
+              <strong>Tier {currentCannon.tier}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannon</span>
+              <strong>{currentCannon.name}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Damage</span>
+              <strong>{formatNumber(currentCannon.damage)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Used / Battle</span>
+              <strong>{formatNumber(currentCannon.ballsPerBattle)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cost / 100 Balls</span>
+              <strong>{formatNumber(currentCannon.goldPer100Balls)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Next Tier</span>
+              <strong>{nextCannon ? nextCannon.name : "Max Tier"}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Upgrade Cost</span>
+              <strong>{nextCannon ? formatNumber(upgradeCost) : "Complete"}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Unlock Level</span>
+              <strong>{nextCannon ? nextCannon.unlockLevel : "Max"}</strong>
+            </div>
+          </div>
+
+          <div className="button-row armoury-actions">
+            <button
+              className="chunky-button primary"
+              disabled={!canBuyCannonballs}
+              onClick={() => dispatch({ type: "BUY_CANNONBALLS" })}
+              type="button"
+            >
+              Buy 100 Cannonballs
+            </button>
+            <button
+              className="chunky-button"
+              disabled={!canUpgradeCannons}
+              onClick={() => dispatch({ type: "UPGRADE_CANNONS" })}
+              type="button"
+            >
+              Upgrade Cannons
+            </button>
+          </div>
+        </article>
+
         <article className="pixel-panel log-card">
           <h2>Activity Log</h2>
           {visibleActivityLog.length > 0 ? (
             <ul className="activity-log">
               {visibleActivityLog.map((entry, index) => (
-                <li key={`${entry}-${index}`}>{entry}</li>
+                <li className={getLogClassName(entry)} key={`${getLogMessage(entry)}-${index}`}>
+                  {getLogMessage(entry)}
+                </li>
               ))}
             </ul>
           ) : (

@@ -1,6 +1,12 @@
 import { useEffect, useReducer } from "react";
 import { ships } from "../data/ships.js";
-import { getCurrentShip, getXpRequired } from "../utils/gameEngine.js";
+import {
+  calcCannonUpgradeCost,
+  getCurrentCannon,
+  getCurrentShip,
+  getNextCannon,
+  getXpRequired
+} from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
 const MAX_PLAYER_LEVEL = 15;
@@ -13,6 +19,7 @@ const initialState = {
   ownedShips: [1],
   cannonTier: 1,
   cannonballs: 100,
+  totalShipsSunk: 0,
   talentPoints: 0,
   talents: {},
   skills: {},
@@ -61,14 +68,27 @@ function applyXp(state, amount) {
   };
 }
 
-function addActivityLogEntry(state, message) {
+function addActivityLogEntry(state, message, type = "info") {
   if (!Array.isArray(state.activityLog) || !message) {
     return state;
   }
 
   return {
     ...state,
-    activityLog: [message, ...state.activityLog].slice(0, 8)
+    activityLog: [{ message, type }, ...state.activityLog].slice(0, 8)
+  };
+}
+
+function applyBattleRewards(state, battles, xpPerBattle) {
+  const currentShip = getCurrentShip(state);
+  const goldGained = battles * currentShip.goldPerShip;
+  const xpGained = battles * xpPerBattle;
+  const xpState = applyXp(state, xpGained);
+
+  return {
+    ...xpState,
+    gold: xpState.gold + goldGained,
+    totalShipsSunk: xpState.totalShipsSunk + battles
   };
 }
 
@@ -114,11 +134,51 @@ function gameStateReducer(state, action) {
         ...state,
         gold: Math.max(0, state.gold - (action.amount ?? 0))
       };
-    case "BUY_CANNONBALLS":
-      return {
+    case "BUY_CANNONBALLS": {
+      const currentCannon = getCurrentCannon(state);
+
+      if (state.gold < currentCannon.goldPer100Balls) {
+        return addActivityLogEntry(state, "Not enough gold to buy cannonballs.", "warning");
+      }
+
+      return addActivityLogEntry({
         ...state,
-        cannonballs: state.cannonballs + (action.amount ?? 0)
-      };
+        gold: state.gold - currentCannon.goldPer100Balls,
+        cannonballs: state.cannonballs + 100
+      }, `Bought 100 ${currentCannon.name} cannonballs.`);
+    }
+    case "UPGRADE_CANNONS": {
+      const nextCannon = getNextCannon(state);
+      const upgradeCost = calcCannonUpgradeCost(state);
+
+      if (!nextCannon) {
+        return state;
+      }
+
+      if (state.playerLevel < nextCannon.unlockLevel || state.gold < upgradeCost) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - upgradeCost,
+        cannonTier: nextCannon.tier
+      }, `Cannons upgraded to ${nextCannon.name}.`);
+    }
+    case "SINK_ENEMY_SHIP": {
+      const currentCannon = getCurrentCannon(state);
+
+      if (state.cannonballs < currentCannon.ballsPerBattle) {
+        return addActivityLogEntry(state, "Not enough cannonballs to sink an enemy ship.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...applyBattleRewards({
+          ...state,
+          cannonballs: state.cannonballs - currentCannon.ballsPerBattle
+        }, 1, action.xpAmount ?? 5)
+      }, `Sank an enemy ship: +${action.xpAmount ?? 5} XP, +${getCurrentShip(state).goldPerShip} gold.`);
+    }
     case "LEVEL_UP":
       if (state.playerLevel >= MAX_PLAYER_LEVEL) {
         return state;
@@ -131,6 +191,10 @@ function gameStateReducer(state, action) {
         talentPoints: state.talentPoints + 4
       };
     case "START_IDLE":
+      if (state.cannonballs <= 0) {
+        return addActivityLogEntry(state, "Cannot start idling without cannonballs.", "warning");
+      }
+
       return {
         ...state,
         isIdling: true,
@@ -148,15 +212,51 @@ function gameStateReducer(state, action) {
       }
 
       const currentShip = getCurrentShip(state);
+      const currentCannon = getCurrentCannon(state);
       const seconds = action.seconds ?? 1;
       const shipsSunk = (currentShip.shipsPerHour / 3600) * seconds;
-      const goldGained = shipsSunk * currentShip.goldPerShip;
-      const xpGained = shipsSunk * currentShip.xpPerShip;
-      const xpState = applyXp(state, xpGained);
+      const cannonballsNeeded = shipsSunk * currentCannon.ballsPerBattle;
+
+      if (state.cannonballs <= 0) {
+        return addActivityLogEntry({
+          ...state,
+          isIdling: false,
+          cannonballs: 0,
+          lastSeen: action.now ?? Date.now()
+        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+      }
+
+      if (state.cannonballs < cannonballsNeeded) {
+        const possibleBattles = state.cannonballs / currentCannon.ballsPerBattle;
+        const partialRewardState = applyBattleRewards({
+          ...state,
+          cannonballs: 0
+        }, possibleBattles, currentShip.xpPerShip);
+
+        return addActivityLogEntry({
+          ...partialRewardState,
+          isIdling: false,
+          lastSeen: action.now ?? Date.now()
+        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+      }
+
+      const remainingCannonballs = state.cannonballs - cannonballsNeeded;
+      const rewardState = applyBattleRewards({
+        ...state,
+        cannonballs: remainingCannonballs
+      }, shipsSunk, currentShip.xpPerShip);
+
+      if (remainingCannonballs <= 0) {
+        return addActivityLogEntry({
+          ...rewardState,
+          isIdling: false,
+          cannonballs: 0,
+          lastSeen: action.now ?? Date.now()
+        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+      }
 
       return {
-        ...xpState,
-        gold: xpState.gold + goldGained,
+        ...rewardState,
         lastSeen: action.now ?? Date.now()
       };
     }

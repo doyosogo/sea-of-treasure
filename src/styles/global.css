@@ -105,7 +105,8 @@ button:disabled {
 }
 
 .dashboard,
-.fleet-page {
+.fleet-page,
+.port-page {
   display: grid;
   gap: 20px;
 }
@@ -161,6 +162,7 @@ button:disabled {
 
 .rates-card,
 .controls-card,
+.cannon-card,
 .log-card {
   grid-column: span 12;
 }
@@ -311,6 +313,94 @@ h2 {
 .empty-log {
   margin: 0;
   padding: 10px 12px;
+  color: var(--cream);
+  background: rgba(4, 17, 31, 0.72);
+  border-left: 4px solid var(--gold-500);
+  font-family: "Courier New", Courier, monospace;
+}
+
+.activity-log li.warning {
+  color: #ffe8c5;
+  background: rgba(96, 45, 37, 0.78);
+  border-left-color: var(--coral);
+}
+
+.panel-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-heading-row h2 {
+  margin-bottom: 0;
+}
+
+.resource-counter {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border: 2px solid var(--gold-500);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.armoury-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.armoury-actions {
+  margin-top: 16px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.shop-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 20px;
+}
+
+.resource-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 54px;
+  padding: 10px 12px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.resource-row span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.resource-row strong {
+  color: var(--cream);
+  text-align: right;
+}
+
+.shop-note {
+  margin: 0;
+  padding: 12px;
   color: var(--cream);
   background: rgba(4, 17, 31, 0.72);
   border-left: 4px solid var(--gold-500);
@@ -506,13 +596,15 @@ h2 {
   .ship-card,
   .rates-card,
   .controls-card,
+  .cannon-card,
   .log-card {
     grid-column: span 12;
   }
 
   .stat-grid,
   .stat-grid.three-up,
-  .fleet-stat-grid {
+  .fleet-stat-grid,
+  .armoury-grid {
     grid-template-columns: 1fr;
   }
 
@@ -530,6 +622,16 @@ h2 {
 
   .ship-status {
     max-width: none;
+  }
+
+  .panel-heading-row,
+  .resource-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .resource-row strong {
+    text-align: left;
   }
 }
 

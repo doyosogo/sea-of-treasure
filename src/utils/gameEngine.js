@@ -1,3 +1,4 @@
+import { cannons } from "../data/cannons.js";
 import { levels } from "../data/levels.js";
 import { ships } from "../data/ships.js";
 
@@ -7,6 +8,20 @@ export function getXpRequired(level) {
 
 export function getCurrentShip(gameState) {
   return ships.find((ship) => ship.id === gameState.currentShipId) ?? ships[0];
+}
+
+export function getCurrentCannon(gameState) {
+  return cannons.find((cannon) => cannon.tier === gameState.cannonTier) ?? cannons[0];
+}
+
+export function getNextCannon(gameState) {
+  return cannons.find((cannon) => cannon.tier === gameState.cannonTier + 1) ?? null;
+}
+
+export function calcCannonUpgradeCost(gameState) {
+  const currentShip = getCurrentShip(gameState);
+  const nextCannon = getNextCannon(gameState);
+  return nextCannon ? currentShip.cannons * nextCannon.upgradeCostPerCannon : 0;
 }
 
 export function calcIdleProgress(lastSeen, now, gameState) {
@@ -21,7 +36,8 @@ export function calcIdleProgress(lastSeen, now, gameState) {
 }
 
 export function calcDamagePerShot(cannonTier, talentBonuses) {
-  return cannonTier + Number(Boolean(talentBonuses));
+  const cannon = cannons.find((cannonData) => cannonData.tier === cannonTier) ?? cannons[0];
+  return cannon.damage + Number(Boolean(talentBonuses));
 }
 
 export function calcReloadTime(baseCooldown, talentBonuses) {
