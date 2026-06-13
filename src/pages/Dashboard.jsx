@@ -12,6 +12,7 @@ function Dashboard({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
+  const visibleActivityLog = [...activityLog, ...(gameState.activityLog ?? [])].slice(0, 5);
 
   function handleManualSink() {
     dispatch({ type: "GAIN_GOLD", amount: currentShip.goldPerShip });
@@ -121,9 +122,9 @@ function Dashboard({ gameState, dispatch }) {
 
         <article className="pixel-panel log-card">
           <h2>Activity Log</h2>
-          {activityLog.length > 0 ? (
+          {visibleActivityLog.length > 0 ? (
             <ul className="activity-log">
-              {activityLog.map((entry, index) => (
+              {visibleActivityLog.map((entry, index) => (
                 <li key={`${entry}-${index}`}>{entry}</li>
               ))}
             </ul>

@@ -104,7 +104,8 @@ button:disabled {
   box-shadow: 6px 6px 0 var(--shadow);
 }
 
-.dashboard {
+.dashboard,
+.fleet-page {
   display: grid;
   gap: 20px;
 }
@@ -316,6 +317,174 @@ h2 {
   font-family: "Courier New", Courier, monospace;
 }
 
+.active-ship-panel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.active-ship-panel h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  text-transform: none;
+}
+
+.fleet-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ship-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.fleet-ship-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  padding: 16px;
+  border-color: var(--navy-600);
+}
+
+.fleet-ship-card.active {
+  border-color: var(--gold-300);
+  background: rgba(50, 38, 11, 0.86);
+}
+
+.fleet-ship-card.owned {
+  border-color: #6fa6a6;
+  background: rgba(9, 38, 49, 0.88);
+}
+
+.fleet-ship-card.locked,
+.fleet-ship-card.unaffordable {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.88);
+}
+
+.fleet-ship-card.locked .ship-meta-list,
+.fleet-ship-card.unaffordable .ship-meta-list {
+  opacity: 0.72;
+}
+
+.ship-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ship-card-header h2 {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.ship-tier {
+  margin: 0;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ship-status {
+  flex: 0 0 auto;
+  max-width: 116px;
+  padding: 6px 8px;
+  color: var(--cream);
+  background: var(--navy-700);
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ship-status.active {
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border-color: var(--gold-500);
+}
+
+.ship-status.owned {
+  color: var(--navy-950);
+  background: #8ed0c4;
+  border-color: #6fa6a6;
+}
+
+.ship-status.locked {
+  background: #3d4c60;
+  border-color: #6f7e91;
+}
+
+.ship-status.unaffordable {
+  background: #7d3f42;
+  border-color: #b75d5a;
+}
+
+.ship-meta-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ship-meta-list div {
+  min-height: 68px;
+  padding: 10px;
+  background: rgba(18, 49, 84, 0.6);
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.ship-meta-list span {
+  display: block;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ship-meta-list strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--cream);
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.ship-actions {
+  display: flex;
+  align-items: flex-end;
+  margin-top: auto;
+}
+
+.ship-actions .chunky-button,
+.active-ship-label {
+  width: 100%;
+}
+
+.active-ship-label {
+  min-height: 48px;
+  padding: 12px 14px;
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border: 3px solid var(--gold-500);
+  box-shadow: 4px 4px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .topbar {
     align-items: flex-start;
@@ -342,11 +511,30 @@ h2 {
   }
 
   .stat-grid,
-  .stat-grid.three-up {
+  .stat-grid.three-up,
+  .fleet-stat-grid {
     grid-template-columns: 1fr;
   }
 
   .chunky-button {
     width: 100%;
+  }
+
+  .ship-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ship-card-header {
+    flex-direction: column;
+  }
+
+  .ship-status {
+    max-width: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .ship-meta-list {
+    grid-template-columns: 1fr;
   }
 }

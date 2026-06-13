@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import { ships } from "../data/ships.js";
 import { getCurrentShip, getXpRequired } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
@@ -15,6 +16,7 @@ const initialState = {
   talentPoints: 0,
   talents: {},
   skills: {},
+  activityLog: [],
   isIdling: false,
   lastSeen: Date.now()
 };
@@ -59,15 +61,46 @@ function applyXp(state, amount) {
   };
 }
 
+function addActivityLogEntry(state, message) {
+  if (!Array.isArray(state.activityLog) || !message) {
+    return state;
+  }
+
+  return {
+    ...state,
+    activityLog: [message, ...state.activityLog].slice(0, 8)
+  };
+}
+
 function gameStateReducer(state, action) {
   switch (action.type) {
-    case "BUY_SHIP":
+    case "BUY_SHIP": {
+      const ship = ships.find((shipData) => shipData.id === action.shipId);
+
+      if (
+        !ship ||
+        state.playerLevel < ship.level ||
+        state.gold < ship.purchaseCost ||
+        state.ownedShips.includes(ship.id)
+      ) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - ship.purchaseCost,
+        ownedShips: [...state.ownedShips, ship.id],
+        currentShipId: ship.id
+      }, `${ship.name} joined the fleet.`);
+    }
+    case "SET_ACTIVE_SHIP":
+      if (!state.ownedShips.includes(action.shipId)) {
+        return state;
+      }
+
       return {
         ...state,
-        ownedShips: state.ownedShips.includes(action.shipId)
-          ? state.ownedShips
-          : [...state.ownedShips, action.shipId],
-        currentShipId: action.shipId ?? state.currentShipId
+        currentShipId: action.shipId
       };
     case "GAIN_XP":
       return applyXp(state, action.amount ?? 0);
