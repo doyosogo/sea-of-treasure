@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import { skills as skillDefinitions } from "../data/skills.js";
 import { ships } from "../data/ships.js";
 import {
   calcCannonUpgradeCost,
@@ -11,6 +12,20 @@ import {
 
 const STORAGE_KEY = "sot_save";
 const MAX_PLAYER_LEVEL = 15;
+const BASE_SKILL_XP_REWARD = 100;
+
+function createInitialSkills() {
+  return Object.fromEntries(skillDefinitions.map((skill) => [
+    skill.id,
+    {
+      level: 1,
+      xp: 0,
+      active: false,
+      startedAt: null,
+      finishesAt: null
+    }
+  ]));
+}
 
 const initialState = {
   playerLevel: 1,
@@ -23,13 +38,34 @@ const initialState = {
   totalShipsSunk: 0,
   talentPoints: 0,
   talents: {},
-  skills: {},
+  skills: createInitialSkills(),
   activityLog: [],
   pendingOfflineRewards: null,
   offlineSummaryVisible: false,
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function normalizeSkills(savedSkills = {}) {
+  const defaultSkills = createInitialSkills();
+
+  return Object.fromEntries(skillDefinitions.map((skill) => {
+    const savedSkill = savedSkills[skill.id] ?? {};
+
+    return [
+      skill.id,
+      {
+        ...defaultSkills[skill.id],
+        ...savedSkill,
+        level: Math.min(skill.maxLevel, Math.max(1, savedSkill.level ?? 1)),
+        xp: Math.max(0, savedSkill.xp ?? 0),
+        active: Boolean(savedSkill.active),
+        startedAt: savedSkill.startedAt ?? null,
+        finishesAt: savedSkill.finishesAt ?? null
+      }
+    ];
+  }));
+}
 
 function loadSavedState() {
   const now = Date.now();
@@ -45,6 +81,7 @@ function loadSavedState() {
       ...initialState,
       ...parsedState,
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
+      skills: normalizeSkills(parsedState.skills),
       isIdling: false,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
@@ -135,6 +172,64 @@ function applyBattleRewards(state, battles, xpPerBattle) {
   };
 }
 
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getSkillGoldReward(skillId) {
+  switch (skillId) {
+    case "fishing":
+      return randomInt(25, 60);
+    case "treasureHunting": {
+      const baseGold = randomInt(50, 250);
+      const bonusGold = Math.random() < 0.2 ? 500 : 0;
+      return baseGold + bonusGold;
+    }
+    case "shipwright":
+      return randomInt(80, 160);
+    case "trading":
+      return randomInt(150, 350);
+    default:
+      return 0;
+  }
+}
+
+function applySkillXp(skillDefinition, skillState, xpAmount) {
+  if (skillState.level >= skillDefinition.maxLevel) {
+    return {
+      skillState: {
+        ...skillState,
+        level: skillDefinition.maxLevel,
+        xp: 0
+      },
+      levelsGained: 0
+    };
+  }
+
+  let level = skillState.level;
+  let xp = skillState.xp + xpAmount;
+  let levelsGained = 0;
+
+  while (level < skillDefinition.maxLevel && xp >= skillDefinition.xpPerLevel[level - 1]) {
+    xp -= skillDefinition.xpPerLevel[level - 1];
+    level += 1;
+    levelsGained += 1;
+  }
+
+  if (level >= skillDefinition.maxLevel) {
+    xp = 0;
+  }
+
+  return {
+    skillState: {
+      ...skillState,
+      level,
+      xp
+    },
+    levelsGained
+  };
+}
+
 function gameStateReducer(state, action) {
   switch (action.type) {
     case "BUY_SHIP": {
@@ -195,6 +290,87 @@ function gameStateReducer(state, action) {
         gold: state.gold - currentCannon.goldPer100Balls,
         cannonballs: state.cannonballs + 100
       }, `Bought 100 ${currentCannon.name} cannonballs.`);
+    }
+    case "START_SKILL_ACTION": {
+      const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
+      const skillState = state.skills[action.skillId];
+      const now = action.now ?? Date.now();
+
+      if (!skillDefinition || !skillState || skillState.active || skillState.level >= skillDefinition.maxLevel) {
+        return state;
+      }
+
+      if (state.gold < skillDefinition.goldCostPerAction) {
+        return addActivityLogEntry(state, `Not enough gold to start ${skillDefinition.actionName}.`, "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - skillDefinition.goldCostPerAction,
+        skills: {
+          ...state.skills,
+          [skillDefinition.id]: {
+            ...skillState,
+            active: true,
+            startedAt: now,
+            finishesAt: now + skillDefinition.actionTimeSeconds * 1000
+          }
+        }
+      }, `${skillDefinition.actionName} started.`);
+    }
+    case "COMPLETE_SKILL_ACTION": {
+      const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
+      const skillState = state.skills[action.skillId];
+      const now = action.now ?? Date.now();
+
+      if (!skillDefinition || !skillState || !skillState.active || now < skillState.finishesAt) {
+        return state;
+      }
+
+      const goldReward = getSkillGoldReward(skillDefinition.id);
+      const { skillState: rewardedSkillState, levelsGained } = applySkillXp(
+        skillDefinition,
+        {
+          ...skillState,
+          active: false,
+          startedAt: null,
+          finishesAt: null
+        },
+        BASE_SKILL_XP_REWARD
+      );
+      const levelText = levelsGained > 0 ? ` ${skillDefinition.name} gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
+      const goldText = goldReward > 0 ? ` +${goldReward} gold.` : "";
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold + goldReward,
+        talentPoints: state.talentPoints + levelsGained,
+        skills: {
+          ...state.skills,
+          [skillDefinition.id]: rewardedSkillState
+        }
+      }, `${skillDefinition.actionName} complete: +${BASE_SKILL_XP_REWARD} ${skillDefinition.name} XP.${goldText}${levelText}`);
+    }
+    case "CANCEL_SKILL_ACTION": {
+      const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
+      const skillState = state.skills[action.skillId];
+
+      if (!skillDefinition || !skillState || !skillState.active) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        skills: {
+          ...state.skills,
+          [skillDefinition.id]: {
+            ...skillState,
+            active: false,
+            startedAt: null,
+            finishesAt: null
+          }
+        }
+      }, `${skillDefinition.actionName} cancelled.`);
     }
     case "UPGRADE_CANNONS": {
       const nextCannon = getNextCannon(state);

@@ -106,7 +106,8 @@ button:disabled {
 
 .dashboard,
 .fleet-page,
-.port-page {
+.port-page,
+.skills-page {
   display: grid;
   gap: 20px;
 }
@@ -163,6 +164,7 @@ button:disabled {
 .rates-card,
 .controls-card,
 .cannon-card,
+.skills-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -350,6 +352,13 @@ h2 {
   text-transform: uppercase;
 }
 
+.resource-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .armoury-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -405,6 +414,118 @@ h2 {
   background: rgba(4, 17, 31, 0.72);
   border-left: 4px solid var(--gold-500);
   font-family: "Courier New", Courier, monospace;
+}
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.skill-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 100%;
+  padding: 18px;
+  border-color: var(--navy-600);
+}
+
+.skill-card.active {
+  border-color: #6fa6a6;
+  background: rgba(9, 38, 49, 0.88);
+}
+
+.skill-card.complete-ready {
+  border-color: var(--gold-300);
+  background: rgba(50, 38, 11, 0.86);
+}
+
+.skill-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skill-card-header h2 {
+  margin: 4px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.skill-description {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.skill-timer {
+  padding: 10px 12px;
+  color: var(--cream);
+  background: rgba(4, 17, 31, 0.72);
+  border-left: 4px solid #6fa6a6;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+}
+
+.skill-timer.ready {
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border-left-color: var(--gold-500);
+}
+
+.skill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.skill-actions .chunky-button {
+  flex: 1 1 140px;
+}
+
+.skills-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.skill-summary-item {
+  min-height: 76px;
+  padding: 12px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.skill-summary-item.active {
+  border-color: var(--gold-500);
+}
+
+.skill-summary-item span,
+.skill-summary-item em {
+  display: block;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.skill-summary-item strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--cream);
+  font-size: 1.15rem;
+}
+
+.skill-summary-item em {
+  margin-top: 8px;
+  color: var(--gold-300);
+  text-transform: none;
 }
 
 .modal-backdrop {
@@ -636,6 +757,7 @@ h2 {
   .rates-card,
   .controls-card,
   .cannon-card,
+  .skills-summary-card,
   .log-card {
     grid-column: span 12;
   }
@@ -643,7 +765,8 @@ h2 {
   .stat-grid,
   .stat-grid.three-up,
   .fleet-stat-grid,
-  .armoury-grid {
+  .armoury-grid,
+  .skills-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -664,7 +787,8 @@ h2 {
   }
 
   .panel-heading-row,
-  .resource-row {
+  .resource-row,
+  .skill-card-header {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -675,6 +799,11 @@ h2 {
 
   .offline-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .resource-cluster,
+  .skill-actions {
+    width: 100%;
   }
 }
 

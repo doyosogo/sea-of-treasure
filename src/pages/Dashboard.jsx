@@ -8,6 +8,7 @@ import {
   getNextCannon,
   getXpRequired
 } from "../utils/gameEngine.js";
+import { skills } from "../data/skills.js";
 
 function Dashboard({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
@@ -195,6 +196,24 @@ function Dashboard({ gameState, dispatch }) {
             >
               Upgrade Cannons
             </button>
+          </div>
+        </article>
+
+        <article className="pixel-panel skills-summary-card">
+          <h2>Skills Summary</h2>
+          <div className="skills-summary-grid">
+            {skills.map((skill) => {
+              const skillState = gameState.skills[skill.id];
+              const isActive = Boolean(skillState?.active);
+
+              return (
+                <div className={isActive ? "skill-summary-item active" : "skill-summary-item"} key={skill.id}>
+                  <span>{skill.name}</span>
+                  <strong>Level {skillState?.level ?? 1}</strong>
+                  {isActive && <em>{skill.actionName}</em>}
+                </div>
+              );
+            })}
           </div>
         </article>
 
