@@ -2,6 +2,7 @@ import { useEffect, useReducer } from "react";
 import { ships } from "../data/ships.js";
 import {
   calcCannonUpgradeCost,
+  calcOfflineProgress,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
@@ -24,16 +25,57 @@ const initialState = {
   talents: {},
   skills: {},
   activityLog: [],
+  pendingOfflineRewards: null,
+  offlineSummaryVisible: false,
   isIdling: false,
   lastSeen: Date.now()
 };
 
 function loadSavedState() {
+  const now = Date.now();
+
   try {
     const savedState = localStorage.getItem(STORAGE_KEY);
-    return savedState ? { ...initialState, ...JSON.parse(savedState), isIdling: false } : initialState;
+    if (!savedState) {
+      return { ...initialState, lastSeen: now };
+    }
+
+    const parsedState = JSON.parse(savedState);
+    const restoredState = {
+      ...initialState,
+      ...parsedState,
+      activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
+      isIdling: false,
+      pendingOfflineRewards: null,
+      offlineSummaryVisible: false
+    };
+
+    if (parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible) {
+      return {
+        ...restoredState,
+        pendingOfflineRewards: parsedState.pendingOfflineRewards,
+        offlineSummaryVisible: true,
+        lastSeen: now
+      };
+    }
+
+    const offlineRewards = calcOfflineProgress(restoredState.lastSeen, now, restoredState);
+
+    if (!offlineRewards) {
+      return {
+        ...restoredState,
+        lastSeen: now
+      };
+    }
+
+    return {
+      ...restoredState,
+      pendingOfflineRewards: offlineRewards,
+      offlineSummaryVisible: true,
+      lastSeen: now
+    };
   } catch {
-    return initialState;
+    return { ...initialState, lastSeen: now };
   }
 }
 
@@ -75,6 +117,7 @@ function addActivityLogEntry(state, message, type = "info") {
 
   return {
     ...state,
+    lastSeen: Date.now(),
     activityLog: [{ message, type }, ...state.activityLog].slice(0, 8)
   };
 }
@@ -120,19 +163,25 @@ function gameStateReducer(state, action) {
 
       return {
         ...state,
-        currentShipId: action.shipId
+        currentShipId: action.shipId,
+        lastSeen: Date.now()
       };
     case "GAIN_XP":
-      return applyXp(state, action.amount ?? 0);
+      return {
+        ...applyXp(state, action.amount ?? 0),
+        lastSeen: Date.now()
+      };
     case "GAIN_GOLD":
       return {
         ...state,
-        gold: state.gold + (action.amount ?? 0)
+        gold: state.gold + (action.amount ?? 0),
+        lastSeen: Date.now()
       };
     case "SPEND_GOLD":
       return {
         ...state,
-        gold: Math.max(0, state.gold - (action.amount ?? 0))
+        gold: Math.max(0, state.gold - (action.amount ?? 0)),
+        lastSeen: Date.now()
       };
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
@@ -188,7 +237,8 @@ function gameStateReducer(state, action) {
         ...state,
         playerLevel: state.playerLevel + 1,
         playerXP: 0,
-        talentPoints: state.talentPoints + 4
+        talentPoints: state.talentPoints + 4,
+        lastSeen: Date.now()
       };
     case "START_IDLE":
       if (state.cannonballs <= 0) {
@@ -266,6 +316,35 @@ function gameStateReducer(state, action) {
         gold: state.gold + (action.goldGained ?? 0),
         lastSeen: action.now ?? Date.now()
       }, action.xpGained ?? 0);
+    case "CLAIM_OFFLINE_REWARDS": {
+      if (!state.pendingOfflineRewards) {
+        return {
+          ...state,
+          offlineSummaryVisible: false,
+          lastSeen: Date.now()
+        };
+      }
+
+      const rewards = state.pendingOfflineRewards;
+      const xpState = applyXp({
+        ...state,
+        gold: state.gold + rewards.goldEarned,
+        cannonballs: Math.max(0, state.cannonballs - rewards.cannonballsUsed),
+        totalShipsSunk: state.totalShipsSunk + rewards.shipsSunk,
+        pendingOfflineRewards: null,
+        offlineSummaryVisible: false,
+        lastSeen: Date.now()
+      }, rewards.xpEarned);
+
+      return addActivityLogEntry(xpState, "Claimed offline rewards.");
+    }
+    case "DISMISS_OFFLINE_REWARDS":
+      return {
+        ...state,
+        pendingOfflineRewards: null,
+        offlineSummaryVisible: false,
+        lastSeen: Date.now()
+      };
     default:
       return state;
   }
@@ -276,6 +355,18 @@ export function useGameState() {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  }, [gameState]);
+
+  useEffect(() => {
+    function handleBeforeUnload() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...gameState,
+        lastSeen: Date.now()
+      }));
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [gameState]);
 
   useEffect(() => {

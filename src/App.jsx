@@ -1,4 +1,5 @@
 import { useState } from "react";
+import OfflineSummary from "./components/OfflineSummary.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Fleet from "./pages/Fleet.jsx";
 import Skills from "./pages/Skills.jsx";
@@ -40,6 +41,8 @@ function App() {
       <main className="page-frame">
         <ActivePage gameState={gameState} dispatch={dispatch} />
       </main>
+
+      <OfflineSummary gameState={gameState} dispatch={dispatch} />
     </div>
   );
 }

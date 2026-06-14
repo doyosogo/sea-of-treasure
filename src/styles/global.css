@@ -407,6 +407,45 @@ h2 {
   font-family: "Courier New", Courier, monospace;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(1, 8, 15, 0.78);
+}
+
+.offline-modal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 22px;
+}
+
+.offline-modal h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  text-transform: none;
+}
+
+.offline-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.offline-warning {
+  margin: 0 0 18px;
+  padding: 12px;
+  color: #ffe8c5;
+  background: rgba(96, 45, 37, 0.78);
+  border-left: 4px solid var(--coral);
+  font-family: "Courier New", Courier, monospace;
+}
+
 .active-ship-panel {
   display: grid;
   gap: 18px;
@@ -632,6 +671,10 @@ h2 {
 
   .resource-row strong {
     text-align: left;
+  }
+
+  .offline-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 
