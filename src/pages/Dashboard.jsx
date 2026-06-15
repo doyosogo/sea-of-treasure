@@ -17,6 +17,7 @@ import {
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
+import { treasureSites } from "../data/treasures.js";
 
 function Dashboard({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
@@ -35,6 +36,14 @@ function Dashboard({ gameState, dispatch }) {
   const usedCargo = getUsedCargo(gameState);
   const cargoCapacity = getCargoCapacity(gameState);
   const marketCooldown = getMarketCooldownRemaining(gameState);
+  const activeTreasureDig = gameState.activeTreasureDig;
+  const activeTreasureSite = treasureSites.find((site) => site.id === activeTreasureDig?.siteId);
+  const activeTreasureRemaining = activeTreasureDig
+    ? Math.max(0, activeTreasureDig.finishesAt - Date.now())
+    : 0;
+  const recentMapLog = (gameState.activityLog ?? []).find((entry) => (
+    getLogMessage(entry).toLowerCase().includes("treasure map")
+  ));
 
   function handleManualSink() {
     dispatch({ type: "SINK_ENEMY_SHIP", xpAmount: 5 });
@@ -279,6 +288,32 @@ function Dashboard({ gameState, dispatch }) {
             <div className="stat-box">
               <span>Next Market Cycle</span>
               <strong>{marketCooldown > 0 ? formatDuration(marketCooldown) : "Ready"}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="pixel-panel treasure-summary-card">
+          <h2>Treasure Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Treasure Maps</span>
+              <strong>{formatNumber(gameState.treasureMaps)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Recent Map Find</span>
+              <strong>{recentMapLog ? getLogMessage(recentMapLog) : "None"}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Active Dig</span>
+              <strong>{activeTreasureSite ? activeTreasureSite.name : "None"}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Time Remaining</span>
+              <strong>{activeTreasureDig ? formatDuration(activeTreasureRemaining) : "None"}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Rare Finds</span>
+              <strong>{formatNumber(gameState.treasureInventory.length)}</strong>
             </div>
           </div>
         </article>

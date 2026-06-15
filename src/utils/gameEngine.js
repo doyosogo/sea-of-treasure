@@ -55,7 +55,8 @@ export function getTalentBonuses(gameState) {
     offlineCapBonusHours: 0,
     passiveGoldPerHour: 0,
     cannonballReduction: 0,
-    sellPriceMultiplier: 1
+    sellPriceMultiplier: 1,
+    treasureChanceMultiplier: 1
   };
 
   for (const talent of talents) {
@@ -95,6 +96,9 @@ export function getTalentBonuses(gameState) {
       case "sellPriceMultiplier":
         bonuses.sellPriceMultiplier += value;
         break;
+      case "treasureChance":
+        bonuses.treasureChanceMultiplier += value;
+        break;
       case "cannonballReduction":
         bonuses.cannonballReduction += value;
         break;
@@ -111,6 +115,29 @@ export function getEffectiveBallsPerBattle(gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const reduction = Math.floor(talentBonuses.cannonballReduction / 5);
   return Math.max(1, currentCannon.ballsPerBattle - reduction);
+}
+
+export function getTreasureMapDropChance(gameState) {
+  return 0.15 * getTalentBonuses(gameState).treasureChanceMultiplier;
+}
+
+export function rollTreasureMapDrops(gameState, shipsSunk) {
+  const dropChance = getTreasureMapDropChance(gameState);
+  const wholeShips = Math.floor(shipsSunk);
+  const fractionalShip = shipsSunk - wholeShips;
+  let mapsFound = 0;
+
+  for (let index = 0; index < wholeShips; index += 1) {
+    if (Math.random() < dropChance) {
+      mapsFound += 1;
+    }
+  }
+
+  if (fractionalShip > 0 && Math.random() < dropChance * fractionalShip) {
+    mapsFound += 1;
+  }
+
+  return mapsFound;
 }
 
 export function generateMarketPrices() {
@@ -215,6 +242,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
       ((talentBonuses.passiveGoldPerHour * effectiveTimeMs) / (60 * 60 * 1000)),
     xpEarned: shipsSunk * currentShip.xpPerShip * talentBonuses.xpMultiplier,
     cannonballsUsed,
+    mapsFound: rollTreasureMapDrops(gameState, shipsSunk),
     stoppedReason
   };
 }

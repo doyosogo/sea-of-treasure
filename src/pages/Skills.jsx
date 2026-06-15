@@ -66,6 +66,9 @@ function Skills({ gameState, dispatch }) {
               </div>
 
               <p className="skill-description">{skill.description}</p>
+              {skill.id === "treasureHunting" && (
+                <p className="skill-note">Advanced treasure digs are available in the Treasure section.</p>
+              )}
 
               <div className="ship-meta-list">
                 <div>

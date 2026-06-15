@@ -5,11 +5,13 @@ import Fleet from "./pages/Fleet.jsx";
 import Skills from "./pages/Skills.jsx";
 import Talents from "./pages/Talents.jsx";
 import Port from "./pages/Port.jsx";
+import Treasure from "./pages/Treasure.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 
 const pages = {
   dashboard: { label: "Dashboard", component: Dashboard },
   fleet: { label: "Fleet", component: Fleet },
+  treasure: { label: "Treasure", component: Treasure },
   skills: { label: "Skills", component: Skills },
   talents: { label: "Talents", component: Talents },
   port: { label: "Port", component: Port }

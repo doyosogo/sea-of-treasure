@@ -47,6 +47,10 @@ function OfflineSummary({ gameState, dispatch }) {
             <span>Cannonballs Used</span>
             <strong>{formatNumber(rewards.cannonballsUsed)}</strong>
           </div>
+          <div className="resource-row">
+            <span>Maps Found</span>
+            <strong>{formatNumber(rewards.mapsFound ?? 0)}</strong>
+          </div>
         </div>
 
         {rewards.stoppedReason && (

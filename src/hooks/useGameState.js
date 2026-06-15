@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from "react";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
+import { rareTreasures, treasureSites } from "../data/treasures.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
 import {
@@ -18,7 +19,8 @@ import {
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
   getUsedCargo,
-  getXpRequired
+  getXpRequired,
+  rollTreasureMapDrops
 } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
@@ -66,6 +68,9 @@ const initialState = {
   marketTradeLimit: 102,
   marketTradeUsed: 0,
   marketRefreshCooldownMs: MARKET_REFRESH_COOLDOWN_MS,
+  treasureMaps: 3,
+  activeTreasureDig: null,
+  treasureInventory: [],
   activityLog: [],
   pendingOfflineRewards: null,
   offlineSummaryVisible: false,
@@ -94,6 +99,10 @@ function normalizeMarketPrices(savedMarketPrices) {
       }
     ];
   }));
+}
+
+function normalizeTreasureInventory(savedInventory) {
+  return Array.isArray(savedInventory) ? savedInventory : [];
 }
 
 function normalizeTalents(savedTalents = {}) {
@@ -152,6 +161,9 @@ function loadSavedState() {
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
       marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
+      treasureMaps: parsedState.treasureMaps ?? 3,
+      activeTreasureDig: parsedState.activeTreasureDig ?? null,
+      treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
       isIdling: false,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
@@ -277,6 +289,17 @@ function getSkillGoldReward(skillId) {
     default:
       return 0;
   }
+}
+
+function getRareTreasure(now) {
+  const rareTreasure = rareTreasures[randomInt(0, rareTreasures.length - 1)];
+
+  return {
+    id: `${rareTreasure.id}_${now}`,
+    name: rareTreasure.name,
+    rarity: rareTreasure.rarity,
+    foundAt: now
+  };
 }
 
 function applySkillXp(skillDefinition, skillState, xpAmount) {
@@ -464,6 +487,77 @@ function gameStateReducer(state, action) {
         cannonballs: state.cannonballs + 100
       }, `Bought 100 ${currentCannon.name} cannonballs.`);
     }
+    case "START_TREASURE_DIG": {
+      const site = treasureSites.find((treasureSite) => treasureSite.id === action.siteId);
+      const treasureSkill = state.skills.treasureHunting;
+      const now = action.now ?? Date.now();
+
+      if (!site || state.activeTreasureDig) {
+        return state;
+      }
+
+      if (treasureSkill.level < site.requiredSkillLevel) {
+        return addActivityLogEntry(state, `${site.name} requires Treasure Hunting level ${site.requiredSkillLevel}.`, "warning");
+      }
+
+      if (state.treasureMaps < site.mapCost) {
+        return addActivityLogEntry(state, "Not enough treasure maps.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        treasureMaps: state.treasureMaps - site.mapCost,
+        activeTreasureDig: {
+          siteId: site.id,
+          startedAt: now,
+          finishesAt: now + site.durationSeconds * 1000
+        }
+      }, `Started digging at ${site.name}.`);
+    }
+    case "COMPLETE_TREASURE_DIG": {
+      const now = action.now ?? Date.now();
+      const activeDig = state.activeTreasureDig;
+      const site = treasureSites.find((treasureSite) => treasureSite.id === activeDig?.siteId);
+
+      if (!activeDig || !site || now < activeDig.finishesAt) {
+        return state;
+      }
+
+      const treasureSkillDefinition = skillDefinitions.find((skill) => skill.id === "treasureHunting");
+      const talentBonuses = getTalentBonuses(state);
+      const goldReward = randomInt(site.goldMin, site.goldMax) * talentBonuses.goldMultiplier;
+      const xpReward = site.xpReward * talentBonuses.xpMultiplier;
+      const rareChance = site.rareChance * talentBonuses.treasureChanceMultiplier;
+      const rareFound = Math.random() < rareChance ? getRareTreasure(now) : null;
+      const { skillState: updatedTreasureSkill, levelsGained } = applySkillXp(
+        treasureSkillDefinition,
+        state.skills.treasureHunting,
+        xpReward
+      );
+      const levelText = levelsGained > 0 ? ` Treasure Hunting gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
+      const rareText = rareFound ? ` Found ${rareFound.name}.` : "";
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold + goldReward,
+        talentPoints: state.talentPoints + levelsGained,
+        activeTreasureDig: null,
+        treasureInventory: rareFound ? [rareFound, ...state.treasureInventory] : state.treasureInventory,
+        skills: {
+          ...state.skills,
+          treasureHunting: updatedTreasureSkill
+        }
+      }, `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${rareText}${levelText}`);
+    }
+    case "CANCEL_TREASURE_DIG":
+      if (!state.activeTreasureDig) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        activeTreasureDig: null
+      }, "Treasure dig cancelled.");
     case "START_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
       const skillState = state.skills[action.skillId];
@@ -572,12 +666,19 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Not enough cannonballs to sink an enemy ship.", "warning");
       }
 
-      return addActivityLogEntry({
-        ...applyBattleRewards({
+      const mapsFound = rollTreasureMapDrops(state, 1);
+      const rewardedState = applyBattleRewards({
           ...state,
           cannonballs: state.cannonballs - ballsPerBattle
-        }, 1, action.xpAmount ?? 5)
+        }, 1, action.xpAmount ?? 5);
+      const loggedState = addActivityLogEntry({
+        ...rewardedState,
+        treasureMaps: rewardedState.treasureMaps + mapsFound
       }, `Sank an enemy ship: +${action.xpAmount ?? 5} XP, +${getCurrentShip(state).goldPerShip} gold.`);
+
+      return mapsFound > 0
+        ? addActivityLogEntry(loggedState, "Found a treasure map among the wreckage.")
+        : loggedState;
     }
     case "SPEND_TALENT_POINT": {
       const talent = talentDefinitions.find((talentData) => talentData.id === action.talentId);
@@ -646,6 +747,7 @@ function gameStateReducer(state, action) {
 
       if (state.cannonballs < cannonballsNeeded) {
         const possibleBattles = state.cannonballs / ballsPerBattle;
+        const mapsFound = rollTreasureMapDrops(state, possibleBattles);
         const effectiveSeconds = currentShip.shipsPerHour > 0
           ? (possibleBattles / currentShip.shipsPerHour) * 3600
           : 0;
@@ -654,35 +756,51 @@ function gameStateReducer(state, action) {
           cannonballs: 0
         }, possibleBattles, currentShip.xpPerShip);
 
-        return addActivityLogEntry({
+        const stoppedState = addActivityLogEntry({
           ...partialRewardState,
           gold: partialRewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * effectiveSeconds),
+          treasureMaps: partialRewardState.treasureMaps + mapsFound,
           isIdling: false,
           lastSeen: action.now ?? Date.now()
         }, "The ship ran out of cannonballs and stopped idling.", "warning");
+
+        return mapsFound > 0
+          ? addActivityLogEntry(stoppedState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+          : stoppedState;
       }
 
       const remainingCannonballs = state.cannonballs - cannonballsNeeded;
+      const mapsFound = rollTreasureMapDrops(state, shipsSunk);
       const rewardState = applyBattleRewards({
         ...state,
         cannonballs: remainingCannonballs
       }, shipsSunk, currentShip.xpPerShip);
 
       if (remainingCannonballs <= 0) {
-        return addActivityLogEntry({
+        const depletedState = addActivityLogEntry({
           ...rewardState,
           gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
+          treasureMaps: rewardState.treasureMaps + mapsFound,
           isIdling: false,
           cannonballs: 0,
           lastSeen: action.now ?? Date.now()
         }, "The ship ran out of cannonballs and stopped idling.", "warning");
+
+        return mapsFound > 0
+          ? addActivityLogEntry(depletedState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+          : depletedState;
       }
 
-      return {
+      const idleState = {
         ...rewardState,
         gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
+        treasureMaps: rewardState.treasureMaps + mapsFound,
         lastSeen: action.now ?? Date.now()
       };
+
+      return mapsFound > 0
+        ? addActivityLogEntry(idleState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+        : idleState;
     }
     case "APPLY_OFFLINE_PROGRESS":
       return applyXp({
@@ -705,6 +823,7 @@ function gameStateReducer(state, action) {
         gold: state.gold + rewards.goldEarned,
         cannonballs: Math.max(0, state.cannonballs - rewards.cannonballsUsed),
         totalShipsSunk: state.totalShipsSunk + rewards.shipsSunk,
+        treasureMaps: state.treasureMaps + (rewards.mapsFound ?? 0),
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
