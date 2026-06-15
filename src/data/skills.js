@@ -23,8 +23,8 @@ export const skills = [
     xpPerLevel,
     goldCostPerAction: 75,
     actionTimeSeconds: 15,
-    rewardType: "Fishing XP + small gold",
-    unlockText: "Bring in a modest catch while training Fishing."
+    rewardType: "Fishing XP + Fish, rare Whale Oil",
+    unlockText: "Gather fish and rare whale oil for future crafting."
   },
   {
     id: "treasureHunting",

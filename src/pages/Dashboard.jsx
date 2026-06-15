@@ -7,6 +7,7 @@ import {
   formatNumber,
   getCargoCapacity,
   getEstimatedCargoValue,
+  getEstimatedResourceValue,
   getEffectiveBallsPerBattle,
   getCurrentCannon,
   getCurrentShip,
@@ -314,6 +315,24 @@ function Dashboard({ gameState, dispatch }) {
             <div className="stat-box">
               <span>Rare Finds</span>
               <strong>{formatNumber(gameState.treasureInventory.length)}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="pixel-panel resource-summary-card">
+          <h2>Resource Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Fish</span>
+              <strong>{formatNumber(gameState.resources.fish)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Whale Oil</span>
+              <strong>{formatNumber(gameState.resources.whaleOil)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Estimated Value</span>
+              <strong>{formatNumber(getEstimatedResourceValue(gameState))}</strong>
             </div>
           </div>
         </article>

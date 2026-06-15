@@ -170,6 +170,7 @@ button:disabled {
 .talent-summary-card,
 .trading-summary-card,
 .treasure-summary-card,
+.resource-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -491,6 +492,27 @@ h2 {
   color: var(--navy-950);
   background: var(--gold-500);
   border-color: var(--gold-300);
+}
+
+.resource-market-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.resource-market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.resource-market-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
 }
 
 .active-dig-panel {
@@ -1032,6 +1054,7 @@ h2 {
   .talent-summary-card,
   .trading-summary-card,
   .treasure-summary-card,
+  .resource-summary-card,
   .log-card {
     grid-column: span 12;
   }

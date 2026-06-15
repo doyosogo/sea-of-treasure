@@ -174,6 +174,19 @@ export function getTradingSellMultiplier(gameState) {
   return (1 + tradingLevel * 0.01) * talentBonuses.sellPriceMultiplier;
 }
 
+export function getFishSellValue(gameState) {
+  return Math.floor(8 * getTradingSellMultiplier(gameState));
+}
+
+export function getWhaleOilSellValue(gameState) {
+  return Math.floor(60 * getTradingSellMultiplier(gameState));
+}
+
+export function getEstimatedResourceValue(gameState) {
+  return (gameState.resources?.fish ?? 0) * getFishSellValue(gameState) +
+    (gameState.resources?.whaleOil ?? 0) * getWhaleOilSellValue(gameState);
+}
+
 export function getTradeGoodBuyPrice(gameState, good) {
   const marketPrice = gameState.marketPrices?.[good.id] ?? { buyModifier: 1 };
   return Math.ceil(good.baseBuyPrice * marketPrice.buyModifier);

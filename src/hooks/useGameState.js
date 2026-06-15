@@ -11,6 +11,7 @@ import {
   generateMarketPrices,
   getCargoCapacity,
   getEffectiveBallsPerBattle,
+  getFishSellValue,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
@@ -19,6 +20,7 @@ import {
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
   getUsedCargo,
+  getWhaleOilSellValue,
   getXpRequired,
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
@@ -49,6 +51,13 @@ function createInitialCargo() {
   return Object.fromEntries(tradeGoods.map((good) => [good.id, 0]));
 }
 
+function createInitialResources() {
+  return {
+    fish: 0,
+    whaleOil: 0
+  };
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -62,6 +71,7 @@ const initialState = {
   talents: createInitialTalents(),
   skills: createInitialSkills(),
   cargo: createInitialCargo(),
+  resources: createInitialResources(),
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -77,6 +87,13 @@ const initialState = {
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function normalizeResources(savedResources = {}) {
+  return {
+    fish: Math.max(0, savedResources.fish ?? 0),
+    whaleOil: Math.max(0, savedResources.whaleOil ?? 0)
+  };
+}
 
 function normalizeCargo(savedCargo = {}) {
   return Object.fromEntries(tradeGoods.map((good) => [
@@ -158,6 +175,7 @@ function loadSavedState() {
       talents: normalizeTalents(parsedState.talents),
       skills: normalizeSkills(parsedState.skills),
       cargo: normalizeCargo(parsedState.cargo),
+      resources: normalizeResources(parsedState.resources),
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
       marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
@@ -275,8 +293,6 @@ function randomInt(min, max) {
 
 function getSkillGoldReward(skillId) {
   switch (skillId) {
-    case "fishing":
-      return randomInt(25, 60);
     case "treasureHunting": {
       const baseGold = randomInt(50, 250);
       const bonusGold = Math.random() < 0.2 ? 500 : 0;
@@ -289,6 +305,13 @@ function getSkillGoldReward(skillId) {
     default:
       return 0;
   }
+}
+
+function getFishingResourceReward() {
+  const fish = randomInt(5, 15);
+  const whaleOil = Math.random() < 0.1 ? randomInt(1, 3) : 0;
+
+  return { fish, whaleOil };
 }
 
 function getRareTreasure(now) {
@@ -474,6 +497,42 @@ function gameStateReducer(state, action) {
         }
       }, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
     }
+    case "SELL_FISH": {
+      const quantity = action.quantity === "all"
+        ? state.resources.fish
+        : Math.max(0, Math.floor(action.quantity ?? 0));
+
+      if (quantity <= 0 || state.resources.fish < quantity) {
+        return addActivityLogEntry(state, "Not enough Fish to sell.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold + getFishSellValue(state) * quantity,
+        resources: {
+          ...state.resources,
+          fish: state.resources.fish - quantity
+        }
+      }, `Sold ${quantity} Fish.`);
+    }
+    case "SELL_WHALE_OIL": {
+      const quantity = action.quantity === "all"
+        ? state.resources.whaleOil
+        : Math.max(0, Math.floor(action.quantity ?? 0));
+
+      if (quantity <= 0 || state.resources.whaleOil < quantity) {
+        return addActivityLogEntry(state, "Not enough Whale Oil to sell.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold + getWhaleOilSellValue(state) * quantity,
+        resources: {
+          ...state.resources,
+          whaleOil: state.resources.whaleOil - quantity
+        }
+      }, `Sold ${quantity} Whale Oil.`);
+    }
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
 
@@ -596,6 +655,7 @@ function gameStateReducer(state, action) {
 
       const talentBonuses = getTalentBonuses(state);
       const goldReward = getSkillGoldReward(skillDefinition.id);
+      const fishingReward = skillDefinition.id === "fishing" ? getFishingResourceReward() : null;
       const skillXpReward = BASE_SKILL_XP_REWARD * talentBonuses.xpMultiplier;
       const { skillState: rewardedSkillState, levelsGained } = applySkillXp(
         skillDefinition,
@@ -609,16 +669,23 @@ function gameStateReducer(state, action) {
       );
       const levelText = levelsGained > 0 ? ` ${skillDefinition.name} gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
       const goldText = goldReward > 0 ? ` +${goldReward} gold.` : "";
+      const fishText = fishingReward ? ` Caught ${fishingReward.fish} Fish.` : "";
+      const whaleOilText = fishingReward?.whaleOil > 0 ? ` Found ${fishingReward.whaleOil} Whale Oil.` : "";
 
       return addActivityLogEntry({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
+        resources: fishingReward ? {
+          ...state.resources,
+          fish: state.resources.fish + fishingReward.fish,
+          whaleOil: state.resources.whaleOil + fishingReward.whaleOil
+        } : state.resources,
         skills: {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
         }
-      }, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${levelText}`);
+      }, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
