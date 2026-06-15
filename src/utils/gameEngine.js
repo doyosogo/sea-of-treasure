@@ -1,4 +1,5 @@
 import { cannons } from "../data/cannons.js";
+import { achievements } from "../data/achievements.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import { levels } from "../data/levels.js";
 import { ships } from "../data/ships.js";
@@ -114,9 +115,8 @@ export function getTalentBonuses(gameState) {
 export function getEffectiveBallsPerBattle(gameState) {
   const currentCannon = getCurrentCannon(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  const craftingBonuses = getCraftingBonuses(gameState);
   const reduction = Math.floor(talentBonuses.cannonballReduction / 5);
-  return Math.max(1, (currentCannon.ballsPerBattle - reduction) * craftingBonuses.cannonballUseMultiplier);
+  return Math.max(1, currentCannon.ballsPerBattle - reduction);
 }
 
 export function getCraftingCost(upgrade, currentLevel) {
@@ -133,11 +133,11 @@ export function getCraftingCost(upgrade, currentLevel) {
 export function getCraftingEffect(upgradeId, level) {
   switch (upgradeId) {
     case "reinforcedHull":
-      return `+${formatNumber(level * 2)}% max hull`;
+      return `+${formatNumber(level * 2)}% future max hull`;
     case "speedSails":
       return `+${formatNumber(level * 2)}% ships/hour`;
     case "cannonBraces":
-      return `-${formatNumber(level * 2)}% cannonball pressure`;
+      return `${formatNumber(Math.min(20, level * 2))}% refund chance`;
     default:
       return "No bonus";
   }
@@ -150,9 +150,32 @@ export function getCraftingBonuses(gameState) {
 
   return {
     shipsPerHourMultiplier: 1 + speedSails * 0.02,
-    cannonballUseMultiplier: Math.max(0.2, 1 - cannonBraces * 0.02),
+    cannonballRefundChance: Math.min(0.2, cannonBraces * 0.02),
     hullMultiplier: 1 + reinforcedHull * 0.02
   };
+}
+
+export function rollCannonballRecovery(gameState, battles, ballsPerBattle) {
+  const refundChance = getCraftingBonuses(gameState).cannonballRefundChance;
+  const wholeBattles = Math.floor(battles);
+  const fractionalBattle = battles - wholeBattles;
+  let recovered = 0;
+
+  if (refundChance <= 0 || ballsPerBattle <= 0 || battles <= 0) {
+    return 0;
+  }
+
+  for (let index = 0; index < wholeBattles; index += 1) {
+    if (Math.random() < refundChance) {
+      recovered += ballsPerBattle;
+    }
+  }
+
+  if (fractionalBattle > 0 && Math.random() < refundChance * fractionalBattle) {
+    recovered += ballsPerBattle * fractionalBattle;
+  }
+
+  return Math.min(recovered, battles * ballsPerBattle);
 }
 
 export function getEffectiveShipsPerHour(gameState) {
@@ -279,16 +302,19 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   let stoppedReason = timeAwayMs > offlineCapMs ? "offline_cap_reached" : null;
   const effectiveShipsPerHour = getEffectiveShipsPerHour(gameState);
   let shipsSunk = (effectiveShipsPerHour * effectiveTimeMs) / (60 * 60 * 1000);
-  let cannonballsUsed = shipsSunk * ballsPerBattle;
+  let cannonballsSpent = shipsSunk * ballsPerBattle;
 
-  if (cannonballsUsed > gameState.cannonballs) {
+  if (cannonballsSpent > gameState.cannonballs) {
     shipsSunk = gameState.cannonballs / ballsPerBattle;
-    cannonballsUsed = gameState.cannonballs;
+    cannonballsSpent = gameState.cannonballs;
     effectiveTimeMs = effectiveShipsPerHour > 0
       ? (shipsSunk / effectiveShipsPerHour) * 60 * 60 * 1000
       : 0;
     stoppedReason = "out_of_cannonballs";
   }
+
+  const cannonballsRecovered = rollCannonballRecovery(gameState, shipsSunk, ballsPerBattle);
+  const cannonballsUsed = Math.max(0, cannonballsSpent - cannonballsRecovered);
 
   return {
     timeAwayMs,
@@ -298,6 +324,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
       ((talentBonuses.passiveGoldPerHour * effectiveTimeMs) / (60 * 60 * 1000)),
     xpEarned: shipsSunk * currentShip.xpPerShip * talentBonuses.xpMultiplier,
     cannonballsUsed,
+    cannonballsRecovered,
     mapsFound: rollTreasureMapDrops(gameState, shipsSunk),
     stoppedReason
   };
@@ -351,4 +378,86 @@ export function formatDuration(ms) {
   }
 
   return `${seconds}s`;
+}
+
+export function getAchievementProgress(achievement, gameState) {
+  const skills = Object.values(gameState.skills ?? {});
+  const craftedLevels = Object.values(gameState.craftedUpgrades ?? {});
+  const lifetimeStats = gameState.lifetimeStats ?? {};
+  let current = 0;
+  let target = achievement.target ?? 1;
+
+  switch (achievement.id) {
+    case "sink_10_ships":
+    case "sink_100_ships":
+    case "sink_1000_ships":
+    case "sink_10000_ships":
+      current = lifetimeStats.totalShipsSunk ?? gameState.totalShipsSunk ?? 0;
+      break;
+    case "reach_level_5":
+    case "reach_level_10":
+    case "reach_level_15":
+      current = gameState.playerLevel ?? 1;
+      break;
+    case "own_3_ships":
+    case "own_7_ships":
+    case "own_all_ships":
+      current = gameState.ownedShips?.length ?? 0;
+      break;
+    case "earn_10000_gold":
+    case "earn_1000000_gold":
+    case "earn_100000000_gold":
+      current = lifetimeStats.totalGoldEarned ?? 0;
+      break;
+    case "skill_level_5_any":
+    case "skill_level_10_any":
+      current = skills.length > 0 ? Math.max(...skills.map((skill) => skill.level ?? 1)) : 1;
+      break;
+    case "skill_level_10_all":
+      current = skills.length > 0 ? Math.min(...skills.map((skill) => skill.level ?? 1)) : 1;
+      break;
+    case "complete_5_treasure_digs":
+      current = lifetimeStats.treasureDigsCompleted ?? 0;
+      break;
+    case "find_1_rare_treasure":
+    case "find_10_rare_treasures":
+      current = lifetimeStats.rareTreasuresFound ?? gameState.treasureInventory?.length ?? 0;
+      break;
+    case "craft_5_upgrades":
+      current = lifetimeStats.upgradesCrafted ?? 0;
+      break;
+    case "max_one_crafted_upgrade":
+      current = craftedLevels.length > 0 ? Math.max(...craftedLevels) : 0;
+      break;
+    case "max_all_crafted_upgrades":
+      current = craftedLevels.reduce((total, level) => total + level, 0);
+      break;
+    default:
+      target = 1;
+      current = 0;
+      break;
+  }
+
+  return {
+    current,
+    target,
+    percentage: Math.min(100, target > 0 ? (current / target) * 100 : 0)
+  };
+}
+
+export function isAchievementUnlocked(achievement, gameState) {
+  const progress = getAchievementProgress(achievement, gameState);
+  return progress.current >= progress.target;
+}
+
+export function getUnlockedAchievements(gameState) {
+  return achievements.filter((achievement) => isAchievementUnlocked(achievement, gameState));
+}
+
+export function getClaimableAchievements(gameState) {
+  const claimedAchievements = gameState.claimedAchievements ?? [];
+  return achievements.filter((achievement) => (
+    !claimedAchievements.includes(achievement.id) &&
+    isAchievementUnlocked(achievement, gameState)
+  ));
 }

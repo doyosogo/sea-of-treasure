@@ -110,7 +110,8 @@ button:disabled {
 .skills-page,
 .talents-page,
 .treasure-page,
-.shipwright-page {
+.shipwright-page,
+.achievements-page {
   display: grid;
   gap: 20px;
 }
@@ -173,6 +174,7 @@ button:disabled {
 .treasure-summary-card,
 .resource-summary-card,
 .shipwright-summary-card,
+.achievements-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -577,6 +579,106 @@ h2 {
 .crafting-cost-list strong {
   margin-top: 5px;
   color: var(--cream);
+}
+
+.achievement-overview,
+.achievement-category {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 16px;
+}
+
+.achievement-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.achievement-card.claimable {
+  border-color: var(--gold-300);
+  background: rgba(69, 51, 14, 0.82);
+}
+
+.achievement-card.claimed {
+  border-color: #8ed0c4;
+  background: rgba(16, 59, 63, 0.78);
+}
+
+.achievement-card.locked {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.86);
+}
+
+.achievement-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.achievement-card h3 {
+  margin: 0;
+  color: var(--gold-300);
+  font-size: 1.12rem;
+  line-height: 1.2;
+}
+
+.achievement-card p {
+  margin: 0;
+  color: #d8c99c;
+  line-height: 1.45;
+}
+
+.achievement-status,
+.reward-badge {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.achievement-status.locked {
+  color: var(--cream);
+  background: #3d4c60;
+  border-color: #6f7e91;
+}
+
+.achievement-status.claimable {
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border-color: var(--gold-500);
+}
+
+.achievement-status.claimed {
+  color: var(--navy-950);
+  background: #8ed0c4;
+  border-color: #6fa6a6;
+}
+
+.reward-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reward-badge {
+  color: var(--navy-950);
+  background: #f1c15a;
+  border-color: #a87925;
 }
 
 .active-dig-panel {
@@ -1120,6 +1222,7 @@ h2 {
   .treasure-summary-card,
   .resource-summary-card,
   .shipwright-summary-card,
+  .achievements-summary-card,
   .log-card {
     grid-column: span 12;
   }
@@ -1174,6 +1277,10 @@ h2 {
   }
 
   .market-card-header {
+    flex-direction: column;
+  }
+
+  .achievement-card-header {
     flex-direction: column;
   }
 }

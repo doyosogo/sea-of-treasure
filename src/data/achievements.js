@@ -1,0 +1,200 @@
+export const achievements = [
+  {
+    id: "sink_10_ships",
+    category: "Combat",
+    name: "First Broadside",
+    description: "Sink 10 ships.",
+    rewardGold: 250,
+    rewardTalentPoints: 0,
+    target: 10
+  },
+  {
+    id: "sink_100_ships",
+    category: "Combat",
+    name: "Sea Raider",
+    description: "Sink 100 ships.",
+    rewardGold: 2500,
+    rewardTalentPoints: 1,
+    target: 100
+  },
+  {
+    id: "sink_1000_ships",
+    category: "Combat",
+    name: "Dread Captain",
+    description: "Sink 1,000 ships.",
+    rewardGold: 50000,
+    rewardTalentPoints: 2,
+    target: 1000
+  },
+  {
+    id: "sink_10000_ships",
+    category: "Combat",
+    name: "Terror of the Tides",
+    description: "Sink 10,000 ships.",
+    rewardGold: 1000000,
+    rewardTalentPoints: 4,
+    target: 10000
+  },
+  {
+    id: "reach_level_5",
+    category: "Progression",
+    name: "Seasoned Sailor",
+    description: "Reach player level 5.",
+    rewardGold: 5000,
+    rewardTalentPoints: 1,
+    target: 5
+  },
+  {
+    id: "reach_level_10",
+    category: "Progression",
+    name: "Veteran Captain",
+    description: "Reach player level 10.",
+    rewardGold: 100000,
+    rewardTalentPoints: 2,
+    target: 10
+  },
+  {
+    id: "reach_level_15",
+    category: "Progression",
+    name: "Legend of the Sea",
+    description: "Reach player level 15.",
+    rewardGold: 1000000,
+    rewardTalentPoints: 5,
+    target: 15
+  },
+  {
+    id: "own_3_ships",
+    category: "Fleet",
+    name: "Small Fleet",
+    description: "Own 3 ships.",
+    rewardGold: 7500,
+    rewardTalentPoints: 1,
+    target: 3
+  },
+  {
+    id: "own_7_ships",
+    category: "Fleet",
+    name: "Harbor Master",
+    description: "Own 7 ships.",
+    rewardGold: 150000,
+    rewardTalentPoints: 2,
+    target: 7
+  },
+  {
+    id: "own_all_ships",
+    category: "Fleet",
+    name: "Grand Armada",
+    description: "Own all 15 ships.",
+    rewardGold: 5000000,
+    rewardTalentPoints: 5,
+    target: 15
+  },
+  {
+    id: "earn_10000_gold",
+    category: "Economy",
+    name: "Heavy Purse",
+    description: "Earn 10,000 total gold.",
+    rewardGold: 1000,
+    rewardTalentPoints: 0,
+    target: 10000
+  },
+  {
+    id: "earn_1000000_gold",
+    category: "Economy",
+    name: "Golden Wake",
+    description: "Earn 1,000,000 total gold.",
+    rewardGold: 50000,
+    rewardTalentPoints: 2,
+    target: 1000000
+  },
+  {
+    id: "earn_100000000_gold",
+    category: "Economy",
+    name: "Treasury of Kings",
+    description: "Earn 100,000,000 total gold.",
+    rewardGold: 5000000,
+    rewardTalentPoints: 5,
+    target: 100000000
+  },
+  {
+    id: "skill_level_5_any",
+    category: "Skills",
+    name: "Practiced Hand",
+    description: "Reach level 5 in any skill.",
+    rewardGold: 10000,
+    rewardTalentPoints: 1,
+    target: 5
+  },
+  {
+    id: "skill_level_10_any",
+    category: "Skills",
+    name: "Mastered Craft",
+    description: "Reach level 10 in any skill.",
+    rewardGold: 150000,
+    rewardTalentPoints: 3,
+    target: 10
+  },
+  {
+    id: "skill_level_10_all",
+    category: "Skills",
+    name: "Master of All Trades",
+    description: "Reach level 10 in all skills.",
+    rewardGold: 1000000,
+    rewardTalentPoints: 6,
+    target: 10
+  },
+  {
+    id: "complete_5_treasure_digs",
+    category: "Treasure",
+    name: "Sand in the Boots",
+    description: "Complete 5 treasure digs.",
+    rewardGold: 15000,
+    rewardTalentPoints: 1,
+    target: 5
+  },
+  {
+    id: "find_1_rare_treasure",
+    category: "Treasure",
+    name: "Rare Find",
+    description: "Find 1 rare treasure.",
+    rewardGold: 25000,
+    rewardTalentPoints: 1,
+    target: 1
+  },
+  {
+    id: "find_10_rare_treasures",
+    category: "Treasure",
+    name: "Curator of Relics",
+    description: "Find 10 rare treasures.",
+    rewardGold: 500000,
+    rewardTalentPoints: 4,
+    target: 10
+  },
+  {
+    id: "craft_5_upgrades",
+    category: "Crafting",
+    name: "Yard Apprentice",
+    description: "Craft 5 upgrades.",
+    rewardGold: 20000,
+    rewardTalentPoints: 1,
+    target: 5
+  },
+  {
+    id: "max_one_crafted_upgrade",
+    category: "Crafting",
+    name: "Perfected Upgrade",
+    description: "Max one crafted upgrade.",
+    rewardGold: 250000,
+    rewardTalentPoints: 3,
+    target: 10
+  },
+  {
+    id: "max_all_crafted_upgrades",
+    category: "Crafting",
+    name: "Master Shipwright",
+    description: "Max all crafted upgrades.",
+    rewardGold: 2000000,
+    rewardTalentPoints: 6,
+    target: 30
+  }
+];

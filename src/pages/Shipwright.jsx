@@ -37,15 +37,15 @@ function Shipwright({ gameState, dispatch }) {
           </div>
           <div className="stat-box">
             <span>Hull Bonus</span>
-            <strong>{formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%</strong>
+            <strong>{formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}% Future</strong>
           </div>
           <div className="stat-box">
             <span>Ships / Hour Bonus</span>
             <strong>{formatNumber((craftingBonuses.shipsPerHourMultiplier - 1) * 100)}%</strong>
           </div>
           <div className="stat-box">
-            <span>Cannonball Reduction</span>
-            <strong>{formatNumber((1 - craftingBonuses.cannonballUseMultiplier) * 100)}%</strong>
+            <span>Cannonball Refund Chance</span>
+            <strong>{formatNumber(craftingBonuses.cannonballRefundChance * 100)}%</strong>
           </div>
         </div>
       </article>

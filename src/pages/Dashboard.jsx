@@ -17,8 +17,10 @@ import {
   getNextCannon,
   getTalentBonuses,
   getUsedCargo,
-  getXpRequired
+  getXpRequired,
+  getClaimableAchievements
 } from "../utils/gameEngine.js";
+import { achievements } from "../data/achievements.js";
 import { skills } from "../data/skills.js";
 import { treasureSites } from "../data/treasures.js";
 
@@ -48,6 +50,8 @@ function Dashboard({ gameState, dispatch }) {
   const recentMapLog = (gameState.activityLog ?? []).find((entry) => (
     getLogMessage(entry).toLowerCase().includes("treasure map")
   ));
+  const claimableAchievements = getClaimableAchievements(gameState);
+  const latestClaimableAchievement = claimableAchievements[0];
 
   function handleManualSink() {
     dispatch({ type: "SINK_ENEMY_SHIP", xpAmount: 5 });
@@ -345,7 +349,7 @@ function Dashboard({ gameState, dispatch }) {
           <div className="summary-stat-grid">
             <div className="stat-box">
               <span>Reinforced Hull</span>
-              <strong>Lv. {gameState.craftedUpgrades.reinforcedHull}</strong>
+              <strong>Lv. {gameState.craftedUpgrades.reinforcedHull} Future Hull</strong>
             </div>
             <div className="stat-box">
               <span>Speed Sails</span>
@@ -360,8 +364,28 @@ function Dashboard({ gameState, dispatch }) {
               <strong>{formatNumber((craftingBonuses.shipsPerHourMultiplier - 1) * 100)}%</strong>
             </div>
             <div className="stat-box">
-              <span>Cannonball Reduction</span>
-              <strong>{formatNumber((1 - craftingBonuses.cannonballUseMultiplier) * 100)}%</strong>
+              <span>Cannonball Refund Chance</span>
+              <strong>{formatNumber(craftingBonuses.cannonballRefundChance * 100)}%</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="pixel-panel achievements-summary-card">
+          <h2>Achievements Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Claimed</span>
+              <strong>
+                {formatNumber(gameState.claimedAchievements?.length ?? 0)} / {formatNumber(achievements.length)}
+              </strong>
+            </div>
+            <div className="stat-box">
+              <span>Claimable</span>
+              <strong>{formatNumber(claimableAchievements.length)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Latest Claimable</span>
+              <strong>{latestClaimableAchievement ? latestClaimableAchievement.name : "None"}</strong>
             </div>
           </div>
         </article>

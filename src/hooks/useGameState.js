@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import { achievements } from "../data/achievements.js";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
 import { craftableUpgrades } from "../data/crafting.js";
@@ -15,6 +16,7 @@ import {
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
   getFishSellValue,
+  isAchievementUnlocked,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
@@ -25,6 +27,7 @@ import {
   getUsedCargo,
   getWhaleOilSellValue,
   getXpRequired,
+  rollCannonballRecovery,
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
 
@@ -69,6 +72,16 @@ function createInitialCraftedUpgrades() {
   };
 }
 
+function createInitialLifetimeStats() {
+  return {
+    totalGoldEarned: 0,
+    totalShipsSunk: 0,
+    treasureDigsCompleted: 0,
+    rareTreasuresFound: 0,
+    upgradesCrafted: 0
+  };
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -84,6 +97,8 @@ const initialState = {
   cargo: createInitialCargo(),
   resources: createInitialResources(),
   craftedUpgrades: createInitialCraftedUpgrades(),
+  lifetimeStats: createInitialLifetimeStats(),
+  claimedAchievements: [],
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -99,6 +114,25 @@ const initialState = {
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function sumCraftedUpgradeLevels(upgrades = {}) {
+  return Object.values(upgrades).reduce((total, level) => total + (level ?? 0), 0);
+}
+
+function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
+  const craftedUpgrades = normalizeCraftedUpgrades(restoredState.craftedUpgrades);
+
+  return {
+    totalGoldEarned: Math.max(0, savedStats.totalGoldEarned ?? 0),
+    totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
+    treasureDigsCompleted: Math.max(0, savedStats.treasureDigsCompleted ?? 0),
+    rareTreasuresFound: Math.max(
+      0,
+      savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
+    ),
+    upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades))
+  };
+}
 
 function normalizeCraftedUpgrades(savedUpgrades = {}) {
   return Object.fromEntries(craftableUpgrades.map((upgrade) => [
@@ -202,12 +236,14 @@ function loadSavedState() {
       treasureMaps: parsedState.treasureMaps ?? 3,
       activeTreasureDig: parsedState.activeTreasureDig ?? null,
       treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
+      claimedAchievements: Array.isArray(parsedState.claimedAchievements) ? parsedState.claimedAchievements : [],
       isIdling: false,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
     const normalizedState = {
       ...restoredState,
+      lifetimeStats: normalizeLifetimeStats(parsedState.lifetimeStats, restoredState),
       marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
       marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
       marketTradeUsed: parsedState.marketTradeUsed ?? 0
@@ -293,6 +329,38 @@ function addActivityLogEntry(state, message, type = "info") {
   };
 }
 
+function addLifetimeGold(state, amount) {
+  const goldEarned = Math.max(0, amount ?? 0);
+
+  if (goldEarned <= 0) {
+    return state;
+  }
+
+  return {
+    ...state,
+    lifetimeStats: {
+      ...state.lifetimeStats,
+      totalGoldEarned: (state.lifetimeStats?.totalGoldEarned ?? 0) + goldEarned
+    }
+  };
+}
+
+function addLifetimeShipsSunk(state, shipsSunk) {
+  const sunk = Math.max(0, shipsSunk ?? 0);
+
+  if (sunk <= 0) {
+    return state;
+  }
+
+  return {
+    ...state,
+    lifetimeStats: {
+      ...state.lifetimeStats,
+      totalShipsSunk: (state.lifetimeStats?.totalShipsSunk ?? 0) + sunk
+    }
+  };
+}
+
 function applyBattleRewards(state, battles, xpPerBattle) {
   const currentShip = getCurrentShip(state);
   const talentBonuses = getTalentBonuses(state);
@@ -300,11 +368,11 @@ function applyBattleRewards(state, battles, xpPerBattle) {
   const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier;
   const xpState = applyXp(state, xpGained);
 
-  return {
+  return addLifetimeShipsSunk(addLifetimeGold({
     ...xpState,
     gold: xpState.gold + goldGained,
     totalShipsSunk: xpState.totalShipsSunk + battles
-  };
+  }, goldGained), battles);
 }
 
 function randomInt(min, max) {
@@ -343,6 +411,10 @@ function getRareTreasure(now) {
     rarity: rareTreasure.rarity,
     foundAt: now
   };
+}
+
+function formatRecoveredCannonballs(value) {
+  return Number.isInteger(value) ? value : Number(value.toFixed(1));
 }
 
 function applySkillXp(skillDefinition, skillState, xpAmount) {
@@ -418,11 +490,11 @@ function gameStateReducer(state, action) {
         lastSeen: Date.now()
       };
     case "GAIN_GOLD":
-      return {
+      return addLifetimeGold({
         ...state,
         gold: state.gold + (action.amount ?? 0),
         lastSeen: Date.now()
-      };
+      }, action.amount ?? 0);
     case "SPEND_GOLD":
       return {
         ...state,
@@ -501,11 +573,12 @@ function gameStateReducer(state, action) {
         tradingState,
         tradingXpGained
       );
+      const goldEarned = getTradeGoodSellPrice(state, good) * quantity;
       const levelText = levelsGained > 0 ? ` Trading gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(addLifetimeGold({
         ...state,
-        gold: state.gold + getTradeGoodSellPrice(state, good) * quantity,
+        gold: state.gold + goldEarned,
         talentPoints: state.talentPoints + levelsGained,
         skills: {
           ...state.skills,
@@ -515,7 +588,7 @@ function gameStateReducer(state, action) {
           ...state.cargo,
           [good.id]: state.cargo[good.id] - quantity
         }
-      }, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
+      }, goldEarned), `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
     }
     case "SELL_FISH": {
       const quantity = action.quantity === "all"
@@ -526,14 +599,16 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Not enough Fish to sell.", "warning");
       }
 
-      return addActivityLogEntry({
+      const goldEarned = getFishSellValue(state) * quantity;
+
+      return addActivityLogEntry(addLifetimeGold({
         ...state,
-        gold: state.gold + getFishSellValue(state) * quantity,
+        gold: state.gold + goldEarned,
         resources: {
           ...state.resources,
           fish: state.resources.fish - quantity
         }
-      }, `Sold ${quantity} Fish.`);
+      }, goldEarned), `Sold ${quantity} Fish.`);
     }
     case "SELL_WHALE_OIL": {
       const quantity = action.quantity === "all"
@@ -544,14 +619,16 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Not enough Whale Oil to sell.", "warning");
       }
 
-      return addActivityLogEntry({
+      const goldEarned = getWhaleOilSellValue(state) * quantity;
+
+      return addActivityLogEntry(addLifetimeGold({
         ...state,
-        gold: state.gold + getWhaleOilSellValue(state) * quantity,
+        gold: state.gold + goldEarned,
         resources: {
           ...state.resources,
           whaleOil: state.resources.whaleOil - quantity
         }
-      }, `Sold ${quantity} Whale Oil.`);
+      }, goldEarned), `Sold ${quantity} Whale Oil.`);
     }
     case "CRAFT_UPGRADE": {
       const upgrade = craftableUpgrades.find((craftableUpgrade) => craftableUpgrade.id === action.upgradeId);
@@ -599,6 +676,10 @@ function gameStateReducer(state, action) {
         craftedUpgrades: {
           ...state.craftedUpgrades,
           [upgrade.id]: nextLevel
+        },
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          upgradesCrafted: (state.lifetimeStats?.upgradesCrafted ?? 0) + 1
         },
         skills: {
           ...state.skills,
@@ -669,17 +750,22 @@ function gameStateReducer(state, action) {
       const levelText = levelsGained > 0 ? ` Treasure Hunting gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
       const rareText = rareFound ? ` Found ${rareFound.name}.` : "";
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
         activeTreasureDig: null,
         treasureInventory: rareFound ? [rareFound, ...state.treasureInventory] : state.treasureInventory,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          treasureDigsCompleted: (state.lifetimeStats?.treasureDigsCompleted ?? 0) + 1,
+          rareTreasuresFound: (state.lifetimeStats?.rareTreasuresFound ?? 0) + (rareFound ? 1 : 0)
+        },
         skills: {
           ...state.skills,
           treasureHunting: updatedTreasureSkill
         }
-      }, `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${rareText}${levelText}`);
+      }, goldReward), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${rareText}${levelText}`);
     }
     case "CANCEL_TREASURE_DIG":
       if (!state.activeTreasureDig) {
@@ -745,7 +831,7 @@ function gameStateReducer(state, action) {
       const fishText = fishingReward ? ` Caught ${fishingReward.fish} Fish.` : "";
       const whaleOilText = fishingReward?.whaleOil > 0 ? ` Found ${fishingReward.whaleOil} Whale Oil.` : "";
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
@@ -758,7 +844,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
         }
-      }, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${levelText}`);
+      }, goldReward), `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
@@ -807,18 +893,22 @@ function gameStateReducer(state, action) {
       }
 
       const mapsFound = rollTreasureMapDrops(state, 1);
+      const cannonballsRecovered = rollCannonballRecovery(state, 1, ballsPerBattle);
       const rewardedState = applyBattleRewards({
           ...state,
-          cannonballs: state.cannonballs - ballsPerBattle
+          cannonballs: state.cannonballs - ballsPerBattle + cannonballsRecovered
         }, 1, action.xpAmount ?? 5);
       const loggedState = addActivityLogEntry({
         ...rewardedState,
         treasureMaps: rewardedState.treasureMaps + mapsFound
       }, `Sank an enemy ship: +${action.xpAmount ?? 5} XP, +${getCurrentShip(state).goldPerShip} gold.`);
+      const recoveredState = cannonballsRecovered > 0
+        ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+        : loggedState;
 
       return mapsFound > 0
-        ? addActivityLogEntry(loggedState, "Found a treasure map among the wreckage.")
-        : loggedState;
+        ? addActivityLogEntry(recoveredState, "Found a treasure map among the wreckage.")
+        : recoveredState;
     }
     case "SPEND_TALENT_POINT": {
       const talent = talentDefinitions.find((talentData) => talentData.id === action.talentId);
@@ -875,6 +965,7 @@ function gameStateReducer(state, action) {
       const ballsPerBattle = getEffectiveBallsPerBattle(state);
       const shipsSunk = (getEffectiveShipsPerHour(state) / 3600) * seconds;
       const cannonballsNeeded = shipsSunk * ballsPerBattle;
+      const passiveGold = (talentBonuses.passiveGoldPerHour / 3600) * seconds;
 
       if (state.cannonballs <= 0) {
         return addActivityLogEntry({
@@ -888,67 +979,98 @@ function gameStateReducer(state, action) {
       if (state.cannonballs < cannonballsNeeded) {
         const possibleBattles = state.cannonballs / ballsPerBattle;
         const mapsFound = rollTreasureMapDrops(state, possibleBattles);
+        const cannonballsRecovered = rollCannonballRecovery(state, possibleBattles, ballsPerBattle);
         const effectiveShipsPerHour = getEffectiveShipsPerHour(state);
         const effectiveSeconds = effectiveShipsPerHour > 0
           ? (possibleBattles / effectiveShipsPerHour) * 3600
           : 0;
         const partialRewardState = applyBattleRewards({
           ...state,
-          cannonballs: 0
+          cannonballs: cannonballsRecovered
         }, possibleBattles, currentShip.xpPerShip);
+        const partialPassiveGold = (talentBonuses.passiveGoldPerHour / 3600) * effectiveSeconds;
 
-        const stoppedState = addActivityLogEntry({
+        const stoppedState = addActivityLogEntry(addLifetimeGold({
           ...partialRewardState,
-          gold: partialRewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * effectiveSeconds),
+          gold: partialRewardState.gold + partialPassiveGold,
           treasureMaps: partialRewardState.treasureMaps + mapsFound,
           isIdling: false,
           lastSeen: action.now ?? Date.now()
-        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+        }, partialPassiveGold), "The ship ran out of cannonballs and stopped idling.", "warning");
+        const recoveredState = cannonballsRecovered > 0
+          ? addActivityLogEntry(stoppedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
+          : stoppedState;
 
         return mapsFound > 0
-          ? addActivityLogEntry(stoppedState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
-          : stoppedState;
+          ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+          : recoveredState;
       }
 
-      const remainingCannonballs = state.cannonballs - cannonballsNeeded;
       const mapsFound = rollTreasureMapDrops(state, shipsSunk);
+      const cannonballsRecovered = rollCannonballRecovery(state, shipsSunk, ballsPerBattle);
+      const remainingCannonballs = state.cannonballs - cannonballsNeeded + cannonballsRecovered;
       const rewardState = applyBattleRewards({
         ...state,
         cannonballs: remainingCannonballs
       }, shipsSunk, currentShip.xpPerShip);
 
       if (remainingCannonballs <= 0) {
-        const depletedState = addActivityLogEntry({
+        const depletedState = addActivityLogEntry(addLifetimeGold({
           ...rewardState,
-          gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
+          gold: rewardState.gold + passiveGold,
           treasureMaps: rewardState.treasureMaps + mapsFound,
           isIdling: false,
           cannonballs: 0,
           lastSeen: action.now ?? Date.now()
-        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+        }, passiveGold), "The ship ran out of cannonballs and stopped idling.", "warning");
+        const recoveredState = cannonballsRecovered > 0
+          ? addActivityLogEntry(depletedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
+          : depletedState;
 
         return mapsFound > 0
-          ? addActivityLogEntry(depletedState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
-          : depletedState;
+          ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+          : recoveredState;
       }
 
-      const idleState = {
+      const idleState = addLifetimeGold({
         ...rewardState,
-        gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
+        gold: rewardState.gold + passiveGold,
         treasureMaps: rewardState.treasureMaps + mapsFound,
         lastSeen: action.now ?? Date.now()
-      };
+      }, passiveGold);
+      const recoveredState = cannonballsRecovered > 0
+        ? addActivityLogEntry(idleState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
+        : idleState;
 
       return mapsFound > 0
-        ? addActivityLogEntry(idleState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
-        : idleState;
+        ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
+        : recoveredState;
     }
     case "APPLY_OFFLINE_PROGRESS":
-      return applyXp({
+      return applyXp(addLifetimeGold({
         ...state,
         gold: state.gold + (action.goldGained ?? 0),
         lastSeen: action.now ?? Date.now()
-      }, action.xpGained ?? 0);
+      }, action.goldGained ?? 0), action.xpGained ?? 0);
+    case "CLAIM_ACHIEVEMENT": {
+      const achievement = achievements.find((achievementData) => achievementData.id === action.achievementId);
+
+      if (
+        !achievement ||
+        (state.claimedAchievements ?? []).includes(achievement.id) ||
+        !isAchievementUnlocked(achievement, state)
+      ) {
+        return state;
+      }
+
+      return addActivityLogEntry(addLifetimeGold({
+        ...state,
+        gold: state.gold + achievement.rewardGold,
+        talentPoints: state.talentPoints + achievement.rewardTalentPoints,
+        claimedAchievements: [...(state.claimedAchievements ?? []), achievement.id],
+        lastSeen: Date.now()
+      }, achievement.rewardGold), `Achievement claimed: ${achievement.name}`);
+    }
     case "CLAIM_OFFLINE_REWARDS": {
       if (!state.pendingOfflineRewards) {
         return {
@@ -959,7 +1081,7 @@ function gameStateReducer(state, action) {
       }
 
       const rewards = state.pendingOfflineRewards;
-      const xpState = applyXp({
+      const baseRewardState = addLifetimeShipsSunk(addLifetimeGold({
         ...state,
         gold: state.gold + rewards.goldEarned,
         cannonballs: Math.max(0, state.cannonballs - rewards.cannonballsUsed),
@@ -968,7 +1090,8 @@ function gameStateReducer(state, action) {
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
-      }, rewards.xpEarned);
+      }, rewards.goldEarned), rewards.shipsSunk);
+      const xpState = applyXp(baseRewardState, rewards.xpEarned);
 
       return addActivityLogEntry(xpState, "Claimed offline rewards.");
     }
