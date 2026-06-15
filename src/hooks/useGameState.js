@@ -1,22 +1,30 @@
 import { useEffect, useReducer } from "react";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
+import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
 import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
   canSpendTalentPoint,
+  generateMarketPrices,
+  getCargoCapacity,
   getEffectiveBallsPerBattle,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
+  getMarketCooldownRemaining,
   getTalentBonuses,
+  getTradeGoodBuyPrice,
+  getTradeGoodSellPrice,
+  getUsedCargo,
   getXpRequired
 } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
 const MAX_PLAYER_LEVEL = 15;
 const BASE_SKILL_XP_REWARD = 100;
+const MARKET_REFRESH_COOLDOWN_MS = 10800000;
 
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
@@ -35,6 +43,10 @@ function createInitialTalents() {
   return Object.fromEntries(talentDefinitions.map((talent) => [talent.id, 0]));
 }
 
+function createInitialCargo() {
+  return Object.fromEntries(tradeGoods.map((good) => [good.id, 0]));
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -47,12 +59,42 @@ const initialState = {
   talentPoints: 0,
   talents: createInitialTalents(),
   skills: createInitialSkills(),
+  cargo: createInitialCargo(),
+  marketPrices: generateMarketPrices(),
+  marketLastRefreshed: Date.now(),
+  marketCycleStartedAt: Date.now(),
+  marketTradeLimit: 102,
+  marketTradeUsed: 0,
+  marketRefreshCooldownMs: MARKET_REFRESH_COOLDOWN_MS,
   activityLog: [],
   pendingOfflineRewards: null,
   offlineSummaryVisible: false,
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function normalizeCargo(savedCargo = {}) {
+  return Object.fromEntries(tradeGoods.map((good) => [
+    good.id,
+    Math.max(0, savedCargo[good.id] ?? 0)
+  ]));
+}
+
+function normalizeMarketPrices(savedMarketPrices) {
+  const fallbackPrices = generateMarketPrices();
+
+  return Object.fromEntries(tradeGoods.map((good) => {
+    const savedPrice = savedMarketPrices?.[good.id];
+
+    return [
+      good.id,
+      {
+        buyModifier: savedPrice?.buyModifier ?? fallbackPrices[good.id].buyModifier,
+        sellModifier: savedPrice?.sellModifier ?? fallbackPrices[good.id].sellModifier
+      }
+    ];
+  }));
+}
 
 function normalizeTalents(savedTalents = {}) {
   return Object.fromEntries(talentDefinitions.map((talent) => [
@@ -88,7 +130,15 @@ function loadSavedState() {
   try {
     const savedState = localStorage.getItem(STORAGE_KEY);
     if (!savedState) {
-      return { ...initialState, lastSeen: now };
+      return {
+        ...initialState,
+        marketPrices: generateMarketPrices(),
+        marketLastRefreshed: now,
+        marketCycleStartedAt: now,
+        marketTradeLimit: getCargoCapacity(initialState),
+        marketTradeUsed: 0,
+        lastSeen: now
+      };
     }
 
     const parsedState = JSON.parse(savedState);
@@ -98,37 +148,55 @@ function loadSavedState() {
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
       talents: normalizeTalents(parsedState.talents),
       skills: normalizeSkills(parsedState.skills),
+      cargo: normalizeCargo(parsedState.cargo),
+      marketPrices: normalizeMarketPrices(parsedState.marketPrices),
+      marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
+      marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
       isIdling: false,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
+    const normalizedState = {
+      ...restoredState,
+      marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
+      marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
+      marketTradeUsed: parsedState.marketTradeUsed ?? 0
+    };
 
     if (parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible) {
       return {
-        ...restoredState,
+        ...normalizedState,
         pendingOfflineRewards: parsedState.pendingOfflineRewards,
         offlineSummaryVisible: true,
         lastSeen: now
       };
     }
 
-    const offlineRewards = calcOfflineProgress(restoredState.lastSeen, now, restoredState);
+    const offlineRewards = calcOfflineProgress(normalizedState.lastSeen, now, normalizedState);
 
     if (!offlineRewards) {
       return {
-        ...restoredState,
+        ...normalizedState,
         lastSeen: now
       };
     }
 
     return {
-      ...restoredState,
+      ...normalizedState,
       pendingOfflineRewards: offlineRewards,
       offlineSummaryVisible: true,
       lastSeen: now
     };
   } catch {
-    return { ...initialState, lastSeen: now };
+    return {
+      ...initialState,
+      marketPrices: generateMarketPrices(),
+      marketLastRefreshed: now,
+      marketCycleStartedAt: now,
+      marketTradeLimit: getCargoCapacity(initialState),
+      marketTradeUsed: 0,
+      lastSeen: now
+    };
   }
 }
 
@@ -295,6 +363,94 @@ function gameStateReducer(state, action) {
         gold: Math.max(0, state.gold - (action.amount ?? 0)),
         lastSeen: Date.now()
       };
+    case "REFRESH_MARKET": {
+      const now = action.now ?? Date.now();
+
+      if (getMarketCooldownRemaining(state, now) > 0) {
+        return addActivityLogEntry(state, "Market refresh is still on cooldown", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        marketPrices: generateMarketPrices(),
+        marketLastRefreshed: now,
+        marketCycleStartedAt: now,
+        marketTradeLimit: getCargoCapacity(state),
+        marketTradeUsed: 0,
+        lastSeen: now
+      }, "Market prices refreshed");
+    }
+    case "BUY_GOODS": {
+      const quantity = Math.max(0, Math.floor(action.quantity ?? 0));
+      const good = tradeGoods.find((tradeGood) => tradeGood.id === action.goodId);
+
+      if (!good || quantity <= 0) {
+        return state;
+      }
+
+      const totalCost = getTradeGoodBuyPrice(state, good) * quantity;
+      const freeCargo = getCargoCapacity(state) - getUsedCargo(state);
+      const tradeAllowanceRemaining = state.marketTradeLimit - state.marketTradeUsed;
+
+      if (state.gold < totalCost) {
+        return addActivityLogEntry(state, `Not enough gold to buy ${quantity} ${good.name}.`, "warning");
+      }
+
+      if (freeCargo < quantity) {
+        return addActivityLogEntry(state, "Not enough cargo space.", "warning");
+      }
+
+      if (tradeAllowanceRemaining < quantity) {
+        return addActivityLogEntry(state, "Market trade limit reached. Wait for the next market cycle.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - totalCost,
+        marketTradeUsed: state.marketTradeUsed + quantity,
+        cargo: {
+          ...state.cargo,
+          [good.id]: (state.cargo[good.id] ?? 0) + quantity
+        }
+      }, `Bought ${quantity} ${good.name}`);
+    }
+    case "SELL_GOODS": {
+      const quantity = Math.max(0, Math.floor(action.quantity ?? 0));
+      const good = tradeGoods.find((tradeGood) => tradeGood.id === action.goodId);
+
+      if (!good || quantity <= 0) {
+        return state;
+      }
+
+      if ((state.cargo[good.id] ?? 0) < quantity) {
+        return addActivityLogEntry(state, `Not enough ${good.name} to sell.`, "warning");
+      }
+
+      const tradingSkill = skillDefinitions.find((skill) => skill.id === "trading");
+      const tradingState = state.skills.trading;
+      const talentBonuses = getTalentBonuses(state);
+      const tradingXpGained = quantity * 5 * talentBonuses.xpMultiplier;
+      const { skillState: updatedTrading, levelsGained } = applySkillXp(
+        tradingSkill,
+        tradingState,
+        tradingXpGained
+      );
+      const levelText = levelsGained > 0 ? ` Trading gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold + getTradeGoodSellPrice(state, good) * quantity,
+        talentPoints: state.talentPoints + levelsGained,
+        skills: {
+          ...state.skills,
+          trading: updatedTrading
+        },
+        cargo: {
+          ...state.cargo,
+          [good.id]: state.cargo[good.id] - quantity
+        }
+      }, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
+    }
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
 

@@ -167,6 +167,7 @@ button:disabled {
 .cannon-card,
 .skills-summary-card,
 .talent-summary-card,
+.trading-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -416,6 +417,78 @@ h2 {
   background: rgba(4, 17, 31, 0.72);
   border-left: 4px solid var(--gold-500);
   font-family: "Courier New", Courier, monospace;
+}
+
+.market-overview {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 20px;
+}
+
+.market-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.market-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-card-header h2 {
+  margin-bottom: 0;
+  font-size: 1.25rem;
+  text-transform: none;
+}
+
+.profit-pill {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  color: var(--cream);
+  background: var(--navy-700);
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profit-pill.positive {
+  color: var(--navy-950);
+  background: #8ed0c4;
+  border-color: #6fa6a6;
+}
+
+.market-price-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.trade-button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.buy-button {
+  background: #175744;
+  border-color: #3d9b75;
+}
+
+.sell-button {
+  color: var(--navy-950);
+  background: var(--gold-500);
+  border-color: var(--gold-300);
 }
 
 .skill-grid {
@@ -884,6 +957,7 @@ h2 {
   .cannon-card,
   .skills-summary-card,
   .talent-summary-card,
+  .trading-summary-card,
   .log-card {
     grid-column: span 12;
   }
@@ -936,10 +1010,15 @@ h2 {
   .talent-card-header {
     flex-direction: column;
   }
+
+  .market-card-header {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 420px) {
-  .ship-meta-list {
+  .ship-meta-list,
+  .trade-button-grid {
     grid-template-columns: 1fr;
   }
 }

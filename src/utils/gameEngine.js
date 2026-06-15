@@ -2,6 +2,7 @@ import { cannons } from "../data/cannons.js";
 import { levels } from "../data/levels.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
+import { tradeGoods } from "../data/tradeGoods.js";
 
 export function getXpRequired(level) {
   return levels.find((levelData) => levelData.level === level)?.xpRequired ?? Infinity;
@@ -53,7 +54,8 @@ export function getTalentBonuses(gameState) {
     critMultiplier: 1.5,
     offlineCapBonusHours: 0,
     passiveGoldPerHour: 0,
-    cannonballReduction: 0
+    cannonballReduction: 0,
+    sellPriceMultiplier: 1
   };
 
   for (const talent of talents) {
@@ -90,6 +92,9 @@ export function getTalentBonuses(gameState) {
       case "passiveGoldPerHour":
         bonuses.passiveGoldPerHour += value;
         break;
+      case "sellPriceMultiplier":
+        bonuses.sellPriceMultiplier += value;
+        break;
       case "cannonballReduction":
         bonuses.cannonballReduction += value;
         break;
@@ -106,6 +111,56 @@ export function getEffectiveBallsPerBattle(gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const reduction = Math.floor(talentBonuses.cannonballReduction / 5);
   return Math.max(1, currentCannon.ballsPerBattle - reduction);
+}
+
+export function generateMarketPrices() {
+  return Object.fromEntries(tradeGoods.map((good) => [
+    good.id,
+    {
+      buyModifier: randomModifier(),
+      sellModifier: randomModifier()
+    }
+  ]));
+}
+
+function randomModifier() {
+  return Number((0.8 + Math.random() * 0.4).toFixed(2));
+}
+
+export function getCargoCapacity(gameState) {
+  return 100 + getCurrentShip(gameState).cannons * 2;
+}
+
+export function getUsedCargo(gameState) {
+  return tradeGoods.reduce((total, good) => total + (gameState.cargo?.[good.id] ?? 0), 0);
+}
+
+export function getMarketCooldownRemaining(gameState, now = Date.now()) {
+  const cycleStartedAt = gameState.marketCycleStartedAt ?? gameState.marketLastRefreshed ?? 0;
+  const nextRefreshAt = cycleStartedAt + gameState.marketRefreshCooldownMs;
+  return Math.max(0, nextRefreshAt - now);
+}
+
+export function getTradingSellMultiplier(gameState) {
+  const tradingLevel = gameState.skills?.trading?.level ?? 1;
+  const talentBonuses = getTalentBonuses(gameState);
+  return (1 + tradingLevel * 0.01) * talentBonuses.sellPriceMultiplier;
+}
+
+export function getTradeGoodBuyPrice(gameState, good) {
+  const marketPrice = gameState.marketPrices?.[good.id] ?? { buyModifier: 1 };
+  return Math.ceil(good.baseBuyPrice * marketPrice.buyModifier);
+}
+
+export function getTradeGoodSellPrice(gameState, good) {
+  const marketPrice = gameState.marketPrices?.[good.id] ?? { sellModifier: 1 };
+  return Math.floor(good.baseSellPrice * marketPrice.sellModifier * getTradingSellMultiplier(gameState));
+}
+
+export function getEstimatedCargoValue(gameState) {
+  return tradeGoods.reduce((total, good) => (
+    total + (gameState.cargo?.[good.id] ?? 0) * getTradeGoodSellPrice(gameState, good)
+  ), 0);
 }
 
 export function calcIdleProgress(lastSeen, now, gameState) {

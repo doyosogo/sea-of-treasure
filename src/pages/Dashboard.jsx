@@ -5,11 +5,15 @@ import {
   calcXpPerHour,
   formatDuration,
   formatNumber,
+  getCargoCapacity,
+  getEstimatedCargoValue,
   getEffectiveBallsPerBattle,
   getCurrentCannon,
   getCurrentShip,
+  getMarketCooldownRemaining,
   getNextCannon,
   getTalentBonuses,
+  getUsedCargo,
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
@@ -28,6 +32,9 @@ function Dashboard({ gameState, dispatch }) {
     Boolean(nextCannon) &&
     gameState.playerLevel >= nextCannon.unlockLevel &&
     gameState.gold >= upgradeCost;
+  const usedCargo = getUsedCargo(gameState);
+  const cargoCapacity = getCargoCapacity(gameState);
+  const marketCooldown = getMarketCooldownRemaining(gameState);
 
   function handleManualSink() {
     dispatch({ type: "SINK_ENEMY_SHIP", xpAmount: 5 });
@@ -244,6 +251,34 @@ function Dashboard({ gameState, dispatch }) {
             <div className="stat-box">
               <span>Offline Cap</span>
               <strong>{formatDuration(calcOfflineCap(gameState))}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="pixel-panel trading-summary-card">
+          <h2>Trading Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Cargo</span>
+              <strong>{formatNumber(usedCargo)} / {formatNumber(cargoCapacity)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Trading Level</span>
+              <strong>{gameState.skills.trading?.level ?? 1}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Market Allowance</span>
+              <strong>
+                {formatNumber(gameState.marketTradeUsed)} / {formatNumber(gameState.marketTradeLimit)}
+              </strong>
+            </div>
+            <div className="stat-box">
+              <span>Cargo Value</span>
+              <strong>{formatNumber(getEstimatedCargoValue(gameState))}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Next Market Cycle</span>
+              <strong>{marketCooldown > 0 ? formatDuration(marketCooldown) : "Ready"}</strong>
             </div>
           </div>
         </article>
