@@ -107,7 +107,8 @@ button:disabled {
 .dashboard,
 .fleet-page,
 .port-page,
-.skills-page {
+.skills-page,
+.talents-page {
   display: grid;
   gap: 20px;
 }
@@ -165,6 +166,7 @@ button:disabled {
 .controls-card,
 .cannon-card,
 .skills-summary-card,
+.talent-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -492,6 +494,12 @@ h2 {
   gap: 12px;
 }
 
+.summary-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .skill-summary-item {
   min-height: 76px;
   padding: 12px;
@@ -526,6 +534,123 @@ h2 {
   margin-top: 8px;
   color: var(--gold-300);
   text-transform: none;
+}
+
+.talent-tree-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.talent-tree {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.talent-tree > h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  text-transform: none;
+}
+
+.talent-tier {
+  display: grid;
+  gap: 12px;
+}
+
+.talent-tier h3 {
+  margin: 0;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.talent-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.talent-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 100%;
+  padding: 14px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.talent-card.locked {
+  background: rgba(8, 18, 32, 0.88);
+  border-color: #485c73;
+  opacity: 0.78;
+}
+
+.talent-card.maxed {
+  background: rgba(50, 38, 11, 0.86);
+  border-color: var(--gold-300);
+}
+
+.talent-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.talent-card h4 {
+  margin: 0;
+  color: var(--gold-300);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1rem;
+}
+
+.talent-card-header span {
+  flex: 0 0 auto;
+  padding: 5px 7px;
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border: 2px solid var(--gold-500);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.talent-card p {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.4;
+}
+
+.talent-requirement {
+  min-height: 58px;
+  padding: 10px;
+  background: rgba(4, 17, 31, 0.72);
+  border-left: 4px solid var(--gold-500);
+}
+
+.talent-requirement span,
+.talent-requirement strong {
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.talent-requirement span {
+  color: #a9bfd4;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.talent-requirement strong {
+  margin-top: 4px;
+  color: var(--cream);
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
 
 .modal-backdrop {
@@ -758,6 +883,7 @@ h2 {
   .controls-card,
   .cannon-card,
   .skills-summary-card,
+  .talent-summary-card,
   .log-card {
     grid-column: span 12;
   }
@@ -766,7 +892,8 @@ h2 {
   .stat-grid.three-up,
   .fleet-stat-grid,
   .armoury-grid,
-  .skills-summary-grid {
+  .skills-summary-grid,
+  .summary-stat-grid {
     grid-template-columns: 1fr;
   }
 
@@ -804,6 +931,10 @@ h2 {
   .resource-cluster,
   .skill-actions {
     width: 100%;
+  }
+
+  .talent-card-header {
+    flex-direction: column;
   }
 }
 

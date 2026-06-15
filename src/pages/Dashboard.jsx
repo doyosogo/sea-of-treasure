@@ -1,11 +1,15 @@
 import {
   calcCannonUpgradeCost,
+  calcOfflineCap,
   calcGoldPerHour,
   calcXpPerHour,
+  formatDuration,
   formatNumber,
+  getEffectiveBallsPerBattle,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
+  getTalentBonuses,
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
@@ -14,6 +18,7 @@ function Dashboard({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const nextCannon = getNextCannon(gameState);
+  const talentBonuses = getTalentBonuses(gameState);
   const upgradeCost = calcCannonUpgradeCost(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
@@ -159,7 +164,7 @@ function Dashboard({ gameState, dispatch }) {
             </div>
             <div className="stat-box">
               <span>Used / Battle</span>
-              <strong>{formatNumber(currentCannon.ballsPerBattle)}</strong>
+              <strong>{formatNumber(getEffectiveBallsPerBattle(gameState))}</strong>
             </div>
             <div className="stat-box">
               <span>Cost / 100 Balls</span>
@@ -214,6 +219,32 @@ function Dashboard({ gameState, dispatch }) {
                 </div>
               );
             })}
+          </div>
+        </article>
+
+        <article className="pixel-panel talent-summary-card">
+          <h2>Talent Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Available Points</span>
+              <strong>{formatNumber(gameState.talentPoints)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Gold Multiplier</span>
+              <strong>{formatNumber(talentBonuses.goldMultiplier)}x</strong>
+            </div>
+            <div className="stat-box">
+              <span>XP Multiplier</span>
+              <strong>{formatNumber(talentBonuses.xpMultiplier)}x</strong>
+            </div>
+            <div className="stat-box">
+              <span>Passive Gold / Hour</span>
+              <strong>{formatNumber(talentBonuses.passiveGoldPerHour)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Offline Cap</span>
+              <strong>{formatDuration(calcOfflineCap(gameState))}</strong>
+            </div>
           </div>
         </article>
 

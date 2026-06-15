@@ -1,12 +1,16 @@
 import { useEffect, useReducer } from "react";
 import { skills as skillDefinitions } from "../data/skills.js";
+import { talents as talentDefinitions } from "../data/talents.js";
 import { ships } from "../data/ships.js";
 import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
+  canSpendTalentPoint,
+  getEffectiveBallsPerBattle,
   getCurrentCannon,
   getCurrentShip,
   getNextCannon,
+  getTalentBonuses,
   getXpRequired
 } from "../utils/gameEngine.js";
 
@@ -27,6 +31,10 @@ function createInitialSkills() {
   ]));
 }
 
+function createInitialTalents() {
+  return Object.fromEntries(talentDefinitions.map((talent) => [talent.id, 0]));
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -37,7 +45,7 @@ const initialState = {
   cannonballs: 100,
   totalShipsSunk: 0,
   talentPoints: 0,
-  talents: {},
+  talents: createInitialTalents(),
   skills: createInitialSkills(),
   activityLog: [],
   pendingOfflineRewards: null,
@@ -45,6 +53,13 @@ const initialState = {
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function normalizeTalents(savedTalents = {}) {
+  return Object.fromEntries(talentDefinitions.map((talent) => [
+    talent.id,
+    Math.min(talent.maxPoints, Math.max(0, savedTalents[talent.id] ?? 0))
+  ]));
+}
 
 function normalizeSkills(savedSkills = {}) {
   const defaultSkills = createInitialSkills();
@@ -81,6 +96,7 @@ function loadSavedState() {
       ...initialState,
       ...parsedState,
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
+      talents: normalizeTalents(parsedState.talents),
       skills: normalizeSkills(parsedState.skills),
       isIdling: false,
       pendingOfflineRewards: null,
@@ -161,8 +177,9 @@ function addActivityLogEntry(state, message, type = "info") {
 
 function applyBattleRewards(state, battles, xpPerBattle) {
   const currentShip = getCurrentShip(state);
-  const goldGained = battles * currentShip.goldPerShip;
-  const xpGained = battles * xpPerBattle;
+  const talentBonuses = getTalentBonuses(state);
+  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier;
+  const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier;
   const xpState = applyXp(state, xpGained);
 
   return {
@@ -263,7 +280,7 @@ function gameStateReducer(state, action) {
       };
     case "GAIN_XP":
       return {
-        ...applyXp(state, action.amount ?? 0),
+        ...applyXp(state, (action.amount ?? 0) * getTalentBonuses(state).xpMultiplier),
         lastSeen: Date.now()
       };
     case "GAIN_GOLD":
@@ -327,7 +344,9 @@ function gameStateReducer(state, action) {
         return state;
       }
 
+      const talentBonuses = getTalentBonuses(state);
       const goldReward = getSkillGoldReward(skillDefinition.id);
+      const skillXpReward = BASE_SKILL_XP_REWARD * talentBonuses.xpMultiplier;
       const { skillState: rewardedSkillState, levelsGained } = applySkillXp(
         skillDefinition,
         {
@@ -336,7 +355,7 @@ function gameStateReducer(state, action) {
           startedAt: null,
           finishesAt: null
         },
-        BASE_SKILL_XP_REWARD
+        skillXpReward
       );
       const levelText = levelsGained > 0 ? ` ${skillDefinition.name} gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
       const goldText = goldReward > 0 ? ` +${goldReward} gold.` : "";
@@ -349,7 +368,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
         }
-      }, `${skillDefinition.actionName} complete: +${BASE_SKILL_XP_REWARD} ${skillDefinition.name} XP.${goldText}${levelText}`);
+      }, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
@@ -391,18 +410,34 @@ function gameStateReducer(state, action) {
       }, `Cannons upgraded to ${nextCannon.name}.`);
     }
     case "SINK_ENEMY_SHIP": {
-      const currentCannon = getCurrentCannon(state);
+      const ballsPerBattle = getEffectiveBallsPerBattle(state);
 
-      if (state.cannonballs < currentCannon.ballsPerBattle) {
+      if (state.cannonballs < ballsPerBattle) {
         return addActivityLogEntry(state, "Not enough cannonballs to sink an enemy ship.", "warning");
       }
 
       return addActivityLogEntry({
         ...applyBattleRewards({
           ...state,
-          cannonballs: state.cannonballs - currentCannon.ballsPerBattle
+          cannonballs: state.cannonballs - ballsPerBattle
         }, 1, action.xpAmount ?? 5)
       }, `Sank an enemy ship: +${action.xpAmount ?? 5} XP, +${getCurrentShip(state).goldPerShip} gold.`);
+    }
+    case "SPEND_TALENT_POINT": {
+      const talent = talentDefinitions.find((talentData) => talentData.id === action.talentId);
+
+      if (!talent || !canSpendTalentPoint(state, talent)) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        talentPoints: state.talentPoints - 1,
+        talents: {
+          ...state.talents,
+          [talent.id]: (state.talents[talent.id] ?? 0) + 1
+        }
+      }, `${talent.name} increased to ${(state.talents[talent.id] ?? 0) + 1}/${talent.maxPoints}.`);
     }
     case "LEVEL_UP":
       if (state.playerLevel >= MAX_PLAYER_LEVEL) {
@@ -438,10 +473,11 @@ function gameStateReducer(state, action) {
       }
 
       const currentShip = getCurrentShip(state);
-      const currentCannon = getCurrentCannon(state);
+      const talentBonuses = getTalentBonuses(state);
       const seconds = action.seconds ?? 1;
+      const ballsPerBattle = getEffectiveBallsPerBattle(state);
       const shipsSunk = (currentShip.shipsPerHour / 3600) * seconds;
-      const cannonballsNeeded = shipsSunk * currentCannon.ballsPerBattle;
+      const cannonballsNeeded = shipsSunk * ballsPerBattle;
 
       if (state.cannonballs <= 0) {
         return addActivityLogEntry({
@@ -453,7 +489,10 @@ function gameStateReducer(state, action) {
       }
 
       if (state.cannonballs < cannonballsNeeded) {
-        const possibleBattles = state.cannonballs / currentCannon.ballsPerBattle;
+        const possibleBattles = state.cannonballs / ballsPerBattle;
+        const effectiveSeconds = currentShip.shipsPerHour > 0
+          ? (possibleBattles / currentShip.shipsPerHour) * 3600
+          : 0;
         const partialRewardState = applyBattleRewards({
           ...state,
           cannonballs: 0
@@ -461,6 +500,7 @@ function gameStateReducer(state, action) {
 
         return addActivityLogEntry({
           ...partialRewardState,
+          gold: partialRewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * effectiveSeconds),
           isIdling: false,
           lastSeen: action.now ?? Date.now()
         }, "The ship ran out of cannonballs and stopped idling.", "warning");
@@ -475,6 +515,7 @@ function gameStateReducer(state, action) {
       if (remainingCannonballs <= 0) {
         return addActivityLogEntry({
           ...rewardState,
+          gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
           isIdling: false,
           cannonballs: 0,
           lastSeen: action.now ?? Date.now()
@@ -483,6 +524,7 @@ function gameStateReducer(state, action) {
 
       return {
         ...rewardState,
+        gold: rewardState.gold + ((talentBonuses.passiveGoldPerHour / 3600) * seconds),
         lastSeen: action.now ?? Date.now()
       };
     }
