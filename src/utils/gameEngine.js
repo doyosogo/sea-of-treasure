@@ -1,4 +1,5 @@
 import { cannons } from "../data/cannons.js";
+import { craftableUpgrades } from "../data/crafting.js";
 import { levels } from "../data/levels.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
@@ -113,8 +114,49 @@ export function getTalentBonuses(gameState) {
 export function getEffectiveBallsPerBattle(gameState) {
   const currentCannon = getCurrentCannon(gameState);
   const talentBonuses = getTalentBonuses(gameState);
+  const craftingBonuses = getCraftingBonuses(gameState);
   const reduction = Math.floor(talentBonuses.cannonballReduction / 5);
-  return Math.max(1, currentCannon.ballsPerBattle - reduction);
+  return Math.max(1, (currentCannon.ballsPerBattle - reduction) * craftingBonuses.cannonballUseMultiplier);
+}
+
+export function getCraftingCost(upgrade, currentLevel) {
+  const nextLevel = currentLevel + 1;
+
+  return {
+    gold: upgrade.goldCostPerLevel * nextLevel,
+    fish: upgrade.fishCostPerLevel * nextLevel,
+    whaleOil: upgrade.whaleOilCostPerLevel * nextLevel,
+    shipwrightXp: upgrade.shipwrightXpPerLevel * nextLevel
+  };
+}
+
+export function getCraftingEffect(upgradeId, level) {
+  switch (upgradeId) {
+    case "reinforcedHull":
+      return `+${formatNumber(level * 2)}% max hull`;
+    case "speedSails":
+      return `+${formatNumber(level * 2)}% ships/hour`;
+    case "cannonBraces":
+      return `-${formatNumber(level * 2)}% cannonball pressure`;
+    default:
+      return "No bonus";
+  }
+}
+
+export function getCraftingBonuses(gameState) {
+  const reinforcedHull = gameState.craftedUpgrades?.reinforcedHull ?? 0;
+  const speedSails = gameState.craftedUpgrades?.speedSails ?? 0;
+  const cannonBraces = gameState.craftedUpgrades?.cannonBraces ?? 0;
+
+  return {
+    shipsPerHourMultiplier: 1 + speedSails * 0.02,
+    cannonballUseMultiplier: Math.max(0.2, 1 - cannonBraces * 0.02),
+    hullMultiplier: 1 + reinforcedHull * 0.02
+  };
+}
+
+export function getEffectiveShipsPerHour(gameState) {
+  return getCurrentShip(gameState).shipsPerHour * getCraftingBonuses(gameState).shipsPerHourMultiplier;
 }
 
 export function getTreasureMapDropChance(gameState) {
@@ -207,7 +249,7 @@ export function calcIdleProgress(lastSeen, now, gameState) {
   const elapsedSeconds = Math.max(0, Math.floor((now - lastSeen) / 1000));
   const currentShip = getCurrentShip(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  const shipsSunk = (currentShip.shipsPerHour / 3600) * elapsedSeconds;
+  const shipsSunk = (getEffectiveShipsPerHour(gameState) / 3600) * elapsedSeconds;
 
   return {
     goldGained: (shipsSunk * currentShip.goldPerShip * talentBonuses.goldMultiplier) +
@@ -235,14 +277,15 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const ballsPerBattle = getEffectiveBallsPerBattle(gameState);
   let stoppedReason = timeAwayMs > offlineCapMs ? "offline_cap_reached" : null;
-  let shipsSunk = (currentShip.shipsPerHour * effectiveTimeMs) / (60 * 60 * 1000);
+  const effectiveShipsPerHour = getEffectiveShipsPerHour(gameState);
+  let shipsSunk = (effectiveShipsPerHour * effectiveTimeMs) / (60 * 60 * 1000);
   let cannonballsUsed = shipsSunk * ballsPerBattle;
 
   if (cannonballsUsed > gameState.cannonballs) {
     shipsSunk = gameState.cannonballs / ballsPerBattle;
     cannonballsUsed = gameState.cannonballs;
-    effectiveTimeMs = currentShip.shipsPerHour > 0
-      ? (shipsSunk / currentShip.shipsPerHour) * 60 * 60 * 1000
+    effectiveTimeMs = effectiveShipsPerHour > 0
+      ? (shipsSunk / effectiveShipsPerHour) * 60 * 60 * 1000
       : 0;
     stoppedReason = "out_of_cannonballs";
   }
@@ -272,14 +315,14 @@ export function calcReloadTime(baseCooldown, talentBonuses) {
 export function calcGoldPerHour(gameState) {
   const currentShip = getCurrentShip(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  return (currentShip.shipsPerHour * currentShip.goldPerShip * talentBonuses.goldMultiplier) +
+  return (getEffectiveShipsPerHour(gameState) * currentShip.goldPerShip * talentBonuses.goldMultiplier) +
     talentBonuses.passiveGoldPerHour;
 }
 
 export function calcXpPerHour(gameState) {
   const currentShip = getCurrentShip(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  return currentShip.shipsPerHour * currentShip.xpPerShip * talentBonuses.xpMultiplier;
+  return getEffectiveShipsPerHour(gameState) * currentShip.xpPerShip * talentBonuses.xpMultiplier;
 }
 
 export function formatNumber(value) {

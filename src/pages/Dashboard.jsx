@@ -6,9 +6,11 @@ import {
   formatDuration,
   formatNumber,
   getCargoCapacity,
+  getCraftingBonuses,
   getEstimatedCargoValue,
   getEstimatedResourceValue,
   getEffectiveBallsPerBattle,
+  getEffectiveShipsPerHour,
   getCurrentCannon,
   getCurrentShip,
   getMarketCooldownRemaining,
@@ -37,6 +39,7 @@ function Dashboard({ gameState, dispatch }) {
   const usedCargo = getUsedCargo(gameState);
   const cargoCapacity = getCargoCapacity(gameState);
   const marketCooldown = getMarketCooldownRemaining(gameState);
+  const craftingBonuses = getCraftingBonuses(gameState);
   const activeTreasureDig = gameState.activeTreasureDig;
   const activeTreasureSite = treasureSites.find((site) => site.id === activeTreasureDig?.siteId);
   const activeTreasureRemaining = activeTreasureDig
@@ -122,7 +125,7 @@ function Dashboard({ gameState, dispatch }) {
           <div className="stat-grid three-up">
             <div className="stat-box">
               <span>Ships / Hour</span>
-              <strong>{formatNumber(currentShip.shipsPerHour)}</strong>
+              <strong>{formatNumber(getEffectiveShipsPerHour(gameState))}</strong>
             </div>
             <div className="stat-box">
               <span>Gold / Hour</span>
@@ -333,6 +336,32 @@ function Dashboard({ gameState, dispatch }) {
             <div className="stat-box">
               <span>Estimated Value</span>
               <strong>{formatNumber(getEstimatedResourceValue(gameState))}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article className="pixel-panel shipwright-summary-card">
+          <h2>Shipwright Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Reinforced Hull</span>
+              <strong>Lv. {gameState.craftedUpgrades.reinforcedHull}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Speed Sails</span>
+              <strong>Lv. {gameState.craftedUpgrades.speedSails}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannon Braces</span>
+              <strong>Lv. {gameState.craftedUpgrades.cannonBraces}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Ships / Hour Bonus</span>
+              <strong>{formatNumber((craftingBonuses.shipsPerHourMultiplier - 1) * 100)}%</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannonball Reduction</span>
+              <strong>{formatNumber((1 - craftingBonuses.cannonballUseMultiplier) * 100)}%</strong>
             </div>
           </div>
         </article>

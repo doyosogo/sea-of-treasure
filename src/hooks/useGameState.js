@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from "react";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
+import { craftableUpgrades } from "../data/crafting.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
@@ -10,7 +11,9 @@ import {
   canSpendTalentPoint,
   generateMarketPrices,
   getCargoCapacity,
+  getCraftingCost,
   getEffectiveBallsPerBattle,
+  getEffectiveShipsPerHour,
   getFishSellValue,
   getCurrentCannon,
   getCurrentShip,
@@ -58,6 +61,14 @@ function createInitialResources() {
   };
 }
 
+function createInitialCraftedUpgrades() {
+  return {
+    reinforcedHull: 0,
+    speedSails: 0,
+    cannonBraces: 0
+  };
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -72,6 +83,7 @@ const initialState = {
   skills: createInitialSkills(),
   cargo: createInitialCargo(),
   resources: createInitialResources(),
+  craftedUpgrades: createInitialCraftedUpgrades(),
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -87,6 +99,13 @@ const initialState = {
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function normalizeCraftedUpgrades(savedUpgrades = {}) {
+  return Object.fromEntries(craftableUpgrades.map((upgrade) => [
+    upgrade.id,
+    Math.min(upgrade.maxLevel, Math.max(0, savedUpgrades[upgrade.id] ?? 0))
+  ]));
+}
 
 function normalizeResources(savedResources = {}) {
   return {
@@ -176,6 +195,7 @@ function loadSavedState() {
       skills: normalizeSkills(parsedState.skills),
       cargo: normalizeCargo(parsedState.cargo),
       resources: normalizeResources(parsedState.resources),
+      craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
       marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
@@ -533,6 +553,59 @@ function gameStateReducer(state, action) {
         }
       }, `Sold ${quantity} Whale Oil.`);
     }
+    case "CRAFT_UPGRADE": {
+      const upgrade = craftableUpgrades.find((craftableUpgrade) => craftableUpgrade.id === action.upgradeId);
+
+      if (!upgrade) {
+        return state;
+      }
+
+      const currentLevel = state.craftedUpgrades[upgrade.id] ?? 0;
+
+      if (currentLevel >= upgrade.maxLevel) {
+        return state;
+      }
+
+      const cost = getCraftingCost(upgrade, currentLevel);
+
+      if (
+        state.gold < cost.gold ||
+        state.resources.fish < cost.fish ||
+        state.resources.whaleOil < cost.whaleOil
+      ) {
+        return addActivityLogEntry(state, `Not enough resources to craft ${upgrade.name}.`, "warning");
+      }
+
+      const shipwrightSkill = skillDefinitions.find((skill) => skill.id === "shipwright");
+      const talentBonuses = getTalentBonuses(state);
+      const shipwrightXp = cost.shipwrightXp * talentBonuses.xpMultiplier;
+      const { skillState: updatedShipwright, levelsGained } = applySkillXp(
+        shipwrightSkill,
+        state.skills.shipwright,
+        shipwrightXp
+      );
+      const nextLevel = currentLevel + 1;
+      const levelText = levelsGained > 0 ? ` Shipwright gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - cost.gold,
+        talentPoints: state.talentPoints + levelsGained,
+        resources: {
+          ...state.resources,
+          fish: state.resources.fish - cost.fish,
+          whaleOil: state.resources.whaleOil - cost.whaleOil
+        },
+        craftedUpgrades: {
+          ...state.craftedUpgrades,
+          [upgrade.id]: nextLevel
+        },
+        skills: {
+          ...state.skills,
+          shipwright: updatedShipwright
+        }
+      }, `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
+    }
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
 
@@ -800,7 +873,7 @@ function gameStateReducer(state, action) {
       const talentBonuses = getTalentBonuses(state);
       const seconds = action.seconds ?? 1;
       const ballsPerBattle = getEffectiveBallsPerBattle(state);
-      const shipsSunk = (currentShip.shipsPerHour / 3600) * seconds;
+      const shipsSunk = (getEffectiveShipsPerHour(state) / 3600) * seconds;
       const cannonballsNeeded = shipsSunk * ballsPerBattle;
 
       if (state.cannonballs <= 0) {
@@ -815,8 +888,9 @@ function gameStateReducer(state, action) {
       if (state.cannonballs < cannonballsNeeded) {
         const possibleBattles = state.cannonballs / ballsPerBattle;
         const mapsFound = rollTreasureMapDrops(state, possibleBattles);
-        const effectiveSeconds = currentShip.shipsPerHour > 0
-          ? (possibleBattles / currentShip.shipsPerHour) * 3600
+        const effectiveShipsPerHour = getEffectiveShipsPerHour(state);
+        const effectiveSeconds = effectiveShipsPerHour > 0
+          ? (possibleBattles / effectiveShipsPerHour) * 3600
           : 0;
         const partialRewardState = applyBattleRewards({
           ...state,

@@ -74,6 +74,9 @@ function Port({ gameState, dispatch }) {
 
       <article className="pixel-panel resource-market-panel">
         <h2>Resource Market</h2>
+        <p className="shop-note">
+          Fish and Whale Oil can be sold for gold, but they are also required for Shipwright upgrades.
+        </p>
         <div className="resource-market-grid">
           <div className="resource-market-card">
             <div className="market-card-header">

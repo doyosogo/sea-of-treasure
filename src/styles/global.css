@@ -109,7 +109,8 @@ button:disabled {
 .port-page,
 .skills-page,
 .talents-page,
-.treasure-page {
+.treasure-page,
+.shipwright-page {
   display: grid;
   gap: 20px;
 }
@@ -171,6 +172,7 @@ button:disabled {
 .trading-summary-card,
 .treasure-summary-card,
 .resource-summary-card,
+.shipwright-summary-card,
 .log-card {
   grid-column: span 12;
 }
@@ -513,6 +515,68 @@ h2 {
   background: rgba(18, 49, 84, 0.72);
   border: 3px solid var(--navy-600);
   box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.crafting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.crafting-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.crafting-card.maxed {
+  background: rgba(50, 38, 11, 0.86);
+  border-color: var(--gold-300);
+}
+
+.upgrade-level-badge {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border: 2px solid var(--gold-500);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.crafting-cost-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crafting-cost-list div {
+  min-height: 58px;
+  padding: 10px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.crafting-cost-list span,
+.crafting-cost-list strong {
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.crafting-cost-list span {
+  color: #a9bfd4;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.crafting-cost-list strong {
+  margin-top: 5px;
+  color: var(--cream);
 }
 
 .active-dig-panel {
@@ -1055,6 +1119,7 @@ h2 {
   .trading-summary-card,
   .treasure-summary-card,
   .resource-summary-card,
+  .shipwright-summary-card,
   .log-card {
     grid-column: span 12;
   }
@@ -1115,7 +1180,8 @@ h2 {
 
 @media (max-width: 420px) {
   .ship-meta-list,
-  .trade-button-grid {
+  .trade-button-grid,
+  .crafting-cost-list {
     grid-template-columns: 1fr;
   }
 }
