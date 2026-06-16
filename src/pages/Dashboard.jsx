@@ -11,8 +11,10 @@ import {
   getEstimatedResourceValue,
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
+  generateEnemy,
   getCurrentCannon,
   getCurrentShip,
+  getPlayerCombatStats,
   getMarketCooldownRemaining,
   getNextCannon,
   getTalentBonuses,
@@ -21,6 +23,7 @@ import {
   getClaimableAchievements
 } from "../utils/gameEngine.js";
 import { achievements } from "../data/achievements.js";
+import { enemies } from "../data/enemies.js";
 import { skills } from "../data/skills.js";
 import { treasureSites } from "../data/treasures.js";
 
@@ -42,6 +45,13 @@ function Dashboard({ gameState, dispatch }) {
   const cargoCapacity = getCargoCapacity(gameState);
   const marketCooldown = getMarketCooldownRemaining(gameState);
   const craftingBonuses = getCraftingBonuses(gameState);
+  const combatStats = getPlayerCombatStats(gameState);
+  const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
+  const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
+  const repairCost = missingHull * 10;
+  const currentBattle = gameState.currentBattle;
+  const battleEnemy = currentBattle?.enemy;
+  const battleHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
   const activeTreasureDig = gameState.activeTreasureDig;
   const activeTreasureSite = treasureSites.find((site) => site.id === activeTreasureDig?.siteId);
   const activeTreasureRemaining = activeTreasureDig
@@ -52,10 +62,6 @@ function Dashboard({ gameState, dispatch }) {
   ));
   const claimableAchievements = getClaimableAchievements(gameState);
   const latestClaimableAchievement = claimableAchievements[0];
-
-  function handleManualSink() {
-    dispatch({ type: "SINK_ENEMY_SHIP", xpAmount: 5 });
-  }
 
   function getLogMessage(entry) {
     return typeof entry === "string" ? entry : entry.message;
@@ -143,7 +149,7 @@ function Dashboard({ gameState, dispatch }) {
         </article>
 
         <article className="pixel-panel controls-card">
-          <h2>Actions</h2>
+          <h2>Voyage Actions</h2>
           <div className="button-row">
             <button
               className="chunky-button primary"
@@ -161,10 +167,145 @@ function Dashboard({ gameState, dispatch }) {
             >
               Stop Idling
             </button>
-            <button className="chunky-button danger" onClick={handleManualSink} type="button">
-              Sink Enemy Ship
-            </button>
           </div>
+        </article>
+
+        <article className="pixel-panel combat-card">
+          <div className="panel-heading-row">
+            <h2>Combat</h2>
+            <span className="resource-counter">{formatNumber(gameState.cannonballs)} Cannonballs</span>
+          </div>
+
+          <div className="level-row">
+            <span>Hull</span>
+            <span>{formatNumber(combatStats.currentHull)} / {formatNumber(combatStats.maxHull)}</span>
+          </div>
+          <div className="progress-track hull-track" aria-label="Hull integrity">
+            <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullProgress)}%` }} />
+          </div>
+
+          <div className="combat-stat-grid">
+            <div className="stat-box">
+              <span>Cannon Damage</span>
+              <strong>{formatNumber(combatStats.cannonDamage)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Volley Damage</span>
+              <strong>{formatNumber(combatStats.volleyDamage)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Crit Chance</span>
+              <strong>{formatNumber(combatStats.critChance * 100)}%</strong>
+            </div>
+            <div className="stat-box">
+              <span>Crit Multiplier</span>
+              <strong>{formatNumber(combatStats.critMultiplier)}x</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannonballs / Volley</span>
+              <strong>{formatNumber(getEffectiveBallsPerBattle(gameState))}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Repair Cost</span>
+              <strong>{formatNumber(repairCost)}</strong>
+            </div>
+          </div>
+
+          <button
+            className="chunky-button"
+            disabled={missingHull <= 0 || gameState.gold <= 0}
+            onClick={() => dispatch({ type: "REPAIR_HULL" })}
+            type="button"
+          >
+            Repair Hull
+          </button>
+        </article>
+
+        <article className="pixel-panel enemy-selector-card">
+          <h2>Enemy Selection</h2>
+          <div className="enemy-grid">
+            {enemies.map((enemy) => {
+              const locked = gameState.playerLevel < enemy.unlockLevel;
+              const selected = gameState.selectedEnemyId === enemy.id;
+              const estimate = generateEnemy(gameState, enemy);
+
+              return (
+                <div
+                  className={`enemy-card ${selected ? "selected" : ""} ${locked ? "locked" : ""}`}
+                  key={enemy.id}
+                >
+                  <div className="enemy-card-header">
+                    <h3>{enemy.name}</h3>
+                    <span className="enemy-difficulty">{enemy.difficulty}</span>
+                  </div>
+                  <p>{enemy.description}</p>
+                  <div className="ship-meta-list">
+                    <div><span>HP Estimate</span><strong>{formatNumber(estimate.maxHP)}</strong></div>
+                    <div><span>Damage</span><strong>{formatNumber(estimate.damage)}</strong></div>
+                    <div><span>Gold</span><strong>{formatNumber(estimate.goldReward)}</strong></div>
+                    <div><span>XP</span><strong>{formatNumber(estimate.xpReward)}</strong></div>
+                  </div>
+                  <button
+                    className="chunky-button primary"
+                    disabled={locked || selected || Boolean(currentBattle)}
+                    onClick={() => dispatch({ type: "SELECT_ENEMY", enemyId: enemy.id })}
+                    type="button"
+                  >
+                    {locked ? `Unlocks Lv. ${enemy.unlockLevel}` : selected ? "Selected" : "Select"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+
+        <article className="pixel-panel current-battle-card">
+          <h2>Current Battle</h2>
+          {battleEnemy ? (
+            <div className="battle-panel">
+              <div className="enemy-card-header">
+                <h3>{battleEnemy.name}</h3>
+                <span className="enemy-difficulty">{battleEnemy.difficulty}</span>
+              </div>
+              <div className="level-row">
+                <span>Enemy HP</span>
+                <span>{formatNumber(battleEnemy.currentHP)} / {formatNumber(battleEnemy.maxHP)}</span>
+              </div>
+              <div className="progress-track enemy-hp-track" aria-label="Enemy hull">
+                <div className="progress-fill enemy-hp-fill" style={{ width: `${Math.min(100, battleHpProgress)}%` }} />
+              </div>
+              <div className="combat-stat-grid">
+                <div className="stat-box">
+                  <span>Enemy Damage</span>
+                  <strong>{formatNumber(battleEnemy.damage)}</strong>
+                </div>
+                <div className="stat-box">
+                  <span>Shots Fired</span>
+                  <strong>{formatNumber(currentBattle.shotsFired)}</strong>
+                </div>
+              </div>
+              <button
+                className="chunky-button danger"
+                disabled={gameState.cannonballs < getEffectiveBallsPerBattle(gameState)}
+                onClick={() => dispatch({ type: "FIRE_VOLLEY" })}
+                type="button"
+              >
+                Fire Volley
+              </button>
+            </div>
+          ) : (
+            <div className="battle-panel">
+              <p className="skill-description">Choose an enemy, then start a battle when your hull is ready.</p>
+              <button
+                className="chunky-button primary"
+                disabled={combatStats.currentHull <= 0}
+                onClick={() => dispatch({ type: "START_BATTLE" })}
+                type="button"
+              >
+                Start Battle
+              </button>
+            </div>
+          )}
         </article>
 
         <article className="pixel-panel cannon-card">

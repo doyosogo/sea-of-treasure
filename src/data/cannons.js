@@ -2,7 +2,7 @@
 export const cannons = [
   {
     tier: 1,
-    name: "Iron Ball",
+    name: "Iron Cannon",
     damage: 10,
     unlockLevel: 1,
     ballsPerBattle: 1,
@@ -11,7 +11,7 @@ export const cannons = [
   },
   {
     tier: 2,
-    name: "Steel Shot",
+    name: "Steel Cannon",
     damage: 25,
     unlockLevel: 2,
     ballsPerBattle: 2,
@@ -20,7 +20,7 @@ export const cannons = [
   },
   {
     tier: 3,
-    name: "Chain Shot",
+    name: "Silver Cannon",
     damage: 55,
     unlockLevel: 4,
     ballsPerBattle: 3,
@@ -29,7 +29,7 @@ export const cannons = [
   },
   {
     tier: 4,
-    name: "Explosive Shell",
+    name: "Golden Cannon",
     damage: 120,
     unlockLevel: 7,
     ballsPerBattle: 4,
@@ -38,7 +38,7 @@ export const cannons = [
   },
   {
     tier: 5,
-    name: "Hellfire Round",
+    name: "Diamond Cannon",
     damage: 260,
     unlockLevel: 11,
     ballsPerBattle: 5,

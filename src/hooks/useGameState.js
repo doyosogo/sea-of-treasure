@@ -1,5 +1,6 @@
 import { useEffect, useReducer } from "react";
 import { achievements } from "../data/achievements.js";
+import { enemies } from "../data/enemies.js";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
 import { craftableUpgrades } from "../data/crafting.js";
@@ -10,12 +11,15 @@ import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
   canSpendTalentPoint,
+  generateEnemy,
   generateMarketPrices,
   getCargoCapacity,
   getCraftingCost,
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
   getFishSellValue,
+  getMaxHull,
+  getPlayerCombatStats,
   isAchievementUnlocked,
   getCurrentCannon,
   getCurrentShip,
@@ -88,6 +92,12 @@ const initialState = {
   gold: 0,
   currentShipId: 1,
   ownedShips: [1],
+  selectedEnemyId: "smugglerCutter",
+  currentBattle: null,
+  hull: {
+    current: 140,
+    max: 140
+  },
   cannonTier: 1,
   cannonballs: 100,
   totalShipsSunk: 0,
@@ -114,6 +124,19 @@ const initialState = {
   isIdling: false,
   lastSeen: Date.now()
 };
+
+function clampHull(state, preferredCurrent = state.hull?.current) {
+  const maxHull = getMaxHull(state);
+  const currentHull = Math.min(maxHull, Math.max(0, preferredCurrent ?? maxHull));
+
+  return {
+    ...state,
+    hull: {
+      current: currentHull,
+      max: maxHull
+    }
+  };
+}
 
 function sumCraftedUpgradeLevels(upgrades = {}) {
   return Object.values(upgrades).reduce((total, level) => total + (level ?? 0), 0);
@@ -236,18 +259,20 @@ function loadSavedState() {
       treasureMaps: parsedState.treasureMaps ?? 3,
       activeTreasureDig: parsedState.activeTreasureDig ?? null,
       treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
+      selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
+      currentBattle: parsedState.currentBattle ?? null,
       claimedAchievements: Array.isArray(parsedState.claimedAchievements) ? parsedState.claimedAchievements : [],
       isIdling: false,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
-    const normalizedState = {
+    const normalizedState = clampHull({
       ...restoredState,
       lifetimeStats: normalizeLifetimeStats(parsedState.lifetimeStats, restoredState),
       marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
       marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
       marketTradeUsed: parsedState.marketTradeUsed ?? 0
-    };
+    }, parsedState.hull?.current);
 
     if (parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible) {
       return {
@@ -375,6 +400,26 @@ function applyBattleRewards(state, battles, xpPerBattle) {
   }, goldGained), battles);
 }
 
+function applyVictoryRewards(state, battleEnemy) {
+  const talentBonuses = getTalentBonuses(state);
+  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier;
+  const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
+  const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
+  const xpState = applyXp(state, xpGained);
+
+  return {
+    state: addLifetimeShipsSunk(addLifetimeGold({
+      ...xpState,
+      gold: xpState.gold + goldGained,
+      totalShipsSunk: xpState.totalShipsSunk + 1,
+      treasureMaps: xpState.treasureMaps + mapFound
+    }, goldGained), 1),
+    goldGained,
+    xpGained,
+    mapFound
+  };
+}
+
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -455,6 +500,143 @@ function applySkillXp(skillDefinition, skillState, xpAmount) {
 
 function gameStateReducer(state, action) {
   switch (action.type) {
+    case "SELECT_ENEMY": {
+      const enemy = enemies.find((enemyData) => enemyData.id === action.enemyId);
+
+      if (!enemy || state.playerLevel < enemy.unlockLevel) {
+        return state;
+      }
+
+      return {
+        ...state,
+        selectedEnemyId: enemy.id,
+        lastSeen: Date.now()
+      };
+    }
+    case "START_BATTLE": {
+      if (state.currentBattle || (state.hull?.current ?? 0) <= 0) {
+        return state;
+      }
+
+      const selectedEnemy = enemies.find((enemy) => enemy.id === state.selectedEnemyId);
+
+      if (!selectedEnemy || state.playerLevel < selectedEnemy.unlockLevel) {
+        return addActivityLogEntry(state, "That enemy is not available yet.", "warning");
+      }
+
+      const enemy = generateEnemy(state, selectedEnemy);
+
+      return addActivityLogEntry(clampHull({
+        ...state,
+        currentBattle: {
+          enemy,
+          shotsFired: 0,
+          startedAt: Date.now()
+        }
+      }), `Battle started against ${enemy.name}.`);
+    }
+    case "FIRE_VOLLEY": {
+      if (!state.currentBattle) {
+        return state;
+      }
+
+      const ballsPerBattle = getEffectiveBallsPerBattle(state);
+
+      if (state.cannonballs < ballsPerBattle) {
+        return addActivityLogEntry(state, "Not enough cannonballs to fire a volley.", "warning");
+      }
+
+      const combatStats = getPlayerCombatStats(state);
+      const isCrit = Math.random() < combatStats.critChance;
+      const volleyDamage = combatStats.volleyDamage * (isCrit ? combatStats.critMultiplier : 1);
+      const enemy = state.currentBattle.enemy;
+      const enemyCurrentHP = Math.max(0, enemy.currentHP - volleyDamage);
+      const cannonballsRecovered = enemyCurrentHP <= 0
+        ? rollCannonballRecovery(state, 1, ballsPerBattle)
+        : 0;
+      const firedState = {
+        ...state,
+        cannonballs: Math.max(0, state.cannonballs - ballsPerBattle + cannonballsRecovered)
+      };
+
+      if (enemyCurrentHP <= 0) {
+        const { state: rewardedState, goldGained, xpGained, mapFound } = applyVictoryRewards(firedState, enemy);
+        const victoryState = addActivityLogEntry({
+          ...rewardedState,
+          currentBattle: null,
+          lastSeen: Date.now()
+        }, `Victory over ${enemy.name}: +${Math.round(goldGained)} gold, +${Math.round(xpGained)} XP.`);
+        const critState = isCrit
+          ? addActivityLogEntry(victoryState, `Critical volley dealt ${Math.round(volleyDamage)} damage.`)
+          : victoryState;
+        const recoveredState = cannonballsRecovered > 0
+          ? addActivityLogEntry(critState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+          : critState;
+
+        return mapFound > 0
+          ? addActivityLogEntry(recoveredState, "Found a treasure map among the wreckage.")
+          : recoveredState;
+      }
+
+      const incomingDamage = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction));
+      const nextHull = Math.max(0, combatStats.currentHull - incomingDamage);
+
+      if (nextHull <= 0) {
+        return addActivityLogEntry({
+          ...firedState,
+          hull: {
+            current: 0,
+            max: combatStats.maxHull
+          },
+          currentBattle: null,
+          lastSeen: Date.now()
+        }, `${enemy.name} broke your hull. Battle lost.`, "warning");
+      }
+
+      const updatedState = addActivityLogEntry({
+        ...firedState,
+        hull: {
+          current: nextHull,
+          max: combatStats.maxHull
+        },
+        currentBattle: {
+          ...state.currentBattle,
+          enemy: {
+            ...enemy,
+            currentHP: enemyCurrentHP
+          },
+          shotsFired: state.currentBattle.shotsFired + 1
+        },
+        lastSeen: Date.now()
+      }, `Volley hit ${enemy.name} for ${Math.round(volleyDamage)} damage. ${enemy.name} dealt ${Math.round(incomingDamage)} hull damage.`);
+
+      return isCrit
+        ? addActivityLogEntry(updatedState, "Critical hit.")
+        : updatedState;
+    }
+    case "REPAIR_HULL": {
+      const clampedState = clampHull(state);
+      const missingHull = clampedState.hull.max - clampedState.hull.current;
+
+      if (missingHull <= 0) {
+        return clampedState;
+      }
+
+      const repairAmount = Math.min(missingHull, Math.floor(clampedState.gold / 10));
+
+      if (repairAmount <= 0) {
+        return addActivityLogEntry(clampedState, "Not enough gold to repair hull.", "warning");
+      }
+
+      return addActivityLogEntry({
+        ...clampedState,
+        gold: clampedState.gold - repairAmount * 10,
+        hull: {
+          current: clampedState.hull.current + repairAmount,
+          max: clampedState.hull.max
+        }
+      }, `Repaired ${repairAmount} hull.`);
+    }
     case "BUY_SHIP": {
       const ship = ships.find((shipData) => shipData.id === action.shipId);
 
@@ -467,23 +649,23 @@ function gameStateReducer(state, action) {
         return state;
       }
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(clampHull({
         ...state,
         gold: state.gold - ship.purchaseCost,
         ownedShips: [...state.ownedShips, ship.id],
         currentShipId: ship.id
-      }, `${ship.name} joined the fleet.`);
+      }), `${ship.name} joined the fleet.`);
     }
     case "SET_ACTIVE_SHIP":
       if (!state.ownedShips.includes(action.shipId)) {
         return state;
       }
 
-      return {
+      return clampHull({
         ...state,
         currentShipId: action.shipId,
         lastSeen: Date.now()
-      };
+      });
     case "GAIN_XP":
       return {
         ...applyXp(state, (action.amount ?? 0) * getTalentBonuses(state).xpMultiplier),
@@ -664,7 +846,7 @@ function gameStateReducer(state, action) {
       const nextLevel = currentLevel + 1;
       const levelText = levelsGained > 0 ? ` Shipwright gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(clampHull({
         ...state,
         gold: state.gold - cost.gold,
         talentPoints: state.talentPoints + levelsGained,
@@ -685,7 +867,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           shipwright: updatedShipwright
         }
-      }, `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
+      }), `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
     }
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
@@ -917,14 +1099,14 @@ function gameStateReducer(state, action) {
         return state;
       }
 
-      return addActivityLogEntry({
+      return addActivityLogEntry(clampHull({
         ...state,
         talentPoints: state.talentPoints - 1,
         talents: {
           ...state.talents,
           [talent.id]: (state.talents[talent.id] ?? 0) + 1
         }
-      }, `${talent.name} increased to ${(state.talents[talent.id] ?? 0) + 1}/${talent.maxPoints}.`);
+      }), `${talent.name} increased to ${(state.talents[talent.id] ?? 0) + 1}/${talent.maxPoints}.`);
     }
     case "LEVEL_UP":
       if (state.playerLevel >= MAX_PLAYER_LEVEL) {

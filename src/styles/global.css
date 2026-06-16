@@ -167,6 +167,9 @@ button:disabled {
 
 .rates-card,
 .controls-card,
+.combat-card,
+.enemy-selector-card,
+.current-battle-card,
 .cannon-card,
 .skills-summary-card,
 .talent-summary-card,
@@ -231,6 +234,14 @@ h2 {
   background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
   box-shadow: 2px 0 0 rgba(255, 255, 255, 0.22);
   transition: width 160ms linear;
+}
+
+.hull-fill {
+  background: linear-gradient(90deg, #6fa6a6, #d8f0d0);
+}
+
+.enemy-hp-fill {
+  background: linear-gradient(90deg, #d66b4a, #ff9b6d);
 }
 
 .stat-grid {
@@ -517,6 +528,79 @@ h2 {
   background: rgba(18, 49, 84, 0.72);
   border: 3px solid var(--navy-600);
   box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.combat-card,
+.enemy-selector-card,
+.current-battle-card {
+  display: grid;
+  gap: 16px;
+}
+
+.combat-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.enemy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.enemy-card,
+.battle-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.enemy-card.selected {
+  border-color: var(--gold-300);
+  background: rgba(69, 51, 14, 0.82);
+}
+
+.enemy-card.locked {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.88);
+  opacity: 0.78;
+}
+
+.enemy-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.enemy-card-header h3 {
+  margin: 0;
+  color: var(--gold-300);
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.enemy-card p {
+  margin: 0;
+  color: #d8c99c;
+  line-height: 1.45;
+}
+
+.enemy-difficulty {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border: 2px solid var(--gold-500);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .crafting-grid {
@@ -1215,6 +1299,9 @@ h2 {
   .ship-card,
   .rates-card,
   .controls-card,
+  .combat-card,
+  .enemy-selector-card,
+  .current-battle-card,
   .cannon-card,
   .skills-summary-card,
   .talent-summary-card,
@@ -1281,6 +1368,10 @@ h2 {
   }
 
   .achievement-card-header {
+    flex-direction: column;
+  }
+
+  .enemy-card-header {
     flex-direction: column;
   }
 }

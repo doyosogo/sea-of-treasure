@@ -1,6 +1,7 @@
 import { cannons } from "../data/cannons.js";
 import { achievements } from "../data/achievements.js";
 import { craftableUpgrades } from "../data/crafting.js";
+import { enemies } from "../data/enemies.js";
 import { levels } from "../data/levels.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
@@ -58,7 +59,10 @@ export function getTalentBonuses(gameState) {
     passiveGoldPerHour: 0,
     cannonballReduction: 0,
     sellPriceMultiplier: 1,
-    treasureChanceMultiplier: 1
+    treasureChanceMultiplier: 1,
+    effectiveCannons: 0,
+    maxHullMultiplier: 1,
+    incomingDamageReduction: 0
   };
 
   for (const talent of talents) {
@@ -103,6 +107,15 @@ export function getTalentBonuses(gameState) {
         break;
       case "cannonballReduction":
         bonuses.cannonballReduction += value;
+        break;
+      case "effectiveCannons":
+        bonuses.effectiveCannons += value;
+        break;
+      case "maxHullMultiplier":
+        bonuses.maxHullMultiplier += value;
+        break;
+      case "incomingDamageReduction":
+        bonuses.incomingDamageReduction += value;
         break;
       default:
         break;
@@ -180,6 +193,62 @@ export function rollCannonballRecovery(gameState, battles, ballsPerBattle) {
 
 export function getEffectiveShipsPerHour(gameState) {
   return getCurrentShip(gameState).shipsPerHour * getCraftingBonuses(gameState).shipsPerHourMultiplier;
+}
+
+export function getMaxHull(gameState) {
+  const currentShip = getCurrentShip(gameState);
+  const talentBonuses = getTalentBonuses(gameState);
+  const craftingBonuses = getCraftingBonuses(gameState);
+  const baseHull = 100 + currentShip.level * 40;
+
+  return Math.round(baseHull * talentBonuses.maxHullMultiplier * craftingBonuses.hullMultiplier);
+}
+
+export function getSelectedEnemyType(gameState) {
+  return enemies.find((enemy) => enemy.id === gameState.selectedEnemyId) ?? enemies[1] ?? enemies[0];
+}
+
+export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameState)) {
+  const currentShip = getCurrentShip(gameState);
+  const baseHP = 40 + gameState.playerLevel * 25;
+  const baseDamage = 2 + gameState.playerLevel * 1.5;
+  const enemyData = typeof enemyType === "string"
+    ? enemies.find((enemy) => enemy.id === enemyType)
+    : enemyType;
+  const selectedEnemy = enemyData ?? getSelectedEnemyType(gameState);
+
+  return {
+    id: selectedEnemy.id,
+    name: selectedEnemy.name,
+    difficulty: selectedEnemy.difficulty,
+    description: selectedEnemy.description,
+    maxHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
+    currentHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
+    damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier)),
+    goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier,
+    xpReward: currentShip.xpPerShip * selectedEnemy.xpMultiplier,
+    mapDropChance: Math.min(1, getTreasureMapDropChance(gameState) * selectedEnemy.mapDropMultiplier)
+  };
+}
+
+export function getPlayerCombatStats(gameState) {
+  const currentShip = getCurrentShip(gameState);
+  const currentCannon = getCurrentCannon(gameState);
+  const talentBonuses = getTalentBonuses(gameState);
+  const maxHull = getMaxHull(gameState);
+  const effectiveCannons = currentShip.cannons + talentBonuses.effectiveCannons;
+  const cannonDamage = currentCannon.damage * talentBonuses.cannonDamageMultiplier;
+
+  return {
+    effectiveCannons,
+    cannonDamage,
+    volleyDamage: effectiveCannons * cannonDamage,
+    critChance: talentBonuses.critChance,
+    critMultiplier: talentBonuses.critMultiplier,
+    maxHull,
+    currentHull: Math.min(gameState.hull?.current ?? maxHull, maxHull),
+    incomingDamageReduction: Math.min(0.75, talentBonuses.incomingDamageReduction)
+  };
 }
 
 export function getTreasureMapDropChance(gameState) {
