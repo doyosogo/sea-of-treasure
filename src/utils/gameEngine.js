@@ -1,4 +1,4 @@
-import { cannons } from "../data/cannons.js";
+import { BASE_CANNON_DAMAGE, cannons } from "../data/cannons.js";
 import { achievements } from "../data/achievements.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import { enemies } from "../data/enemies.js";
@@ -24,9 +24,36 @@ export function getNextCannon(gameState) {
 }
 
 export function calcCannonUpgradeCost(gameState) {
-  const currentShip = getCurrentShip(gameState);
   const nextCannon = getNextCannon(gameState);
-  return nextCannon ? currentShip.cannons * nextCannon.upgradeCostPerCannon : 0;
+  return nextCannon ? nextCannon.goldUpgradeCost : 0;
+}
+
+export function getCannonMaterialUpgradeCost(gameState) {
+  return getNextCannon(gameState)?.materialUpgradeCost ?? null;
+}
+
+export function hasCannonMaterialUpgradeResources(gameState) {
+  const cost = getCannonMaterialUpgradeCost(gameState);
+
+  if (!cost || gameState.gold < (cost.gold ?? 0)) {
+    return false;
+  }
+
+  return Object.entries(cost).every(([resourceId, amount]) => {
+    if (resourceId === "gold") {
+      return true;
+    }
+
+    if (resourceId === "rareMapPieces") {
+      return (gameState.rareMapPieces ?? 0) >= amount;
+    }
+
+    if (resourceId === "whaleOil") {
+      return (gameState.resources?.whaleOil ?? 0) >= amount;
+    }
+
+    return (gameState.materials?.[resourceId] ?? 0) >= amount;
+  });
 }
 
 export function getTalentPointsSpentInTree(gameState, treeId) {
@@ -237,11 +264,13 @@ export function getPlayerCombatStats(gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const maxHull = getMaxHull(gameState);
   const effectiveCannons = currentShip.cannons + talentBonuses.effectiveCannons;
-  const cannonDamage = currentCannon.damage * talentBonuses.cannonDamageMultiplier;
+  const cannonDamage = BASE_CANNON_DAMAGE * currentCannon.damageMultiplier * talentBonuses.cannonDamageMultiplier;
 
   return {
     effectiveCannons,
     cannonDamage,
+    baseCannonDamage: BASE_CANNON_DAMAGE,
+    cannonDamageMultiplier: currentCannon.damageMultiplier,
     volleyDamage: effectiveCannons * cannonDamage,
     critChance: talentBonuses.critChance,
     critMultiplier: talentBonuses.critMultiplier,

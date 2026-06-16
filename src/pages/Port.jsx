@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { tradeGoods } from "../data/tradeGoods.js";
 import {
+  calcCannonUpgradeCost,
   formatDuration,
   formatNumber,
   getCargoCapacity,
+  getCannonMaterialUpgradeCost,
+  getCurrentCannon,
   getFishSellValue,
   getMarketCooldownRemaining,
+  getNextCannon,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
   getUsedCargo,
+  hasCannonMaterialUpgradeResources,
   getWhaleOilSellValue
 } from "../utils/gameEngine.js";
 
@@ -19,6 +24,18 @@ function Port({ gameState, dispatch }) {
   const cooldownRemaining = getMarketCooldownRemaining(gameState, now);
   const tradingLevel = gameState.skills.trading?.level ?? 1;
   const tradeAllowanceRemaining = Math.max(0, gameState.marketTradeLimit - gameState.marketTradeUsed);
+  const currentCannon = getCurrentCannon(gameState);
+  const nextCannon = getNextCannon(gameState);
+  const goldUpgradeCost = calcCannonUpgradeCost(gameState);
+  const materialUpgradeCost = getCannonMaterialUpgradeCost(gameState);
+  const canBuyCannonUpgrade =
+    Boolean(nextCannon) &&
+    gameState.playerLevel >= nextCannon.unlockLevel &&
+    gameState.gold >= goldUpgradeCost;
+  const canCraftCannonUpgrade =
+    Boolean(nextCannon) &&
+    gameState.playerLevel >= nextCannon.unlockLevel &&
+    hasCannonMaterialUpgradeResources(gameState);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setNow(Date.now()), 1000);
@@ -154,6 +171,75 @@ function Port({ gameState, dispatch }) {
         </div>
       </article>
 
+      <article className="pixel-panel cannon-upgrade-panel">
+        <h2>Cannon Upgrade</h2>
+        <div className="summary-stat-grid">
+          <div className="stat-box">
+            <span>Current Tier</span>
+            <strong>Tier {currentCannon.tier}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Current Cannon</span>
+            <strong>{currentCannon.name}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Damage Multiplier</span>
+            <strong>{formatNumber(currentCannon.damageMultiplier)}x</strong>
+          </div>
+          <div className="stat-box">
+            <span>Next Cannon</span>
+            <strong>{nextCannon ? nextCannon.name : "Max Tier"}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Next Multiplier</span>
+            <strong>{nextCannon ? `${formatNumber(nextCannon.damageMultiplier)}x` : "Complete"}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Unlock Level</span>
+            <strong>{nextCannon ? nextCannon.unlockLevel : "Max"}</strong>
+          </div>
+          <div className="stat-box">
+            <span>Gold Upgrade</span>
+            <strong>{nextCannon ? formatNumber(goldUpgradeCost) : "Complete"}</strong>
+          </div>
+        </div>
+
+        <div className="upgrade-cost-panel">
+          <h2>Material Upgrade Cost</h2>
+          {materialUpgradeCost ? (
+            <div className="crafting-cost-list">
+              {Object.entries(materialUpgradeCost).map(([resourceId, amount]) => (
+                <div key={resourceId}>
+                  <span>{formatResourceName(resourceId)}</span>
+                  <strong>{formatNumber(amount)}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="shop-note">Cannon tier is fully upgraded.</p>
+          )}
+        </div>
+
+        <div className="button-row">
+          <button
+            className="chunky-button primary"
+            disabled={!canBuyCannonUpgrade}
+            onClick={() => dispatch({ type: "UPGRADE_CANNONS_WITH_GOLD" })}
+            type="button"
+          >
+            Buy Upgrade
+          </button>
+          <button
+            className="chunky-button"
+            disabled={!canCraftCannonUpgrade}
+            onClick={() => dispatch({ type: "UPGRADE_CANNONS_WITH_MATERIALS" })}
+            type="button"
+          >
+            Craft Upgrade
+          </button>
+        </div>
+      </article>
+
       <div className="market-grid">
         {tradeGoods.map((good) => {
           const buyPrice = getTradeGoodBuyPrice(gameState, good);
@@ -225,6 +311,22 @@ function Port({ gameState, dispatch }) {
       </div>
     </section>
   );
+}
+
+function formatResourceName(resourceId) {
+  const names = {
+    gold: "Gold",
+    gunpowder: "Gunpowder",
+    cannonParts: "Cannon Parts",
+    navigationCharts: "Navigation Charts",
+    compassFragments: "Compass Fragments",
+    ancientRelics: "Ancient Relics",
+    tradeSeals: "Trade Seals",
+    rareMapPieces: "Rare Map Pieces",
+    whaleOil: "Whale Oil"
+  };
+
+  return names[resourceId] ?? resourceId;
 }
 
 export default Port;

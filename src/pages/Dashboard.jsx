@@ -1,5 +1,4 @@
 import {
-  calcCannonUpgradeCost,
   calcOfflineCap,
   formatDuration,
   formatNumber,
@@ -15,7 +14,6 @@ import {
   getCurrentShip,
   getPlayerCombatStats,
   getMarketCooldownRemaining,
-  getNextCannon,
   getTalentBonuses,
   getUsedCargo,
   getXpRequired,
@@ -29,17 +27,11 @@ import { treasureSites } from "../data/treasures.js";
 function Dashboard({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
-  const nextCannon = getNextCannon(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  const upgradeCost = calcCannonUpgradeCost(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
   const visibleActivityLog = (gameState.activityLog ?? []).slice(0, 6);
   const canBuyCannonballs = gameState.gold >= currentCannon.goldPer100Balls;
-  const canUpgradeCannons =
-    Boolean(nextCannon) &&
-    gameState.playerLevel >= nextCannon.unlockLevel &&
-    gameState.gold >= upgradeCost;
   const usedCargo = getUsedCargo(gameState);
   const cargoCapacity = getCargoCapacity(gameState);
   const marketCooldown = getMarketCooldownRemaining(gameState);
@@ -202,6 +194,22 @@ function Dashboard({ gameState, dispatch }) {
               <strong>{formatNumber(combatStats.cannonDamage)}</strong>
             </div>
             <div className="stat-box">
+              <span>Cannon Tier</span>
+              <strong>Tier {currentCannon.tier}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannon</span>
+              <strong>{currentCannon.name}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Damage Multiplier</span>
+              <strong>{formatNumber(currentCannon.damageMultiplier)}x</strong>
+            </div>
+            <div className="stat-box">
+              <span>Effective Cannons</span>
+              <strong>{formatNumber(combatStats.effectiveCannons)}</strong>
+            </div>
+            <div className="stat-box">
               <span>Volley Damage</span>
               <strong>{formatNumber(combatStats.volleyDamage)}</strong>
             </div>
@@ -336,8 +344,8 @@ function Dashboard({ gameState, dispatch }) {
               <strong>{currentCannon.name}</strong>
             </div>
             <div className="stat-box">
-              <span>Damage</span>
-              <strong>{formatNumber(currentCannon.damage)}</strong>
+              <span>Damage Multiplier</span>
+              <strong>{formatNumber(currentCannon.damageMultiplier)}x</strong>
             </div>
             <div className="stat-box">
               <span>Used / Battle</span>
@@ -348,16 +356,8 @@ function Dashboard({ gameState, dispatch }) {
               <strong>{formatNumber(currentCannon.goldPer100Balls)}</strong>
             </div>
             <div className="stat-box">
-              <span>Next Tier</span>
-              <strong>{nextCannon ? nextCannon.name : "Max Tier"}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Upgrade Cost</span>
-              <strong>{nextCannon ? formatNumber(upgradeCost) : "Complete"}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Unlock Level</span>
-              <strong>{nextCannon ? nextCannon.unlockLevel : "Max"}</strong>
+              <span>Base Cannon Damage</span>
+              <strong>{formatNumber(combatStats.baseCannonDamage)}</strong>
             </div>
           </div>
 
@@ -369,14 +369,6 @@ function Dashboard({ gameState, dispatch }) {
               type="button"
             >
               Buy 100 Cannonballs
-            </button>
-            <button
-              className="chunky-button"
-              disabled={!canUpgradeCannons}
-              onClick={() => dispatch({ type: "UPGRADE_CANNONS" })}
-              type="button"
-            >
-              Upgrade Cannons
             </button>
           </div>
         </article>

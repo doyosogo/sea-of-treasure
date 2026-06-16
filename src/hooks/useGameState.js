@@ -18,9 +18,11 @@ import {
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
   getFishSellValue,
+  getCannonMaterialUpgradeCost,
   getIdleCombatEstimate,
   getMaxHull,
   getPlayerCombatStats,
+  hasCannonMaterialUpgradeResources,
   isAchievementUnlocked,
   getCurrentCannon,
   getCurrentShip,
@@ -273,6 +275,7 @@ function loadSavedState() {
     const restoredState = {
       ...initialState,
       ...parsedState,
+      cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
       talents: normalizeTalents(parsedState.talents),
       skills: normalizeSkills(parsedState.skills),
@@ -519,6 +522,28 @@ function mergeMaterials(materials, rewards = {}) {
     ancientRelics: (materials.ancientRelics ?? 0) + (rewards.ancientRelics ?? 0),
     tradeContracts: (materials.tradeContracts ?? 0) + (rewards.tradeContracts ?? 0),
     tradeSeals: (materials.tradeSeals ?? 0) + (rewards.tradeSeals ?? 0)
+  };
+}
+
+function spendCannonMaterialCost(state, cost) {
+  return {
+    ...state,
+    gold: state.gold - (cost.gold ?? 0),
+    rareMapPieces: state.rareMapPieces - (cost.rareMapPieces ?? 0),
+    resources: {
+      ...state.resources,
+      whaleOil: state.resources.whaleOil - (cost.whaleOil ?? 0)
+    },
+    materials: {
+      ...state.materials,
+      navigationCharts: state.materials.navigationCharts - (cost.navigationCharts ?? 0),
+      compassFragments: state.materials.compassFragments - (cost.compassFragments ?? 0),
+      gunpowder: state.materials.gunpowder - (cost.gunpowder ?? 0),
+      cannonParts: state.materials.cannonParts - (cost.cannonParts ?? 0),
+      ancientRelics: state.materials.ancientRelics - (cost.ancientRelics ?? 0),
+      tradeContracts: state.materials.tradeContracts - (cost.tradeContracts ?? 0),
+      tradeSeals: state.materials.tradeSeals - (cost.tradeSeals ?? 0)
+    }
   };
 }
 
@@ -1172,7 +1197,7 @@ function gameStateReducer(state, action) {
         }
       }, `${skillDefinition.actionName} cancelled.`);
     }
-    case "UPGRADE_CANNONS": {
+    case "UPGRADE_CANNONS_WITH_GOLD": {
       const nextCannon = getNextCannon(state);
       const upgradeCost = calcCannonUpgradeCost(state);
 
@@ -1188,7 +1213,24 @@ function gameStateReducer(state, action) {
         ...state,
         gold: state.gold - upgradeCost,
         cannonTier: nextCannon.tier
-      }, `Cannons upgraded to ${nextCannon.name}.`);
+      }, `Bought cannon upgrade: ${nextCannon.name}.`);
+    }
+    case "UPGRADE_CANNONS_WITH_MATERIALS": {
+      const nextCannon = getNextCannon(state);
+      const materialCost = getCannonMaterialUpgradeCost(state);
+
+      if (!nextCannon || !materialCost) {
+        return state;
+      }
+
+      if (state.playerLevel < nextCannon.unlockLevel || !hasCannonMaterialUpgradeResources(state)) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...spendCannonMaterialCost(state, materialCost),
+        cannonTier: nextCannon.tier
+      }, `Crafted cannon upgrade: ${nextCannon.name}.`);
     }
     case "SINK_ENEMY_SHIP": {
       const ballsPerBattle = getEffectiveBallsPerBattle(state);
