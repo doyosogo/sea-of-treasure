@@ -113,7 +113,8 @@ button:disabled {
 .shipwright-page,
 .achievements-page,
 .materials-page,
-.my-ship-page {
+.my-ship-page,
+.settings-page {
   display: grid;
   gap: 20px;
 }
@@ -548,6 +549,92 @@ h2 {
 .material-list {
   display: grid;
   gap: 10px;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.save-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 12px;
+  color: var(--cream);
+  background: var(--navy-950);
+  border: 3px solid var(--navy-600);
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.35);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.file-upload-label {
+  color: var(--gold-300);
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.save-file-input {
+  width: 100%;
+  padding: 12px;
+  color: var(--cream);
+  background: var(--navy-950);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+}
+
+.debug-json {
+  min-height: 260px;
+}
+
+.warning-box,
+.settings-status {
+  margin: 0;
+  padding: 12px;
+  border: 3px solid #b75d5a;
+  background: rgba(125, 63, 66, 0.36);
+  box-shadow: 3px 3px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+}
+
+.settings-status.success {
+  color: var(--navy-950);
+  background: #8ed0c4;
+  border-color: #6fa6a6;
+}
+
+.settings-status.error {
+  background: rgba(125, 63, 66, 0.72);
+}
+
+.settings-status.warning {
+  color: var(--navy-950);
+  background: var(--gold-300);
+  border-color: var(--gold-500);
+}
+
+.debug-panel summary {
+  color: var(--gold-300);
+  cursor: pointer;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.debug-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.debug-button-row {
+  align-items: stretch;
 }
 
 .my-ship-panel,

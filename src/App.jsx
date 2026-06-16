@@ -10,6 +10,7 @@ import Treasure from "./pages/Treasure.jsx";
 import Shipwright from "./pages/Shipwright.jsx";
 import Achievements from "./pages/Achievements.jsx";
 import Materials from "./pages/Materials.jsx";
+import Settings from "./pages/Settings.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 
 const pages = {
@@ -22,7 +23,8 @@ const pages = {
   achievements: { label: "Achievements", component: Achievements },
   skills: { label: "Skills", component: Skills },
   talents: { label: "Talents", component: Talents },
-  port: { label: "Port", component: Port }
+  port: { label: "Port", component: Port },
+  settings: { label: "Settings", component: Settings }
 };
 
 function App() {

@@ -1486,6 +1486,57 @@ function gameStateReducer(state, action) {
         offlineSummaryVisible: false,
         lastSeen: Date.now()
       };
+    case "SAVE_EXPORTED":
+      return addActivityLogEntry(state, "Save exported.");
+    case "SAVE_RESET_REQUESTED":
+      return addActivityLogEntry(state, "Save reset requested.", "warning");
+    case "DEBUG_ADD_GOLD":
+      return addActivityLogEntry(addLifetimeGold({
+        ...state,
+        gold: state.gold + 10000,
+        lastSeen: Date.now()
+      }, 10000), "Developer tool used: added gold.", "warning");
+    case "DEBUG_ADD_CANNONBALLS":
+      return addActivityLogEntry({
+        ...state,
+        cannonballs: state.cannonballs + 100,
+        lastSeen: Date.now()
+      }, "Developer tool used: added cannonballs.", "warning");
+    case "DEBUG_ADD_TALENT_POINTS":
+      return addActivityLogEntry({
+        ...state,
+        talentPoints: state.talentPoints + 10,
+        lastSeen: Date.now()
+      }, "Developer tool used: added talent points.", "warning");
+    case "DEBUG_ADD_MATERIALS_BUNDLE":
+      return addActivityLogEntry({
+        ...state,
+        materials: mergeMaterials(state.materials, {
+          navigationCharts: 50,
+          compassFragments: 10,
+          gunpowder: 200,
+          cannonParts: 50,
+          ancientRelics: 25,
+          tradeContracts: 20,
+          tradeSeals: 5
+        }),
+        resources: {
+          ...state.resources,
+          fish: state.resources.fish + 100,
+          whaleOil: state.resources.whaleOil + 25
+        },
+        rareMapPieces: state.rareMapPieces + 2,
+        lastSeen: Date.now()
+      }, "Developer tool used: added basic materials bundle.", "warning");
+    case "DEBUG_REPAIR_FULL":
+      return addActivityLogEntry({
+        ...state,
+        hull: {
+          current: getMaxHull(state),
+          max: getMaxHull(state)
+        },
+        lastSeen: Date.now()
+      }, "Developer tool used: repaired hull to full.", "warning");
     default:
       return state;
   }
