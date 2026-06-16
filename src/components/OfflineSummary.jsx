@@ -68,6 +68,12 @@ function OfflineSummary({ gameState, dispatch }) {
             <span>Treasure Maps Found</span>
             <strong>{formatNumber(rewards.mapsFound ?? 0)}</strong>
           </div>
+          {(rewards.rareMapPiecesFound ?? 0) > 0 && (
+            <div className="resource-row">
+              <span>Rare Map Pieces</span>
+              <strong>{formatNumber(rewards.rareMapPiecesFound)}</strong>
+            </div>
+          )}
         </div>
 
         {rewards.stoppedReason && (

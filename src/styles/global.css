@@ -111,7 +111,8 @@ button:disabled {
 .talents-page,
 .treasure-page,
 .shipwright-page,
-.achievements-page {
+.achievements-page,
+.materials-page {
   display: grid;
   gap: 20px;
 }
@@ -176,6 +177,7 @@ button:disabled {
 .trading-summary-card,
 .treasure-summary-card,
 .resource-summary-card,
+.materials-summary-card,
 .shipwright-summary-card,
 .achievements-summary-card,
 .log-card {
@@ -528,6 +530,23 @@ h2 {
   background: rgba(18, 49, 84, 0.72);
   border: 3px solid var(--navy-600);
   box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.material-group {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.material-list {
+  display: grid;
+  gap: 10px;
 }
 
 .combat-card,
@@ -1308,6 +1327,7 @@ h2 {
   .trading-summary-card,
   .treasure-summary-card,
   .resource-summary-card,
+  .materials-summary-card,
   .shipwright-summary-card,
   .achievements-summary-card,
   .log-card {

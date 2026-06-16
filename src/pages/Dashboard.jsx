@@ -497,6 +497,28 @@ function Dashboard({ gameState, dispatch }) {
           </div>
         </article>
 
+        <article className="pixel-panel materials-summary-card">
+          <h2>Materials Summary</h2>
+          <div className="summary-stat-grid">
+            <div className="stat-box">
+              <span>Gunpowder</span>
+              <strong>{formatNumber(gameState.materials.gunpowder)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannon Parts</span>
+              <strong>{formatNumber(gameState.materials.cannonParts)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Ancient Relics</span>
+              <strong>{formatNumber(gameState.materials.ancientRelics)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Rare Map Pieces</span>
+              <strong>{formatNumber(gameState.rareMapPieces)}</strong>
+            </div>
+          </div>
+        </article>
+
         <article className="pixel-panel shipwright-summary-card">
           <h2>Shipwright Summary</h2>
           <div className="summary-stat-grid">

@@ -70,6 +70,18 @@ function createInitialResources() {
   };
 }
 
+function createInitialMaterials() {
+  return {
+    navigationCharts: 0,
+    compassFragments: 0,
+    gunpowder: 0,
+    cannonParts: 0,
+    ancientRelics: 0,
+    tradeContracts: 0,
+    tradeSeals: 0
+  };
+}
+
 function createInitialCraftedUpgrades() {
   return {
     reinforcedHull: 0,
@@ -108,6 +120,8 @@ const initialState = {
   skills: createInitialSkills(),
   cargo: createInitialCargo(),
   resources: createInitialResources(),
+  materials: createInitialMaterials(),
+  rareMapPieces: 0,
   craftedUpgrades: createInitialCraftedUpgrades(),
   lifetimeStats: createInitialLifetimeStats(),
   claimedAchievements: [],
@@ -172,6 +186,15 @@ function normalizeResources(savedResources = {}) {
     fish: Math.max(0, savedResources.fish ?? 0),
     whaleOil: Math.max(0, savedResources.whaleOil ?? 0)
   };
+}
+
+function normalizeMaterials(savedMaterials = {}) {
+  const defaultMaterials = createInitialMaterials();
+
+  return Object.fromEntries(Object.keys(defaultMaterials).map((materialId) => [
+    materialId,
+    Math.max(0, savedMaterials[materialId] ?? 0)
+  ]));
 }
 
 function normalizeCargo(savedCargo = {}) {
@@ -255,6 +278,8 @@ function loadSavedState() {
       skills: normalizeSkills(parsedState.skills),
       cargo: normalizeCargo(parsedState.cargo),
       resources: normalizeResources(parsedState.resources),
+      materials: normalizeMaterials(parsedState.materials),
+      rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
       craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
@@ -409,6 +434,7 @@ function applyVictoryRewards(state, battleEnemy) {
   const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier;
   const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
   const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
+  const rareMapPiecesFound = rollRareMapPieces(0.0005);
   const xpState = applyXp(state, xpGained);
 
   return {
@@ -416,11 +442,13 @@ function applyVictoryRewards(state, battleEnemy) {
       ...xpState,
       gold: xpState.gold + goldGained,
       totalShipsSunk: xpState.totalShipsSunk + 1,
-      treasureMaps: xpState.treasureMaps + mapFound
+      treasureMaps: xpState.treasureMaps + mapFound,
+      rareMapPieces: xpState.rareMapPieces + rareMapPiecesFound
     }, goldGained), 1),
     goldGained,
     xpGained,
-    mapFound
+    mapFound,
+    rareMapPiecesFound
   };
 }
 
@@ -449,6 +477,81 @@ function getFishingResourceReward() {
   const whaleOil = Math.random() < 0.1 ? randomInt(1, 3) : 0;
 
   return { fish, whaleOil };
+}
+
+function getSkillMaterialReward(skillId) {
+  switch (skillId) {
+    case "navigation":
+      return {
+        navigationCharts: randomInt(1, 3),
+        compassFragments: Math.random() < 0.25 ? 1 : 0
+      };
+    case "gunnery":
+      return {
+        gunpowder: randomInt(2, 5),
+        cannonParts: Math.random() < 0.15 ? 1 : 0
+      };
+    case "trading":
+      return {
+        tradeContracts: 1,
+        tradeSeals: Math.random() < 0.1 ? 1 : 0
+      };
+    default:
+      return null;
+  }
+}
+
+function getTreasureMaterialReward(site) {
+  const rareSite = site.requiredSkillLevel >= 8;
+
+  return {
+    ancientRelics: rareSite ? randomInt(3, 6) : randomInt(1, 3)
+  };
+}
+
+function mergeMaterials(materials, rewards = {}) {
+  return {
+    ...materials,
+    navigationCharts: (materials.navigationCharts ?? 0) + (rewards.navigationCharts ?? 0),
+    compassFragments: (materials.compassFragments ?? 0) + (rewards.compassFragments ?? 0),
+    gunpowder: (materials.gunpowder ?? 0) + (rewards.gunpowder ?? 0),
+    cannonParts: (materials.cannonParts ?? 0) + (rewards.cannonParts ?? 0),
+    ancientRelics: (materials.ancientRelics ?? 0) + (rewards.ancientRelics ?? 0),
+    tradeContracts: (materials.tradeContracts ?? 0) + (rewards.tradeContracts ?? 0),
+    tradeSeals: (materials.tradeSeals ?? 0) + (rewards.tradeSeals ?? 0)
+  };
+}
+
+function getSkillMaterialLogText(skillId, rewards) {
+  if (!rewards) {
+    return "";
+  }
+
+  switch (skillId) {
+    case "navigation":
+      return ` Found ${rewards.navigationCharts} Navigation Chart${rewards.navigationCharts === 1 ? "" : "s"}.` +
+        (rewards.compassFragments > 0 ? " Recovered a Compass Fragment." : "");
+    case "gunnery":
+      return ` Produced ${rewards.gunpowder} Gunpowder.` +
+        (rewards.cannonParts > 0 ? ` Recovered ${rewards.cannonParts} Cannon Part.` : "");
+    case "trading":
+      return ` Secured ${rewards.tradeContracts} Trade Contract.` +
+        (rewards.tradeSeals > 0 ? " Earned a Trade Seal." : "");
+    default:
+      return "";
+  }
+}
+
+function rollRareMapPieces(chance, attempts = 1) {
+  let pieces = 0;
+
+  for (let index = 0; index < attempts; index += 1) {
+    if (Math.random() < chance) {
+      pieces += 1;
+    }
+  }
+
+  return pieces;
 }
 
 function getRareTreasure(now) {
@@ -568,7 +671,7 @@ function gameStateReducer(state, action) {
       };
 
       if (enemyCurrentHP <= 0) {
-        const { state: rewardedState, goldGained, xpGained, mapFound } = applyVictoryRewards(firedState, enemy);
+        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound } = applyVictoryRewards(firedState, enemy);
         const victoryState = addActivityLogEntry({
           ...rewardedState,
           currentBattle: null,
@@ -580,10 +683,13 @@ function gameStateReducer(state, action) {
         const recoveredState = cannonballsRecovered > 0
           ? addActivityLogEntry(critState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
           : critState;
+        const rareMapPieceState = rareMapPiecesFound > 0
+          ? addActivityLogEntry(recoveredState, "You discovered a Rare Map Piece.")
+          : recoveredState;
 
         return mapFound > 0
-          ? addActivityLogEntry(recoveredState, "Found a treasure map among the wreckage.")
-          : recoveredState;
+          ? addActivityLogEntry(rareMapPieceState, "Found a treasure map among the wreckage.")
+          : rareMapPieceState;
       }
 
       const incomingDamage = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction));
@@ -932,6 +1038,8 @@ function gameStateReducer(state, action) {
       const xpReward = site.xpReward * talentBonuses.xpMultiplier;
       const rareChance = site.rareChance * talentBonuses.treasureChanceMultiplier;
       const rareFound = Math.random() < rareChance ? getRareTreasure(now) : null;
+      const materialReward = getTreasureMaterialReward(site);
+      const rareMapPiecesFound = rollRareMapPieces(0.005);
       const { skillState: updatedTreasureSkill, levelsGained } = applySkillXp(
         treasureSkillDefinition,
         state.skills.treasureHunting,
@@ -939,11 +1047,15 @@ function gameStateReducer(state, action) {
       );
       const levelText = levelsGained > 0 ? ` Treasure Hunting gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
       const rareText = rareFound ? ` Found ${rareFound.name}.` : "";
+      const relicText = ` Recovered ${materialReward.ancientRelics} Ancient Relic${materialReward.ancientRelics === 1 ? "" : "s"}.`;
+      const rareMapPieceText = rareMapPiecesFound > 0 ? " You discovered a Rare Map Piece." : "";
 
       return addActivityLogEntry(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
+        materials: mergeMaterials(state.materials, materialReward),
+        rareMapPieces: state.rareMapPieces + rareMapPiecesFound,
         activeTreasureDig: null,
         treasureInventory: rareFound ? [rareFound, ...state.treasureInventory] : state.treasureInventory,
         lifetimeStats: {
@@ -955,7 +1067,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           treasureHunting: updatedTreasureSkill
         }
-      }, goldReward), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${rareText}${levelText}`);
+      }, goldReward), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${relicText}${rareText}${rareMapPieceText}${levelText}`);
     }
     case "CANCEL_TREASURE_DIG":
       if (!state.activeTreasureDig) {
@@ -1005,6 +1117,7 @@ function gameStateReducer(state, action) {
       const talentBonuses = getTalentBonuses(state);
       const goldReward = getSkillGoldReward(skillDefinition.id);
       const fishingReward = skillDefinition.id === "fishing" ? getFishingResourceReward() : null;
+      const materialReward = getSkillMaterialReward(skillDefinition.id);
       const skillXpReward = BASE_SKILL_XP_REWARD * talentBonuses.xpMultiplier;
       const { skillState: rewardedSkillState, levelsGained } = applySkillXp(
         skillDefinition,
@@ -1020,11 +1133,13 @@ function gameStateReducer(state, action) {
       const goldText = goldReward > 0 ? ` +${goldReward} gold.` : "";
       const fishText = fishingReward ? ` Caught ${fishingReward.fish} Fish.` : "";
       const whaleOilText = fishingReward?.whaleOil > 0 ? ` Found ${fishingReward.whaleOil} Whale Oil.` : "";
+      const materialText = getSkillMaterialLogText(skillDefinition.id, materialReward);
 
       return addActivityLogEntry(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
+        materials: materialReward ? mergeMaterials(state.materials, materialReward) : state.materials,
         resources: fishingReward ? {
           ...state.resources,
           fish: state.resources.fish + fishingReward.fish,
@@ -1034,7 +1149,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
         }
-      }, goldReward), `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${levelText}`);
+      }, goldReward), `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${materialText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
@@ -1229,6 +1344,7 @@ function gameStateReducer(state, action) {
       const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
       const cannonballsRecovered = rollCannonballRecovery(state, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
       const mapsFound = rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk);
+      const rareMapPiecesFound = rollRareMapPieces(0.0005, enemiesSunk);
       const goldEarned = enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier;
       const xpEarned = enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier;
       const xpState = applyXp({
@@ -1243,6 +1359,7 @@ function gameStateReducer(state, action) {
         isIdling: !(limitedByCannonballs || limitedByHull),
         totalShipsSunk: state.totalShipsSunk + enemiesSunk,
         treasureMaps: state.treasureMaps + mapsFound,
+        rareMapPieces: state.rareMapPieces + rareMapPiecesFound,
         lastSeen: action.now ?? Date.now()
       }, xpEarned);
       const idleState = addLifetimeShipsSunk(addLifetimeGold(xpState, goldEarned + passiveGold), enemiesSunk);
@@ -1252,11 +1369,14 @@ function gameStateReducer(state, action) {
       const mapState = mapsFound > 0
         ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
         : recoveredState;
+      const rareMapPieceState = rareMapPiecesFound > 0
+        ? addActivityLogEntry(mapState, "You discovered a Rare Map Piece.")
+        : mapState;
       const stoppedState = limitedByCannonballs
-        ? addActivityLogEntry(mapState, "Idle combat stopped: not enough cannonballs.", "warning")
+        ? addActivityLogEntry(rareMapPieceState, "Idle combat stopped: not enough cannonballs.", "warning")
         : limitedByHull
-          ? addActivityLogEntry(mapState, "Idle combat stopped: your ship was defeated.", "warning")
-          : mapState;
+          ? addActivityLogEntry(rareMapPieceState, "Idle combat stopped: your ship was defeated.", "warning")
+          : rareMapPieceState;
 
       return addActivityLogEntry(stoppedState, `Idle combat defeated ${enemiesSunk} ${estimate.enemy.name}${enemiesSunk === 1 ? "" : "s"}.`);
     }
@@ -1308,6 +1428,7 @@ function gameStateReducer(state, action) {
         },
         totalShipsSunk: state.totalShipsSunk + enemiesSunk,
         treasureMaps: state.treasureMaps + (rewards.mapsFound ?? 0),
+        rareMapPieces: state.rareMapPieces + (rewards.rareMapPiecesFound ?? 0),
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()

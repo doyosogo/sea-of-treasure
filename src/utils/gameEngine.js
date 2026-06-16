@@ -292,6 +292,18 @@ export function rollEnemyMapDrops(mapDropChance, enemiesSunk) {
   return mapsFound;
 }
 
+export function rollRareMapPieces(chance, attempts = 1) {
+  let pieces = 0;
+
+  for (let index = 0; index < attempts; index += 1) {
+    if (Math.random() < chance) {
+      pieces += 1;
+    }
+  }
+
+  return pieces;
+}
+
 export function generateMarketPrices() {
   return Object.fromEntries(tradeGoods.map((good) => [
     good.id,
@@ -452,6 +464,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
     cannonballsUsed: netCannonballsUsed,
     hullDamageTaken,
     mapsFound: rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk),
+    rareMapPiecesFound: rollRareMapPieces(0.0005, enemiesSunk),
     stoppedReason
   };
 }

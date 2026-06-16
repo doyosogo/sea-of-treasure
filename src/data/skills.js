@@ -5,19 +5,19 @@ export const skills = [
   {
     id: "navigation",
     name: "Navigation",
-    description: "Read currents, stars, and wind to chart safer sea routes.",
+    description: "Produces navigation materials for future voyage upgrades.",
     actionName: "Chart Sea Route",
     maxLevel: 10,
     xpPerLevel,
     goldCostPerAction: 50,
     actionTimeSeconds: 10,
-    rewardType: "Navigation XP",
-    unlockText: "Chart routes to improve future voyage systems."
+    rewardType: "Navigation XP + Navigation Charts, rare Compass Fragments",
+    unlockText: "Chart routes to gather navigation materials."
   },
   {
     id: "fishing",
     name: "Fishing",
-    description: "Cast nets from the stern and sell the best of the catch.",
+    description: "Produces Fish and rare Whale Oil.",
     actionName: "Cast Nets",
     maxLevel: 10,
     xpPerLevel,
@@ -29,19 +29,19 @@ export const skills = [
   {
     id: "treasureHunting",
     name: "Treasure Hunting",
-    description: "Study worn maps and chase rumors of buried coin.",
+    description: "Produces relics and rare discoveries.",
     actionName: "Search Old Map",
     maxLevel: 10,
     xpPerLevel,
     goldCostPerAction: 150,
     actionTimeSeconds: 30,
     rewardType: "Treasure XP + chance of gold burst",
-    unlockText: "Searches can reveal extra gold with a lucky find."
+    unlockText: "Advanced treasure digs produce relics and rare discoveries."
   },
   {
     id: "shipwright",
     name: "Shipwright",
-    description: "Patch, plane, and refit spare parts into something useful.",
+    description: "Uses materials for upgrades.",
     actionName: "Repair Spare Parts",
     maxLevel: 10,
     xpPerLevel,
@@ -53,25 +53,25 @@ export const skills = [
   {
     id: "trading",
     name: "Trading",
-    description: "Move small cargo between safe harbours for profit.",
+    description: "Produces commercial materials.",
     actionName: "Run Small Trade Route",
     maxLevel: 10,
     xpPerLevel,
     goldCostPerAction: 250,
     actionTimeSeconds: 35,
-    rewardType: "Trading XP + gold",
-    unlockText: "Trade routes return gold and Trading experience."
+    rewardType: "Trading XP + gold, Trade Contracts, rare Trade Seals",
+    unlockText: "Trade routes return gold, Trading experience, and commercial materials."
   },
   {
     id: "gunnery",
     name: "Gunnery",
-    description: "Drill the crew on aim, timing, and calm reloads.",
+    description: "Produces cannon upgrade materials.",
     actionName: "Target Practice",
     maxLevel: 10,
     xpPerLevel,
     goldCostPerAction: 100,
     actionTimeSeconds: 20,
-    rewardType: "Gunnery XP",
-    unlockText: "Practice improves Gunnery for later combat systems."
+    rewardType: "Gunnery XP + Gunpowder, rare Cannon Parts",
+    unlockText: "Practice gathers cannon materials for future upgrades."
   }
 ];

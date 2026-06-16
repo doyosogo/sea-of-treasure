@@ -8,6 +8,7 @@ import Port from "./pages/Port.jsx";
 import Treasure from "./pages/Treasure.jsx";
 import Shipwright from "./pages/Shipwright.jsx";
 import Achievements from "./pages/Achievements.jsx";
+import Materials from "./pages/Materials.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 
 const pages = {
@@ -15,6 +16,7 @@ const pages = {
   fleet: { label: "Fleet", component: Fleet },
   treasure: { label: "Treasure", component: Treasure },
   shipwright: { label: "Shipwright", component: Shipwright },
+  materials: { label: "Materials", component: Materials },
   achievements: { label: "Achievements", component: Achievements },
   skills: { label: "Skills", component: Skills },
   talents: { label: "Talents", component: Talents },
