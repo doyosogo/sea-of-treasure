@@ -24,7 +24,7 @@ import { enemies } from "../data/enemies.js";
 import { skills } from "../data/skills.js";
 import { treasureSites } from "../data/treasures.js";
 
-function Dashboard({ gameState, dispatch }) {
+function Dashboard({ gameState, dispatch, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const talentBonuses = getTalentBonuses(gameState);
@@ -238,6 +238,13 @@ function Dashboard({ gameState, dispatch }) {
             type="button"
           >
             Repair Hull
+          </button>
+          <button
+            className="chunky-button nav-hint-button"
+            onClick={() => onNavigate?.("myShip")}
+            type="button"
+          >
+            View detailed ship stats in My Ship
           </button>
         </article>
 

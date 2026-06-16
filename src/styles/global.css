@@ -112,7 +112,8 @@ button:disabled {
 .treasure-page,
 .shipwright-page,
 .achievements-page,
-.materials-page {
+.materials-page,
+.my-ship-page {
   display: grid;
   gap: 20px;
 }
@@ -547,6 +548,21 @@ h2 {
 .material-list {
   display: grid;
   gap: 10px;
+}
+
+.my-ship-panel,
+.hull-panel,
+.cannon-status-panel,
+.upgrade-bonuses-panel,
+.talent-bonuses-panel,
+.readiness-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.nav-hint-button {
+  justify-self: start;
 }
 
 .combat-card,
@@ -1345,6 +1361,10 @@ h2 {
 
   .chunky-button {
     width: 100%;
+  }
+
+  .nav-hint-button {
+    justify-self: stretch;
   }
 
   .ship-grid {

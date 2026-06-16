@@ -2,6 +2,7 @@ import { useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Fleet from "./pages/Fleet.jsx";
+import MyShip from "./pages/MyShip.jsx";
 import Skills from "./pages/Skills.jsx";
 import Talents from "./pages/Talents.jsx";
 import Port from "./pages/Port.jsx";
@@ -14,6 +15,7 @@ import { useGameState } from "./hooks/useGameState.js";
 const pages = {
   dashboard: { label: "Dashboard", component: Dashboard },
   fleet: { label: "Fleet", component: Fleet },
+  myShip: { label: "My Ship", component: MyShip },
   treasure: { label: "Treasure", component: Treasure },
   shipwright: { label: "Shipwright", component: Shipwright },
   materials: { label: "Materials", component: Materials },
@@ -47,7 +49,7 @@ function App() {
       </header>
 
       <main className="page-frame">
-        <ActivePage gameState={gameState} dispatch={dispatch} />
+        <ActivePage gameState={gameState} dispatch={dispatch} onNavigate={setActivePage} />
       </main>
 
       <OfflineSummary gameState={gameState} dispatch={dispatch} />

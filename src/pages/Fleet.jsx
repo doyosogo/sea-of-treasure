@@ -55,6 +55,9 @@ function Fleet({ gameState, dispatch }) {
         <div>
           <p className="eyebrow">Current Active Ship</p>
           <h2>{activeShip.name}</h2>
+          <p className="shop-note">
+            Fleet is used to buy and activate ships. Use My Ship to inspect your current ship stats and upgrades.
+          </p>
         </div>
         <div className="fleet-stat-grid">
           <div className="stat-box">
