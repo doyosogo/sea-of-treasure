@@ -105,6 +105,7 @@ button:disabled {
 }
 
 .dashboard,
+.battle-page,
 .fleet-page,
 .port-page,
 .skills-page,
@@ -170,6 +171,7 @@ button:disabled {
 
 .rates-card,
 .controls-card,
+.combat-summary-card,
 .combat-card,
 .enemy-selector-card,
 .current-battle-card,
@@ -652,6 +654,48 @@ h2 {
   justify-self: start;
 }
 
+.battle-page {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+}
+
+.idle-combat-panel,
+.combat-action-panel,
+.player-combat-panel,
+.hull-combat-panel,
+.battle-section {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.combat-action-panel {
+  justify-items: center;
+}
+
+.battle-control-card {
+  display: grid;
+  width: min(760px, 100%);
+  min-width: 300px;
+  gap: 18px;
+  padding: 20px;
+  background: rgba(18, 49, 84, 0.72);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.battle-control-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.combat-action-button {
+  width: 100%;
+  min-height: 64px;
+  font-size: 1.05rem;
+}
+
 .combat-card,
 .enemy-selector-card,
 .current-battle-card {
@@ -661,24 +705,38 @@ h2 {
 
 .combat-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.readable-card-grid,
+.idle-estimate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
 }
 
 .enemy-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
 }
 
 .enemy-card,
 .battle-panel {
   display: grid;
+  min-width: 0;
   gap: 14px;
   padding: 16px;
   background: rgba(18, 49, 84, 0.72);
   border: 3px solid var(--navy-600);
   box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.battle-log-card .activity-log {
+  max-height: 360px;
+  min-height: 250px;
+  overflow-y: auto;
 }
 
 .enemy-card.selected {
@@ -1421,6 +1479,7 @@ h2 {
   .ship-card,
   .rates-card,
   .controls-card,
+  .combat-summary-card,
   .combat-card,
   .enemy-selector-card,
   .current-battle-card,

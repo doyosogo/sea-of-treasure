@@ -1,6 +1,7 @@
 import { useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Battle from "./pages/Battle.jsx";
 import Fleet from "./pages/Fleet.jsx";
 import MyShip from "./pages/MyShip.jsx";
 import Skills from "./pages/Skills.jsx";
@@ -15,6 +16,7 @@ import { useGameState } from "./hooks/useGameState.js";
 
 const pages = {
   dashboard: { label: "Dashboard", component: Dashboard },
+  battle: { label: "Battle", component: Battle },
   fleet: { label: "Fleet", component: Fleet },
   myShip: { label: "My Ship", component: MyShip },
   treasure: { label: "Treasure", component: Treasure },
