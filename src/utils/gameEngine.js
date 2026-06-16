@@ -274,6 +274,24 @@ export function rollTreasureMapDrops(gameState, shipsSunk) {
   return mapsFound;
 }
 
+export function rollEnemyMapDrops(mapDropChance, enemiesSunk) {
+  const wholeEnemies = Math.floor(enemiesSunk);
+  const fractionalEnemy = enemiesSunk - wholeEnemies;
+  let mapsFound = 0;
+
+  for (let index = 0; index < wholeEnemies; index += 1) {
+    if (Math.random() < mapDropChance) {
+      mapsFound += 1;
+    }
+  }
+
+  if (fractionalEnemy > 0 && Math.random() < mapDropChance * fractionalEnemy) {
+    mapsFound += 1;
+  }
+
+  return mapsFound;
+}
+
 export function generateMarketPrices() {
   return Object.fromEntries(tradeGoods.map((good) => [
     good.id,
@@ -356,6 +374,39 @@ export function calcOfflineCap(gameState) {
   return cappedHours * 60 * 60 * 1000;
 }
 
+export function getIdleCombatEstimate(gameState) {
+  const enemy = generateEnemy(gameState);
+  const combatStats = getPlayerCombatStats(gameState);
+  const craftingBonuses = getCraftingBonuses(gameState);
+  const talentBonuses = getTalentBonuses(gameState);
+  const ballsPerVolley = getEffectiveBallsPerBattle(gameState);
+  const averageCritMultiplier = 1 + combatStats.critChance * (combatStats.critMultiplier - 1);
+  const averageVolleyDamage = Math.max(1, combatStats.volleyDamage * averageCritMultiplier);
+  const volleysNeeded = Math.max(1, Math.ceil(enemy.maxHP / averageVolleyDamage));
+  const volleyIntervalSeconds = 10 / craftingBonuses.shipsPerHourMultiplier;
+  const secondsPerEnemy = volleysNeeded * volleyIntervalSeconds;
+  const enemiesPerHour = secondsPerEnemy > 0 ? 3600 / secondsPerEnemy : 0;
+  const hullDamagePerEnemy = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction));
+  const cannonballsPerEnemy = volleysNeeded * ballsPerVolley;
+
+  return {
+    enemy,
+    averageVolleyDamage,
+    volleysNeeded,
+    volleyIntervalSeconds,
+    secondsPerEnemy,
+    enemiesPerHour,
+    goldPerHour: enemiesPerHour * enemy.goldReward * talentBonuses.goldMultiplier + talentBonuses.passiveGoldPerHour,
+    xpPerHour: enemiesPerHour * enemy.xpReward * talentBonuses.xpMultiplier,
+    cannonballsPerHour: enemiesPerHour * cannonballsPerEnemy,
+    hullDamagePerHour: enemiesPerHour * hullDamagePerEnemy,
+    ballsPerVolley,
+    hullDamagePerEnemy,
+    goldPerEnemy: enemy.goldReward * talentBonuses.goldMultiplier,
+    xpPerEnemy: enemy.xpReward * talentBonuses.xpMultiplier
+  };
+}
+
 export function calcOfflineProgress(lastSeen, now, gameState) {
   const timeAwayMs = Math.max(0, now - lastSeen);
 
@@ -364,37 +415,43 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   }
 
   const offlineCapMs = calcOfflineCap(gameState);
-  let effectiveTimeMs = Math.min(timeAwayMs, offlineCapMs);
-  const currentShip = getCurrentShip(gameState);
+  const cappedTimeMs = Math.min(timeAwayMs, offlineCapMs);
+  const estimate = getIdleCombatEstimate(gameState);
   const talentBonuses = getTalentBonuses(gameState);
-  const ballsPerBattle = getEffectiveBallsPerBattle(gameState);
   let stoppedReason = timeAwayMs > offlineCapMs ? "offline_cap_reached" : null;
-  const effectiveShipsPerHour = getEffectiveShipsPerHour(gameState);
-  let shipsSunk = (effectiveShipsPerHour * effectiveTimeMs) / (60 * 60 * 1000);
-  let cannonballsSpent = shipsSunk * ballsPerBattle;
+  const maxEnemiesByTime = Math.floor((cappedTimeMs / 1000) / estimate.secondsPerEnemy);
+  const maxEnemiesByCannonballs = Math.floor(gameState.cannonballs / (estimate.volleysNeeded * estimate.ballsPerVolley));
+  const maxEnemiesByHull = Math.floor((gameState.hull?.current ?? estimate.hullDamagePerEnemy) / estimate.hullDamagePerEnemy);
+  let enemiesSunk = Math.max(0, Math.min(maxEnemiesByTime, maxEnemiesByCannonballs, maxEnemiesByHull));
 
-  if (cannonballsSpent > gameState.cannonballs) {
-    shipsSunk = gameState.cannonballs / ballsPerBattle;
-    cannonballsSpent = gameState.cannonballs;
-    effectiveTimeMs = effectiveShipsPerHour > 0
-      ? (shipsSunk / effectiveShipsPerHour) * 60 * 60 * 1000
-      : 0;
+  if (maxEnemiesByTime > 0 && maxEnemiesByTime > maxEnemiesByCannonballs && maxEnemiesByCannonballs <= maxEnemiesByHull) {
     stoppedReason = "out_of_cannonballs";
+  } else if (maxEnemiesByTime > 0 && maxEnemiesByTime >= maxEnemiesByHull && maxEnemiesByHull <= maxEnemiesByCannonballs) {
+    stoppedReason = "hull_destroyed";
   }
 
-  const cannonballsRecovered = rollCannonballRecovery(gameState, shipsSunk, ballsPerBattle);
-  const cannonballsUsed = Math.max(0, cannonballsSpent - cannonballsRecovered);
+  const volleysFired = enemiesSunk * estimate.volleysNeeded;
+  const cannonballsSpent = volleysFired * estimate.ballsPerVolley;
+  const cannonballsRecovered = rollCannonballRecovery(gameState, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
+  const netCannonballsUsed = Math.max(0, cannonballsSpent - cannonballsRecovered);
+  const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
+  const effectiveTimeMs = Math.min(cappedTimeMs, enemiesSunk * estimate.secondsPerEnemy * 1000);
 
   return {
     timeAwayMs,
     effectiveTimeMs,
-    shipsSunk,
-    goldEarned: (shipsSunk * currentShip.goldPerShip * talentBonuses.goldMultiplier) +
+    enemiesSunk,
+    shipsSunk: enemiesSunk,
+    volleysFired,
+    goldEarned: (enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier) +
       ((talentBonuses.passiveGoldPerHour * effectiveTimeMs) / (60 * 60 * 1000)),
-    xpEarned: shipsSunk * currentShip.xpPerShip * talentBonuses.xpMultiplier,
-    cannonballsUsed,
+    xpEarned: enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier,
+    cannonballsSpent,
     cannonballsRecovered,
-    mapsFound: rollTreasureMapDrops(gameState, shipsSunk),
+    netCannonballsUsed,
+    cannonballsUsed: netCannonballsUsed,
+    hullDamageTaken,
+    mapsFound: rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk),
     stoppedReason
   };
 }

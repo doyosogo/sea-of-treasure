@@ -1,8 +1,6 @@
 import {
   calcCannonUpgradeCost,
   calcOfflineCap,
-  calcGoldPerHour,
-  calcXpPerHour,
   formatDuration,
   formatNumber,
   getCargoCapacity,
@@ -12,6 +10,7 @@ import {
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
   generateEnemy,
+  getIdleCombatEstimate,
   getCurrentCannon,
   getCurrentShip,
   getPlayerCombatStats,
@@ -46,6 +45,7 @@ function Dashboard({ gameState, dispatch }) {
   const marketCooldown = getMarketCooldownRemaining(gameState);
   const craftingBonuses = getCraftingBonuses(gameState);
   const combatStats = getPlayerCombatStats(gameState);
+  const idleEstimate = getIdleCombatEstimate(gameState);
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
   const repairCost = missingHull * 10;
@@ -131,19 +131,31 @@ function Dashboard({ gameState, dispatch }) {
         </article>
 
         <article className="pixel-panel rates-card">
-          <h2>Idle Rates</h2>
-          <div className="stat-grid three-up">
+          <h2>Estimated Idle Combat</h2>
+          <div className="summary-stat-grid">
             <div className="stat-box">
-              <span>Ships / Hour</span>
-              <strong>{formatNumber(getEffectiveShipsPerHour(gameState))}</strong>
+              <span>Enemy Kills / Hour</span>
+              <strong>{formatNumber(idleEstimate.enemiesPerHour)}</strong>
             </div>
             <div className="stat-box">
               <span>Gold / Hour</span>
-              <strong>{formatNumber(calcGoldPerHour(gameState))}</strong>
+              <strong>{formatNumber(idleEstimate.goldPerHour)}</strong>
             </div>
             <div className="stat-box">
               <span>XP / Hour</span>
-              <strong>{formatNumber(calcXpPerHour(gameState))}</strong>
+              <strong>{formatNumber(idleEstimate.xpPerHour)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Cannonballs / Hour</span>
+              <strong>{formatNumber(idleEstimate.cannonballsPerHour)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Hull Damage / Hour</span>
+              <strong>{formatNumber(idleEstimate.hullDamagePerHour)}</strong>
+            </div>
+            <div className="stat-box">
+              <span>Selected Enemy</span>
+              <strong>{idleEstimate.enemy.name}</strong>
             </div>
           </div>
         </article>

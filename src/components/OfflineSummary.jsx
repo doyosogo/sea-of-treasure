@@ -2,7 +2,8 @@ import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 const stoppedReasonMessages = {
   offline_cap_reached: "Your crew reached the 24 hour offline cap.",
-  out_of_cannonballs: "Your crew ran out of cannonballs, so progress stopped early."
+  out_of_cannonballs: "Your crew ran out of cannonballs, so progress stopped early.",
+  hull_destroyed: "Your ship was defeated while you were away. Repair your hull before sailing again."
 };
 
 function OfflineSummary({ gameState, dispatch }) {
@@ -32,8 +33,12 @@ function OfflineSummary({ gameState, dispatch }) {
             <strong>{formatDuration(rewards.effectiveTimeMs)}</strong>
           </div>
           <div className="resource-row">
-            <span>Ships Sunk</span>
-            <strong>{formatNumber(rewards.shipsSunk)}</strong>
+            <span>Enemies Defeated</span>
+            <strong>{formatNumber(rewards.enemiesSunk ?? rewards.shipsSunk ?? 0)}</strong>
+          </div>
+          <div className="resource-row">
+            <span>Volleys Fired</span>
+            <strong>{formatNumber(rewards.volleysFired ?? 0)}</strong>
           </div>
           <div className="resource-row">
             <span>Gold Earned</span>
@@ -44,17 +49,23 @@ function OfflineSummary({ gameState, dispatch }) {
             <strong>{formatNumber(rewards.xpEarned)}</strong>
           </div>
           <div className="resource-row">
-            <span>Cannonballs Used</span>
-            <strong>{formatNumber(rewards.cannonballsUsed)}</strong>
+            <span>Cannonballs Spent</span>
+            <strong>{formatNumber(rewards.cannonballsSpent ?? rewards.cannonballsUsed ?? 0)}</strong>
           </div>
-          {(rewards.cannonballsRecovered ?? 0) > 0 && (
-            <div className="resource-row">
-              <span>Cannonballs Recovered</span>
-              <strong>{formatNumber(rewards.cannonballsRecovered)}</strong>
-            </div>
-          )}
           <div className="resource-row">
-            <span>Maps Found</span>
+            <span>Cannonballs Recovered</span>
+            <strong>{formatNumber(rewards.cannonballsRecovered ?? 0)}</strong>
+          </div>
+          <div className="resource-row">
+            <span>Net Cannonballs Used</span>
+            <strong>{formatNumber(rewards.netCannonballsUsed ?? rewards.cannonballsUsed ?? 0)}</strong>
+          </div>
+          <div className="resource-row">
+            <span>Hull Damage Taken</span>
+            <strong>{formatNumber(rewards.hullDamageTaken ?? 0)}</strong>
+          </div>
+          <div className="resource-row">
+            <span>Treasure Maps Found</span>
             <strong>{formatNumber(rewards.mapsFound ?? 0)}</strong>
           </div>
         </div>

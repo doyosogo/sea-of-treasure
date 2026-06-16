@@ -18,6 +18,7 @@ import {
   getEffectiveBallsPerBattle,
   getEffectiveShipsPerHour,
   getFishSellValue,
+  getIdleCombatEstimate,
   getMaxHull,
   getPlayerCombatStats,
   isAchievementUnlocked,
@@ -32,6 +33,7 @@ import {
   getWhaleOilSellValue,
   getXpRequired,
   rollCannonballRecovery,
+  rollEnemyMapDrops,
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
 
@@ -122,6 +124,7 @@ const initialState = {
   pendingOfflineRewards: null,
   offlineSummaryVisible: false,
   isIdling: false,
+  idleProgressSeconds: 0,
   lastSeen: Date.now()
 };
 
@@ -263,6 +266,7 @@ function loadSavedState() {
       currentBattle: parsedState.currentBattle ?? null,
       claimedAchievements: Array.isArray(parsedState.claimedAchievements) ? parsedState.claimedAchievements : [],
       isIdling: false,
+      idleProgressSeconds: parsedState.idleProgressSeconds ?? 0,
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
@@ -514,6 +518,10 @@ function gameStateReducer(state, action) {
       };
     }
     case "START_BATTLE": {
+      if (state.isIdling) {
+        return addActivityLogEntry(state, "Stop idling before starting an active battle.", "warning");
+      }
+
       if (state.currentBattle || (state.hull?.current ?? 0) <= 0) {
         return state;
       }
@@ -1121,19 +1129,29 @@ function gameStateReducer(state, action) {
         lastSeen: Date.now()
       };
     case "START_IDLE":
+      if (state.currentBattle) {
+        return addActivityLogEntry(state, "Finish your current battle before idling.", "warning");
+      }
+
       if (state.cannonballs <= 0) {
         return addActivityLogEntry(state, "Cannot start idling without cannonballs.", "warning");
+      }
+
+      if ((state.hull?.current ?? 0) <= 0) {
+        return addActivityLogEntry(state, "Repair your hull before idling.", "warning");
       }
 
       return {
         ...state,
         isIdling: true,
+        idleProgressSeconds: 0,
         lastSeen: Date.now()
       };
     case "STOP_IDLE":
       return {
         ...state,
         isIdling: false,
+        idleProgressSeconds: 0,
         lastSeen: Date.now()
       };
     case "TICK_IDLE": {
@@ -1141,92 +1159,106 @@ function gameStateReducer(state, action) {
         return state;
       }
 
-      const currentShip = getCurrentShip(state);
       const talentBonuses = getTalentBonuses(state);
       const seconds = action.seconds ?? 1;
-      const ballsPerBattle = getEffectiveBallsPerBattle(state);
-      const shipsSunk = (getEffectiveShipsPerHour(state) / 3600) * seconds;
-      const cannonballsNeeded = shipsSunk * ballsPerBattle;
+      const estimate = getIdleCombatEstimate(state);
       const passiveGold = (talentBonuses.passiveGoldPerHour / 3600) * seconds;
+      const accumulatedSeconds = (state.idleProgressSeconds ?? 0) + seconds;
+      const enemiesByTime = Math.floor(accumulatedSeconds / estimate.secondsPerEnemy);
+      const enemiesByCannonballs = Math.floor(state.cannonballs / (estimate.volleysNeeded * estimate.ballsPerVolley));
+      const enemiesByHull = Math.floor((state.hull?.current ?? 0) / estimate.hullDamagePerEnemy);
+      const enemiesSunk = Math.max(0, Math.min(enemiesByTime, enemiesByCannonballs, enemiesByHull));
+      const limitedByCannonballs = enemiesByTime > 0 && enemiesByTime > enemiesByCannonballs && enemiesByCannonballs <= enemiesByHull;
+      const limitedByHull = enemiesByTime > 0 && enemiesByTime >= enemiesByHull && enemiesByHull <= enemiesByCannonballs;
+      const remainingIdleProgressSeconds = limitedByCannonballs || limitedByHull
+        ? 0
+        : accumulatedSeconds - enemiesSunk * estimate.secondsPerEnemy;
 
       if (state.cannonballs <= 0) {
         return addActivityLogEntry({
           ...state,
           isIdling: false,
+          idleProgressSeconds: 0,
           cannonballs: 0,
           lastSeen: action.now ?? Date.now()
-        }, "The ship ran out of cannonballs and stopped idling.", "warning");
+        }, "Idle combat stopped: not enough cannonballs.", "warning");
       }
 
-      if (state.cannonballs < cannonballsNeeded) {
-        const possibleBattles = state.cannonballs / ballsPerBattle;
-        const mapsFound = rollTreasureMapDrops(state, possibleBattles);
-        const cannonballsRecovered = rollCannonballRecovery(state, possibleBattles, ballsPerBattle);
-        const effectiveShipsPerHour = getEffectiveShipsPerHour(state);
-        const effectiveSeconds = effectiveShipsPerHour > 0
-          ? (possibleBattles / effectiveShipsPerHour) * 3600
-          : 0;
-        const partialRewardState = applyBattleRewards({
+      if ((state.hull?.current ?? 0) <= 0) {
+        return addActivityLogEntry({
           ...state,
-          cannonballs: cannonballsRecovered
-        }, possibleBattles, currentShip.xpPerShip);
-        const partialPassiveGold = (talentBonuses.passiveGoldPerHour / 3600) * effectiveSeconds;
-
-        const stoppedState = addActivityLogEntry(addLifetimeGold({
-          ...partialRewardState,
-          gold: partialRewardState.gold + partialPassiveGold,
-          treasureMaps: partialRewardState.treasureMaps + mapsFound,
           isIdling: false,
+          idleProgressSeconds: 0,
           lastSeen: action.now ?? Date.now()
-        }, partialPassiveGold), "The ship ran out of cannonballs and stopped idling.", "warning");
-        const recoveredState = cannonballsRecovered > 0
-          ? addActivityLogEntry(stoppedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
-          : stoppedState;
-
-        return mapsFound > 0
-          ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
-          : recoveredState;
+        }, "Idle combat stopped: your ship was defeated.", "warning");
       }
 
-      const mapsFound = rollTreasureMapDrops(state, shipsSunk);
-      const cannonballsRecovered = rollCannonballRecovery(state, shipsSunk, ballsPerBattle);
-      const remainingCannonballs = state.cannonballs - cannonballsNeeded + cannonballsRecovered;
-      const rewardState = applyBattleRewards({
+      if (enemiesSunk <= 0 && !limitedByCannonballs && !limitedByHull) {
+        return addLifetimeGold({
+          ...state,
+          gold: state.gold + passiveGold,
+          idleProgressSeconds: accumulatedSeconds,
+          lastSeen: action.now ?? Date.now()
+        }, passiveGold);
+      }
+
+      if (enemiesSunk <= 0 && limitedByCannonballs) {
+        return addActivityLogEntry({
+          ...state,
+          isIdling: false,
+          idleProgressSeconds: 0,
+          lastSeen: action.now ?? Date.now()
+        }, "Idle combat stopped: not enough cannonballs.", "warning");
+      }
+
+      if (enemiesSunk <= 0 && limitedByHull) {
+        return addActivityLogEntry({
+          ...state,
+          hull: {
+            current: 0,
+            max: getMaxHull(state)
+          },
+          isIdling: false,
+          idleProgressSeconds: 0,
+          lastSeen: action.now ?? Date.now()
+        }, "Idle combat stopped: your ship was defeated.", "warning");
+      }
+
+      const volleysFired = enemiesSunk * estimate.volleysNeeded;
+      const cannonballsSpent = volleysFired * estimate.ballsPerVolley;
+      const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
+      const cannonballsRecovered = rollCannonballRecovery(state, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
+      const mapsFound = rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk);
+      const goldEarned = enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier;
+      const xpEarned = enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier;
+      const xpState = applyXp({
         ...state,
-        cannonballs: remainingCannonballs
-      }, shipsSunk, currentShip.xpPerShip);
-
-      if (remainingCannonballs <= 0) {
-        const depletedState = addActivityLogEntry(addLifetimeGold({
-          ...rewardState,
-          gold: rewardState.gold + passiveGold,
-          treasureMaps: rewardState.treasureMaps + mapsFound,
-          isIdling: false,
-          cannonballs: 0,
-          lastSeen: action.now ?? Date.now()
-        }, passiveGold), "The ship ran out of cannonballs and stopped idling.", "warning");
-        const recoveredState = cannonballsRecovered > 0
-          ? addActivityLogEntry(depletedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
-          : depletedState;
-
-        return mapsFound > 0
-          ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
-          : recoveredState;
-      }
-
-      const idleState = addLifetimeGold({
-        ...rewardState,
-        gold: rewardState.gold + passiveGold,
-        treasureMaps: rewardState.treasureMaps + mapsFound,
+        gold: state.gold + goldEarned + passiveGold,
+        cannonballs: Math.max(0, state.cannonballs - cannonballsSpent + cannonballsRecovered),
+        hull: {
+          current: Math.max(0, (state.hull?.current ?? getMaxHull(state)) - hullDamageTaken),
+          max: getMaxHull(state)
+        },
+        idleProgressSeconds: remainingIdleProgressSeconds,
+        isIdling: !(limitedByCannonballs || limitedByHull),
+        totalShipsSunk: state.totalShipsSunk + enemiesSunk,
+        treasureMaps: state.treasureMaps + mapsFound,
         lastSeen: action.now ?? Date.now()
-      }, passiveGold);
+      }, xpEarned);
+      const idleState = addLifetimeShipsSunk(addLifetimeGold(xpState, goldEarned + passiveGold), enemiesSunk);
       const recoveredState = cannonballsRecovered > 0
         ? addActivityLogEntry(idleState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
         : idleState;
-
-      return mapsFound > 0
+      const mapState = mapsFound > 0
         ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
         : recoveredState;
+      const stoppedState = limitedByCannonballs
+        ? addActivityLogEntry(mapState, "Idle combat stopped: not enough cannonballs.", "warning")
+        : limitedByHull
+          ? addActivityLogEntry(mapState, "Idle combat stopped: your ship was defeated.", "warning")
+          : mapState;
+
+      return addActivityLogEntry(stoppedState, `Idle combat defeated ${enemiesSunk} ${estimate.enemy.name}${enemiesSunk === 1 ? "" : "s"}.`);
     }
     case "APPLY_OFFLINE_PROGRESS":
       return applyXp(addLifetimeGold({
@@ -1263,16 +1295,23 @@ function gameStateReducer(state, action) {
       }
 
       const rewards = state.pendingOfflineRewards;
+      const netCannonballsUsed = rewards.netCannonballsUsed ?? rewards.cannonballsUsed ?? 0;
+      const enemiesSunk = rewards.enemiesSunk ?? rewards.shipsSunk ?? 0;
+      const hullDamageTaken = rewards.hullDamageTaken ?? 0;
       const baseRewardState = addLifetimeShipsSunk(addLifetimeGold({
         ...state,
         gold: state.gold + rewards.goldEarned,
-        cannonballs: Math.max(0, state.cannonballs - rewards.cannonballsUsed),
-        totalShipsSunk: state.totalShipsSunk + rewards.shipsSunk,
+        cannonballs: Math.max(0, state.cannonballs - netCannonballsUsed),
+        hull: {
+          current: Math.max(0, (state.hull?.current ?? getMaxHull(state)) - hullDamageTaken),
+          max: getMaxHull(state)
+        },
+        totalShipsSunk: state.totalShipsSunk + enemiesSunk,
         treasureMaps: state.treasureMaps + (rewards.mapsFound ?? 0),
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
-      }, rewards.goldEarned), rewards.shipsSunk);
+      }, rewards.goldEarned), enemiesSunk);
       const xpState = applyXp(baseRewardState, rewards.xpEarned);
 
       return addActivityLogEntry(xpState, "Claimed offline rewards.");
