@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
+import { SCENES, SKILL_ICONS, UI_XP, UI_TALENT_POINTS } from "../data/assets.js";
 import { skills } from "../data/skills.js";
 import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 function getSkillXpRequired(skillDefinition, skillState) {
-  return skillState.level >= skillDefinition.maxLevel
-    ? Infinity
-    : skillDefinition.xpPerLevel[skillState.level - 1];
+  return skillState.level >= skillDefinition.maxLevel ? Infinity : skillDefinition.xpPerLevel[skillState.level - 1];
 }
 
 function Skills({ gameState, dispatch }) {
@@ -17,113 +16,99 @@ function Skills({ gameState, dispatch }) {
   }, []);
 
   return (
-    <section className="skills-page">
-      <div className="hero-panel pixel-panel">
-        <div>
-          <p className="eyebrow">Crew Training</p>
-          <h1>Skills</h1>
-        </div>
-        <div className="resource-cluster">
-          <span className="resource-counter">{formatNumber(gameState.gold)} Gold</span>
-          <span className="resource-counter">{formatNumber(gameState.talentPoints)} Talent Points</span>
-        </div>
-      </div>
+    <section
+      className="skills-page academy-scene academy-reset"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5, 8, 14, 0.45), rgba(5, 8, 14, 0.7)), url(${SCENES.academy})`
+      }}
+    >
+      <div className="academy-overlay" aria-hidden="true" />
+      <div className="academy-shell">
+        <header className="academy-topbar">
+          <img alt="Sea of Treasure logo" className="academy-logo" src="/assets/logo/LOGO.png" />
+          <div className="academy-title-copy">
+            <p className="eyebrow">Crew Academy</p>
+            <h1>Crew Academy</h1>
+            <p>Train your crew and improve their mastery.</p>
+          </div>
+          <div className="resource-cluster">
+            <span className="resource-counter">{formatNumber(gameState.gold)} Gold</span>
+            <span className="resource-counter">{formatNumber(gameState.talentPoints)} Talent Points</span>
+          </div>
+        </header>
 
-      <div className="skill-grid">
-        {skills.map((skill) => {
-          const skillState = gameState.skills[skill.id];
-          const xpRequired = getSkillXpRequired(skill, skillState);
-          const xpProgress = xpRequired === Infinity ? 100 : (skillState.xp / xpRequired) * 100;
-          const remainingMs = Math.max(0, skillState.finishesAt - now);
-          const isFinished = skillState.active && remainingMs <= 0;
-          const canStart =
-            !skillState.active &&
-            skillState.level < skill.maxLevel &&
-            gameState.gold >= skill.goldCostPerAction;
-          const cardClassName = `pixel-panel skill-card${skillState.active ? " active" : ""}${isFinished ? " complete-ready" : ""}`;
+        <section className="academy-summary-grid">
+          <Metric icon={UI_XP} label="Training XP" value={formatNumber(gameState.playerXP)} />
+          <Metric icon={UI_TALENT_POINTS} label="Talent Points" value={formatNumber(gameState.talentPoints)} />
+        </section>
 
-          return (
-            <article className={cardClassName} key={skill.id}>
-              <div className="skill-card-header">
-                <div>
-                  <p className="ship-tier">{skill.unlockText}</p>
-                  <h2>{skill.name}</h2>
+        <section className="academy-grid">
+          {skills.map((skill) => {
+            const skillState = gameState.skills[skill.id];
+            const xpRequired = getSkillXpRequired(skill, skillState);
+            const xpProgress = xpRequired === Infinity ? 100 : (skillState.xp / xpRequired) * 100;
+            const remainingMs = Math.max(0, skillState.finishesAt - now);
+            const isFinished = skillState.active && remainingMs <= 0;
+            const canStart =
+              !skillState.active &&
+              skillState.level < skill.maxLevel &&
+              gameState.gold >= skill.goldCostPerAction;
+            const cardClassName = `academy-card skill-academy-card${skillState.active ? " active" : ""}${isFinished ? " ready" : ""}`;
+
+            return (
+              <article className={cardClassName} key={skill.id}>
+                <div className="academy-card-hero">
+                  <div className="academy-card-icon-frame">
+                    <img alt={skill.name} className="academy-card-icon" src={SKILL_ICONS[skill.id]} />
+                  </div>
+                  <div className="academy-card-header-copy">
+                    <p className="academy-card-kicker">{skill.actionName}</p>
+                    <h2>{skill.name}</h2>
+                    <div className="academy-card-badges">
+                      <span className="academy-badge">Level {skillState.level}</span>
+                      <span className="academy-badge">{skill.rewardType}</span>
+                    </div>
+                  </div>
                 </div>
-                <span className={isFinished ? "ship-status active" : "ship-status"}>
-                  Level {skillState.level}
-                </span>
-              </div>
 
-              <div className="level-row">
-                <span>
-                  {skillState.level >= skill.maxLevel
-                    ? "Max Level"
-                    : `${formatNumber(skillState.xp)} / ${formatNumber(xpRequired)} XP`}
-                </span>
-              </div>
-              <div className="progress-track" aria-label={`${skill.name} XP progress`}>
-                <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
-              </div>
+                <div className="academy-progress-block">
+                  <div className="level-row">
+                    <span>
+                      {skillState.level >= skill.maxLevel
+                        ? "Max Level"
+                        : `${formatNumber(skillState.xp)} / ${formatNumber(xpRequired)} XP`}
+                    </span>
+                    <span>Duration {formatDuration(skill.actionTimeSeconds * 1000)}</span>
+                  </div>
+                  <div className="progress-track" aria-label={`${skill.name} XP progress`}>
+                    <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
+                  </div>
+                </div>
 
-              <p className="skill-description">{skill.description}</p>
-              {skill.id === "treasureHunting" && (
-                <p className="skill-note">Advanced treasure digs are available in the Treasure section.</p>
-              )}
-
-              <div className="ship-meta-list">
-                <div>
-                  <span>Action</span>
-                  <strong>{skill.actionName}</strong>
-                </div>
-                <div>
-                  <span>Gold Cost</span>
-                  <strong>{formatNumber(skill.goldCostPerAction)}</strong>
-                </div>
-                <div>
-                  <span>Duration</span>
-                  <strong>{formatDuration(skill.actionTimeSeconds * 1000)}</strong>
-                </div>
-                <div>
-                  <span>Reward</span>
-                  <strong>{skill.rewardType}</strong>
-                </div>
-              </div>
-
-              {skillState.active && (
-                <div className={isFinished ? "skill-timer ready" : "skill-timer"}>
-                  {isFinished ? "Ready to Complete" : `${formatDuration(remainingMs)} remaining`}
-                </div>
-              )}
-
-              <div className="skill-actions">
-                {!skillState.active && (
-                  <button
-                    className="chunky-button primary"
-                    disabled={!canStart}
-                    onClick={() => dispatch({ type: "START_SKILL_ACTION", skillId: skill.id })}
-                    type="button"
-                  >
-                    Start
-                  </button>
+                <p className="academy-card-copy">{skill.description}</p>
+                {skill.id === "treasureHunting" && (
+                  <p className="academy-note">Advanced treasure digs are available in the Treasure section.</p>
                 )}
-                {skillState.active && !isFinished && (
-                  <button
-                    className="chunky-button danger"
-                    onClick={() => dispatch({ type: "CANCEL_SKILL_ACTION", skillId: skill.id })}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                )}
-                {isFinished && (
-                  <>
+
+                <div className="academy-detail-grid">
+                  <Detail label="Gold Cost" value={formatNumber(skill.goldCostPerAction)} />
+                  <Detail label="Rewards" value={skill.rewardType} />
+                  <Detail label="Current Action" value={skillState.active ? skill.actionName : "Idle"} />
+                  <Detail label="Countdown" value={skillState.active ? (isFinished ? "Ready to complete" : formatDuration(remainingMs)) : "Not active"} />
+                </div>
+
+                <div className="academy-actions">
+                  {!skillState.active && (
                     <button
                       className="chunky-button primary"
-                      onClick={() => dispatch({ type: "COMPLETE_SKILL_ACTION", skillId: skill.id })}
+                      disabled={!canStart}
+                      onClick={() => dispatch({ type: "START_SKILL_ACTION", skillId: skill.id })}
                       type="button"
                     >
-                      Complete
+                      Start
                     </button>
+                  )}
+                  {skillState.active && !isFinished && (
                     <button
                       className="chunky-button danger"
                       onClick={() => dispatch({ type: "CANCEL_SKILL_ACTION", skillId: skill.id })}
@@ -131,14 +116,53 @@ function Skills({ gameState, dispatch }) {
                     >
                       Cancel
                     </button>
-                  </>
-                )}
-              </div>
-            </article>
-          );
-        })}
+                  )}
+                  {isFinished && (
+                    <>
+                      <button
+                        className="chunky-button primary"
+                        onClick={() => dispatch({ type: "COMPLETE_SKILL_ACTION", skillId: skill.id })}
+                        type="button"
+                      >
+                        Complete
+                      </button>
+                      <button
+                        className="chunky-button danger"
+                        onClick={() => dispatch({ type: "CANCEL_SKILL_ACTION", skillId: skill.id })}
+                        type="button"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </section>
       </div>
     </section>
+  );
+}
+
+function Metric({ icon, value, label }) {
+  return (
+    <div className="academy-metric">
+      {icon ? <img alt={label} className="academy-metric-icon" src={icon} /> : null}
+      <div className="academy-metric-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function Detail({ label, value }) {
+  return (
+    <div className="academy-detail">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 

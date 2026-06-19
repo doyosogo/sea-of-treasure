@@ -135,11 +135,20 @@ function MyShip({ gameState, dispatch }) {
             <h2>Talent Bonuses</h2>
             <div className="shipyard-card-stats">
               <Metric label="Powder Kegs" value={`${formatNumber((talents.powderKegs ?? 0) * 2)}% damage`} icon={UI_GOLD} />
-              <Metric label="Broadside Master" value={`+${formatNumber(talents.broadsideMaster ?? 0)} effective cannons`} icon={UI_GOLD} />
+              <Metric label="Iron Barrage" value={`${formatNumber((talents.ironBarrage ?? 0) * 1.5)}% faster reload`} icon={UI_GOLD} />
               <Metric label="Dead Eye" value={`${formatNumber((talents.deadEye ?? 0) * 1)}% crit chance`} icon={UI_GOLD} />
-              <Metric label="Killing Blow" value={`+${formatNumber((talents.killingBlow ?? 0) * 0.05)} crit multiplier`} icon={UI_GOLD} />
+              <Metric label="Killing Blow" value={`${formatNumber(1.5 + (talents.killingBlow ?? 0) * 0.05)}x crit multiplier`} icon={UI_GOLD} />
+              <Metric label="Broadside Master" value={`+${formatNumber(talents.broadsideMaster ?? 0)} effective cannons`} icon={UI_GOLD} />
               <Metric label="Iron Hull" value={`${formatNumber((talents.ironHull ?? 0) * 5)}% max hull`} icon={UI_HULL} />
+              <Metric label="Veteran Crew" value={`${formatNumber((talents.veteranCrew ?? 0) * 3)}% passive repair`} icon={UI_HULL} />
+              <Metric label="Night Watch" value={`${formatNumber(talents.nightWatch ?? 0)} hour offline cap`} icon={UI_HULL} />
               <Metric label="Ghost Ship" value={`${formatNumber((talents.ghostShip ?? 0) * 1.5)}% damage reduction`} icon={UI_HULL} />
+              <Metric label="Salt & Knowledge" value={`${formatNumber((talents.saltAndKnowledge ?? 0) * 2)}% XP`} icon={UI_GOLD} />
+              <Metric label="Plunderer's Eye" value={`${formatNumber((talents.plunderersEye ?? 0) * 3)}% gold`} icon={UI_GOLD} />
+              <Metric label="Lucky Coin" value={`${formatNumber((talents.luckyCoin ?? 0) * 1)}% treasure luck`} icon={UI_GOLD} />
+              <Metric label="Chest Seeker" value={`${formatNumber((talents.chestSeeker ?? 0) * 2)}% treasure chance`} icon={UI_GOLD} />
+              <Metric label="Merchant's Touch" value={`${formatNumber((talents.merchantsTouch ?? 0) * 2)}% sell value`} icon={UI_GOLD} />
+              <Metric label="Trade Wind" value={`+${formatNumber((talents.tradeWind ?? 0) * 50)} gold/hour`} icon={UI_GOLD} />
             </div>
           </article>
 

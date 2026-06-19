@@ -84,6 +84,7 @@ export function getTalentBonuses(gameState) {
     critMultiplier: 1.5,
     offlineCapBonusHours: 0,
     passiveGoldPerHour: 0,
+    passiveRepair: 0,
     cannonballReduction: 0,
     sellPriceMultiplier: 1,
     treasureChanceMultiplier: 1,
@@ -125,6 +126,9 @@ export function getTalentBonuses(gameState) {
         break;
       case "passiveGoldPerHour":
         bonuses.passiveGoldPerHour += value;
+        break;
+      case "passiveRepair":
+        bonuses.passiveRepair += value;
         break;
       case "sellPriceMultiplier":
         bonuses.sellPriceMultiplier += value;

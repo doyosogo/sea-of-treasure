@@ -54,23 +54,21 @@ export const SKILL_ICON_ALIASES = {
 };
 
 export const TALENT_ICONS = {
-  hairTrigger: null,
   powderKegs: "/assets/talents/firepower/Talent_Firepower_Powder_Kegs.png",
+  ironBarrage: "/assets/talents/firepower/Talent_Firepower_Iron_Barrage.png",
   deadEye: "/assets/talents/firepower/Talent_Firepower_Dead_Eye.png",
-  powderMiser: null,
   killingBlow: "/assets/talents/firepower/Talent_Firepower_Killing_Blow.png",
   broadsideMaster: "/assets/talents/firepower/Talent_Firepower_Broadside_Master.png",
   ironHull: "/assets/talents/seamanship/Talent_Seamanship_Iron_Hull.png",
-  shipsSurgeon: null,
+  veteranCrew: "/assets/talents/seamanship/Talent_Seamanship_Veteran_Crew.png",
   nightWatch: "/assets/talents/seamanship/Talent_Seamanship_Night_Watch.png",
-  skeletonCrew: null,
   ghostShip: "/assets/talents/seamanship/Talent_Seamanship_Ghost_Ship.png",
-  plunderersEye: "/assets/talents/fortune/Talent_Fortune_Plunderers_Eye.png",
   saltAndKnowledge: "/assets/talents/seamanship/Talent_Seamanship_Salt_and_Knowledge.png",
+  plunderersEye: "/assets/talents/fortune/Talent_Fortune_Plunderers_Eye.png",
+  luckyCoin: "/assets/talents/fortune/Talent_Fortune_Lucky_Coin.png",
   chestSeeker: "/assets/talents/fortune/Talent_Fortune_Chest_Seeker.png",
   merchantsTouch: "/assets/talents/fortune/Talent_Fortune_Merchants_Touch.png",
-  tradeWind: "/assets/talents/fortune/Talent_Fortune_Trade_Wind.png",
-  legendsShare: null
+  tradeWind: "/assets/talents/fortune/Talent_Fortune_Trade_Wind.png"
 };
 
 export const RESOURCE_ICONS = {

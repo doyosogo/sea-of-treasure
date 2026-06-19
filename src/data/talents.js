@@ -7,17 +7,6 @@ export const talentTrees = [
 
 export const talents = [
   {
-    id: "hairTrigger",
-    tree: "firepower",
-    name: "Hair Trigger",
-    tier: 1,
-    maxPoints: 10,
-    description: "-1.5% reload time per point.",
-    bonusType: "reloadMultiplier",
-    bonusPerPoint: -0.015,
-    requires: []
-  },
-  {
     id: "powderKegs",
     tree: "firepower",
     name: "Powder Kegs",
@@ -29,6 +18,17 @@ export const talents = [
     requires: []
   },
   {
+    id: "ironBarrage",
+    tree: "firepower",
+    name: "Iron Barrage",
+    tier: 1,
+    maxPoints: 10,
+    description: "-1.5% reload time per point.",
+    bonusType: "reloadMultiplier",
+    bonusPerPoint: -0.015,
+    requires: []
+  },
+  {
     id: "deadEye",
     tree: "firepower",
     name: "Dead Eye",
@@ -37,17 +37,6 @@ export const talents = [
     description: "+1% crit chance per point.",
     bonusType: "critChance",
     bonusPerPoint: 0.01,
-    requires: [{ id: "hairTrigger", points: 4 }]
-  },
-  {
-    id: "powderMiser",
-    tree: "firepower",
-    name: "Powder Miser",
-    tier: 2,
-    maxPoints: 10,
-    description: "Reduces cannonball use slightly.",
-    bonusType: "cannonballReduction",
-    bonusPerPoint: 1,
     requires: [{ id: "powderKegs", points: 4 }]
   },
   {
@@ -72,7 +61,7 @@ export const talents = [
     bonusPerPoint: 1,
     requires: [
       { id: "deadEye", points: 5 },
-      { id: "powderMiser", points: 5 }
+      { id: "ironBarrage", points: 5 }
     ]
   },
   {
@@ -87,9 +76,9 @@ export const talents = [
     requires: []
   },
   {
-    id: "shipsSurgeon",
+    id: "veteranCrew",
     tree: "seamanship",
-    name: "Ship's Surgeon",
+    name: "Veteran Crew",
     tier: 1,
     maxPoints: 10,
     description: "+3% passive repair per point.",
@@ -106,18 +95,7 @@ export const talents = [
     description: "+1 hour offline cap per point.",
     bonusType: "offlineCapBonusHours",
     bonusPerPoint: 1,
-    requires: [{ id: "shipsSurgeon", points: 4 }]
-  },
-  {
-    id: "skeletonCrew",
-    tree: "seamanship",
-    name: "Skeleton Crew",
-    tier: 3,
-    maxPoints: 10,
-    description: "Future auto-restock bonus.",
-    bonusType: "futureAutoRestock",
-    bonusPerPoint: 1,
-    requires: [{ id: "nightWatch", points: 8 }]
+    requires: [{ id: "veteranCrew", points: 4 }]
   },
   {
     id: "ghostShip",
@@ -131,6 +109,17 @@ export const talents = [
     requires: [{ id: "nightWatch", points: 5 }]
   },
   {
+    id: "saltAndKnowledge",
+    tree: "seamanship",
+    name: "Salt & Knowledge",
+    tier: 1,
+    maxPoints: 10,
+    description: "+2% XP from all sources per point.",
+    bonusType: "xpMultiplier",
+    bonusPerPoint: 0.02,
+    requires: []
+  },
+  {
     id: "plunderersEye",
     tree: "fortune",
     name: "Plunderer's Eye",
@@ -142,14 +131,14 @@ export const talents = [
     requires: []
   },
   {
-    id: "saltAndKnowledge",
+    id: "luckyCoin",
     tree: "fortune",
-    name: "Salt & Knowledge",
+    name: "Lucky Coin",
     tier: 1,
     maxPoints: 10,
-    description: "+2% XP from all sources per point.",
-    bonusType: "xpMultiplier",
-    bonusPerPoint: 0.02,
+    description: "+1% treasure luck per point.",
+    bonusType: "treasureChance",
+    bonusPerPoint: 0.01,
     requires: []
   },
   {
@@ -172,7 +161,7 @@ export const talents = [
     description: "+2% sell price per point.",
     bonusType: "sellPriceMultiplier",
     bonusPerPoint: 0.02,
-    requires: [{ id: "saltAndKnowledge", points: 4 }]
+    requires: [{ id: "luckyCoin", points: 4 }]
   },
   {
     id: "tradeWind",
@@ -184,19 +173,5 @@ export const talents = [
     bonusType: "passiveGoldPerHour",
     bonusPerPoint: 50,
     requires: [{ id: "merchantsTouch", points: 8 }]
-  },
-  {
-    id: "legendsShare",
-    tree: "fortune",
-    name: "Legend's Share",
-    tier: 3,
-    maxPoints: 10,
-    description: "Future milestone reward bonus.",
-    bonusType: "futureMilestoneBonus",
-    bonusPerPoint: 1,
-    requires: [
-      { id: "chestSeeker", points: 5 },
-      { id: "merchantsTouch", points: 5 }
-    ]
   }
 ];
