@@ -1,3 +1,4 @@
+import { LOGO, SCENES, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
 import {
   formatNumber,
@@ -11,6 +12,8 @@ const categories = ["Combat", "Progression", "Fleet", "Economy", "Skills", "Trea
 function Achievements({ gameState, dispatch }) {
   const claimedAchievements = gameState.claimedAchievements ?? [];
   const claimableAchievements = getClaimableAchievements(gameState);
+  const totalShipsSunk = gameState.lifetimeStats?.totalShipsSunk ?? gameState.totalShipsSunk ?? 0;
+  const totalGoldEarned = gameState.lifetimeStats?.totalGoldEarned ?? 0;
 
   function getStatus(achievement) {
     if (claimedAchievements.includes(achievement.id)) {
@@ -25,99 +28,183 @@ function Achievements({ gameState, dispatch }) {
   }
 
   return (
-    <section className="achievements-page">
-      <div className="hero-panel pixel-panel">
+    <section
+      className="achievements-page legends-scene legends-reset"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5, 8, 14, 0.45), rgba(5, 8, 14, 0.68)), url(${SCENES.achievements})`
+      }}
+    >
+      <div className="legends-overlay" aria-hidden="true" />
+
+      <div className="legends-shell">
+        <header className="legends-topbar">
+          <img alt="Sea of Treasure logo" className="legends-logo" src={LOGO} />
+          <div className="legends-title-copy">
+            <p className="eyebrow">Hall of Legends</p>
+            <h1>Hall of Legends</h1>
+            <p>Claim milestones, honour your victories, and track your legacy.</p>
+          </div>
+          <div className="legends-top-stats">
+            <StatChip icon={UI_GOLD} label="Claimed / Total" value={`${formatNumber(claimedAchievements.length)} / ${formatNumber(achievements.length)}`} />
+            <StatChip icon={UI_TALENT_POINTS} label="Claimable" value={formatNumber(claimableAchievements.length)} />
+          </div>
+        </header>
+
+        <section className="legends-grid legends-overview-grid">
+          <article className="legends-panel">
+            <h2>Legend Overview</h2>
+            <div className="legends-stat-grid">
+              <Metric icon={UI_GOLD} label="Claimed / Total" value={`${formatNumber(claimedAchievements.length)} / ${formatNumber(achievements.length)}`} />
+              <Metric icon={UI_TALENT_POINTS} label="Claimable Count" value={formatNumber(claimableAchievements.length)} />
+              <Metric icon={UI_XP} label="Total Ships Sunk" value={formatNumber(totalShipsSunk)} />
+              <Metric icon={UI_GOLD} label="Total Gold Earned" value={formatNumber(totalGoldEarned)} />
+            </div>
+          </article>
+
+          <article className="legends-panel">
+            <h2>Legacy Progress</h2>
+            <div className="legends-stat-grid">
+              <Metric icon={UI_XP} label="Treasure Digs" value={formatNumber(gameState.lifetimeStats?.treasureDigsCompleted ?? 0)} />
+              <Metric icon={UI_GOLD} label="Rare Treasures Found" value={formatNumber(gameState.lifetimeStats?.rareTreasuresFound ?? 0)} />
+              <Metric icon={UI_TALENT_POINTS} label="Upgrades Crafted" value={formatNumber(gameState.lifetimeStats?.upgradesCrafted ?? 0)} />
+            </div>
+          </article>
+        </section>
+
+        <section className="legends-grid legends-claimable-grid">
+          <article className="legends-panel">
+            <h2>Claimable Achievements</h2>
+            {claimableAchievements.length > 0 ? (
+              <div className="legend-card-grid">
+                {claimableAchievements.map((achievement) => (
+                  <AchievementCard
+                    achievement={achievement}
+                    gameState={gameState}
+                    status="Claimable"
+                    dispatch={dispatch}
+                    key={achievement.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="legend-empty-state">
+                <strong>No claimable achievements right now.</strong>
+                <p>Keep sailing to unlock your next honours.</p>
+              </div>
+            )}
+          </article>
+        </section>
+
+        <section className="legends-grid legends-categories-grid">
+          <article className="legends-panel">
+            <h2>Achievement Categories</h2>
+            <div className="legend-category-stack">
+              {categories.map((category) => (
+                <div className="legend-category-block" key={category}>
+                  <h3>{category}</h3>
+                  <div className="legend-card-grid">
+                    {achievements
+                      .filter((achievement) => achievement.category === category)
+                      .map((achievement) => {
+                        const status = getStatus(achievement);
+                        return (
+                          <AchievementCard
+                            achievement={achievement}
+                            gameState={gameState}
+                            status={status}
+                            dispatch={dispatch}
+                            key={achievement.id}
+                          />
+                        );
+                      })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function AchievementCard({ achievement, gameState, status, dispatch }) {
+  const progress = getAchievementProgress(achievement, gameState);
+  const claimable = status === "Claimable";
+  const claimed = status === "Claimed";
+
+  return (
+    <article className={`legend-card ${status.toLowerCase()}`}>
+      <div className="legend-card-header">
         <div>
-          <p className="eyebrow">Long-Term Goals</p>
-          <h1>Achievements</h1>
+          <p className="legend-kicker">{achievement.category}</p>
+          <h3>{achievement.name}</h3>
         </div>
-        <div className="resource-cluster">
-          <span className="resource-counter">
-            {formatNumber(claimedAchievements.length)} / {formatNumber(achievements.length)} Claimed
-          </span>
-          <span className="resource-counter">
-            {formatNumber(claimableAchievements.length)} Claimable
-          </span>
-        </div>
+        <span className={`legend-status ${status.toLowerCase()}`}>{status}</span>
       </div>
 
-      <article className="pixel-panel achievement-overview">
-        <h2>Milestones</h2>
-        <div className="summary-stat-grid">
-          <div className="stat-box">
-            <span>Total Gold Earned</span>
-            <strong>{formatNumber(gameState.lifetimeStats?.totalGoldEarned ?? 0)}</strong>
-          </div>
-          <div className="stat-box">
-            <span>Lifetime Ships Sunk</span>
-            <strong>{formatNumber(gameState.lifetimeStats?.totalShipsSunk ?? gameState.totalShipsSunk)}</strong>
-          </div>
-          <div className="stat-box">
-            <span>Treasure Digs</span>
-            <strong>{formatNumber(gameState.lifetimeStats?.treasureDigsCompleted ?? 0)}</strong>
-          </div>
-          <div className="stat-box">
-            <span>Rare Treasures</span>
-            <strong>{formatNumber(gameState.lifetimeStats?.rareTreasuresFound ?? 0)}</strong>
-          </div>
-          <div className="stat-box">
-            <span>Upgrades Crafted</span>
-            <strong>{formatNumber(gameState.lifetimeStats?.upgradesCrafted ?? 0)}</strong>
-          </div>
-        </div>
-      </article>
+      <p className="legend-description">{achievement.description}</p>
 
-      {categories.map((category) => (
-        <section className="achievement-category pixel-panel" key={category}>
-          <h2>{category}</h2>
-          <div className="achievement-grid">
-            {achievements
-              .filter((achievement) => achievement.category === category)
-              .map((achievement) => {
-                const progress = getAchievementProgress(achievement, gameState);
-                const status = getStatus(achievement);
-                const claimable = status === "Claimable";
+      <div className="legend-progress-row">
+        <span>Progress</span>
+        <strong>
+          {formatNumber(progress.current)} / {formatNumber(progress.target)}
+        </strong>
+      </div>
+      <div className="progress-track legend-progress-track" aria-label={`${achievement.name} progress`}>
+        <div className="progress-fill" style={{ width: `${progress.percentage}%` }} />
+      </div>
 
-                return (
-                  <article
-                    className={`achievement-card ${status.toLowerCase()}`}
-                    key={achievement.id}
-                  >
-                    <div className="achievement-card-header">
-                      <h3>{achievement.name}</h3>
-                      <span className={`achievement-status ${status.toLowerCase()}`}>
-                        {status}
-                      </span>
-                    </div>
-                    <p>{achievement.description}</p>
-                    <div className="level-row">
-                      <span>Progress</span>
-                      <span>{formatNumber(progress.current)} / {formatNumber(progress.target)}</span>
-                    </div>
-                    <div className="progress-track" aria-label={`${achievement.name} progress`}>
-                      <div className="progress-fill" style={{ width: `${progress.percentage}%` }} />
-                    </div>
-                    <div className="reward-row">
-                      <span className="reward-badge">{formatNumber(achievement.rewardGold)} Gold</span>
-                      <span className="reward-badge">
-                        {formatNumber(achievement.rewardTalentPoints)} Talent
-                      </span>
-                    </div>
-                    <button
-                      className="chunky-button primary"
-                      disabled={!claimable}
-                      onClick={() => dispatch({ type: "CLAIM_ACHIEVEMENT", achievementId: achievement.id })}
-                      type="button"
-                    >
-                      {status === "Claimed" ? "Claimed" : "Claim Reward"}
-                    </button>
-                  </article>
-                );
-              })}
-          </div>
-        </section>
-      ))}
-    </section>
+      <div className="legend-reward-grid">
+        <RewardRow icon={UI_GOLD} label="Gold" value={achievement.rewardGold} />
+        <RewardRow icon={UI_TALENT_POINTS} label="Talent Points" value={achievement.rewardTalentPoints} />
+      </div>
+
+      <button
+        className="chunky-button primary"
+        disabled={!claimable}
+        onClick={() => dispatch({ type: "CLAIM_ACHIEVEMENT", achievementId: achievement.id })}
+        type="button"
+      >
+        {claimed ? "Claimed" : "Claim Reward"}
+      </button>
+    </article>
+  );
+}
+
+function RewardRow({ icon, label, value }) {
+  return (
+    <div className="legend-reward-row">
+      <div className="legend-reward-left">
+        <img alt={label} className="legend-reward-icon" src={icon} />
+        <span>{label}</span>
+      </div>
+      <strong>{formatNumber(value)}</strong>
+    </div>
+  );
+}
+
+function StatChip({ icon, label, value }) {
+  return (
+    <div className="legend-chip">
+      <img alt={label} src={icon} />
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ icon, label, value }) {
+  return (
+    <div className="legend-metric">
+      {icon ? <img alt={label} className="legend-metric-icon" src={icon} /> : null}
+      <div className="legend-metric-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
   );
 }
 
