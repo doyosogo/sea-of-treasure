@@ -104,6 +104,13 @@ export const UI_ICONS = {
   talentPoints: "/assets/ui/UI_Talent_Points.png"
 };
 
+export const UI_GOLD = UI_ICONS.gold;
+export const UI_XP = UI_ICONS.xp;
+export const UI_HULL = UI_ICONS.hull;
+export const UI_CANNONBALLS = UI_ICONS.cannonballs;
+export const UI_TREASURE_MAPS = UI_ICONS.treasureMaps;
+export const UI_TALENT_POINTS = UI_ICONS.talentPoints;
+
 export function getAsset(path, fallback = "") {
   return typeof path === "string" && path ? path : fallback;
 }

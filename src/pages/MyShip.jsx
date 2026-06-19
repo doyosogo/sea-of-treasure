@@ -1,4 +1,12 @@
 import {
+  CANNON_IMAGES,
+  SHIP_IMAGES,
+  SCENES,
+  UI_CANNONBALLS,
+  UI_GOLD,
+  UI_HULL
+} from "../data/assets.js";
+import {
   formatNumber,
   getCargoCapacity,
   getCraftingBonuses,
@@ -6,7 +14,6 @@ import {
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
-  getMaxHull,
   getPlayerCombatStats
 } from "../utils/gameEngine.js";
 
@@ -20,123 +27,149 @@ function MyShip({ gameState, dispatch }) {
   const hullPercent = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
   const talents = gameState.talents ?? {};
+  const cannonImage = CANNON_IMAGES[currentCannon.tier];
 
   return (
-    <section className="my-ship-page">
-      <div className="hero-panel pixel-panel">
-        <div>
-          <p className="eyebrow">Current Vessel</p>
-          <h1>My Ship</h1>
-        </div>
-        <span className="resource-counter">{currentShip.name}</span>
+    <section
+      className="my-ship-page shipyard-scene shipyard-reset"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5, 8, 14, 0.45), rgba(5, 8, 14, 0.7)), url(${SCENES.shipyard})`
+      }}
+    >
+      <div className="shipyard-overlay" aria-hidden="true" />
+      <div className="shipyard-shell">
+        <header className="shipyard-topbar">
+          <img alt="Sea of Treasure logo" className="shipyard-logo" src="/assets/logo/LOGO.png" />
+          <div className="shipyard-title-copy">
+            <p className="eyebrow">My Ship</p>
+            <h1>My Ship</h1>
+            <p>Inspect your active ship, hull, cannons, upgrades and combat readiness.</p>
+          </div>
+          <div className="status-pill active">{currentShip.name}</div>
+        </header>
+
+        <section className="shipyard-main-grid">
+          <article className="shipyard-panel shipyard-active-panel">
+            <div className="panel-heading-row">
+              <h2>Active Ship</h2>
+              <span className="resource-counter">{currentShip.mapName}</span>
+            </div>
+            <div className="shipyard-active-layout">
+              <div className="shipyard-ship-frame">
+                <img alt={currentShip.name} className="shipyard-active-image" src={SHIP_IMAGES[currentShip.id]} />
+              </div>
+              <div className="shipyard-active-copy">
+                <h3>{currentShip.name}</h3>
+                <p>All cannons on your active ship currently use this cannon tier.</p>
+                <div className="shipyard-active-stats">
+                  <Metric icon={UI_HULL} label="Ship Level" value={currentShip.level} />
+                  <Metric icon={UI_CANNONBALLS} label="Cannons" value={formatNumber(currentShip.cannons)} />
+                  <Metric icon={UI_GOLD} label="Cargo Capacity" value={formatNumber(getCargoCapacity(gameState))} />
+                  <Metric icon={UI_GOLD} label="Owned Status" value={gameState.ownedShips.includes(currentShip.id) ? "Owned" : "Not Owned"} />
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section className="shipyard-grid">
+          <article className="shipyard-panel">
+            <h2>Hull</h2>
+            <div className="progress-track hull-track" aria-label="Hull percentage">
+              <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullPercent)}%` }} />
+            </div>
+            <div className="shipyard-card-stats">
+              <Metric icon={UI_HULL} label="Current Hull" value={`${formatNumber(combatStats.currentHull)} / ${formatNumber(combatStats.maxHull)}`} />
+              <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} />
+              <Metric icon={UI_GOLD} label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} />
+              <Metric icon={UI_HULL} label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} />
+              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(missingHull * 10)} Gold`} />
+            </div>
+            <button
+              className="chunky-button"
+              disabled={missingHull <= 0 || gameState.gold <= 0}
+              onClick={() => dispatch({ type: "REPAIR_HULL" })}
+              type="button"
+            >
+              Repair Hull
+            </button>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Cannons</h2>
+            <div className="shipyard-cannon-art">
+              <img alt={currentCannon.name} className="shipyard-cannon-image" src={cannonImage} />
+            </div>
+            <div className="shipyard-card-stats">
+              <Metric icon={UI_GOLD} label="Current Tier" value={`Tier ${currentCannon.tier}`} />
+              <Metric icon={UI_GOLD} label="Cannon Name" value={currentCannon.name} />
+              <Metric icon={UI_CANNONBALLS} label="Total Cannons" value={formatNumber(currentShip.cannons)} />
+              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} />
+              <Metric icon={UI_GOLD} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} />
+              <Metric icon={UI_HULL} label="Effective Cannons" value={formatNumber(combatStats.effectiveCannons)} />
+            </div>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Shipwright Upgrades</h2>
+            <div className="shipyard-card-stats">
+              <Metric
+                icon={UI_HULL}
+                label="Reinforced Hull"
+                value={`Lv. ${gameState.craftedUpgrades.reinforcedHull} - ${getCraftingEffect("reinforcedHull", gameState.craftedUpgrades.reinforcedHull)}`}
+              />
+              <Metric
+                icon={UI_GOLD}
+                label="Speed Sails"
+                value={`Lv. ${gameState.craftedUpgrades.speedSails} - ${getCraftingEffect("speedSails", gameState.craftedUpgrades.speedSails)}`}
+              />
+              <Metric
+                icon={UI_CANNONBALLS}
+                label="Cannon Braces"
+                value={`Lv. ${gameState.craftedUpgrades.cannonBraces} - ${formatNumber(craftingBonuses.cannonballRefundChance * 100)}% refund chance`}
+              />
+            </div>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Talent Bonuses</h2>
+            <div className="shipyard-card-stats">
+              <Metric label="Powder Kegs" value={`${formatNumber((talents.powderKegs ?? 0) * 2)}% damage`} icon={UI_GOLD} />
+              <Metric label="Broadside Master" value={`+${formatNumber(talents.broadsideMaster ?? 0)} effective cannons`} icon={UI_GOLD} />
+              <Metric label="Dead Eye" value={`${formatNumber((talents.deadEye ?? 0) * 1)}% crit chance`} icon={UI_GOLD} />
+              <Metric label="Killing Blow" value={`+${formatNumber((talents.killingBlow ?? 0) * 0.05)} crit multiplier`} icon={UI_GOLD} />
+              <Metric label="Iron Hull" value={`${formatNumber((talents.ironHull ?? 0) * 5)}% max hull`} icon={UI_HULL} />
+              <Metric label="Ghost Ship" value={`${formatNumber((talents.ghostShip ?? 0) * 1.5)}% damage reduction`} icon={UI_HULL} />
+            </div>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Combat Readiness</h2>
+            <div className="shipyard-card-stats">
+              <Metric label="Selected Enemy" value={idleEstimate.enemy.name} icon={UI_HULL} />
+              <Metric label="Estimated Enemy HP" value={formatNumber(idleEstimate.enemy.maxHP)} icon={UI_HULL} />
+              <Metric label="Estimated Enemy Damage" value={formatNumber(idleEstimate.enemy.damage)} icon={UI_HULL} />
+              <Metric label="Volleys to Defeat" value={formatNumber(idleEstimate.volleysNeeded)} icon={UI_CANNONBALLS} />
+              <Metric label="Cannonballs Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} icon={UI_CANNONBALLS} />
+              <Metric label="Hull Damage Taken" value={formatNumber(idleEstimate.hullDamagePerEnemy)} icon={UI_HULL} />
+              <Metric label="Reward Gold" value={formatNumber(idleEstimate.goldPerEnemy)} icon={UI_GOLD} />
+              <Metric label="Reward XP" value={formatNumber(idleEstimate.xpPerEnemy)} icon={UI_GOLD} />
+            </div>
+          </article>
+        </section>
       </div>
-
-      <article className="pixel-panel my-ship-panel">
-        <h2>Active Ship</h2>
-        <div className="summary-stat-grid">
-          <Stat label="Ship" value={currentShip.name} />
-          <Stat label="Ship Level" value={currentShip.level} />
-          <Stat label="Map" value={currentShip.mapName} />
-          <Stat label="Cannons" value={currentShip.cannons} />
-          <Stat label="Cargo Capacity" value={formatNumber(getCargoCapacity(gameState))} />
-          <Stat label="Owned Status" value={gameState.ownedShips.includes(currentShip.id) ? "Owned" : "Not Owned"} />
-        </div>
-      </article>
-
-      <article className="pixel-panel hull-panel">
-        <div className="panel-heading-row">
-          <h2>Hull</h2>
-          <span className="resource-counter">
-            {formatNumber(combatStats.currentHull)} / {formatNumber(combatStats.maxHull)}
-          </span>
-        </div>
-        <div className="progress-track hull-track" aria-label="Hull percentage">
-          <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullPercent)}%` }} />
-        </div>
-        <div className="summary-stat-grid">
-          <Stat label="Base Hull" value={formatNumber(baseHull)} />
-          <Stat label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} />
-          <Stat label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} />
-          <Stat label="Repair Cost to Full" value={`${formatNumber(missingHull * 10)} Gold`} />
-        </div>
-        <button
-          className="chunky-button"
-          disabled={missingHull <= 0 || gameState.gold <= 0}
-          onClick={() => dispatch({ type: "REPAIR_HULL" })}
-          type="button"
-        >
-          Repair Hull
-        </button>
-      </article>
-
-      <article className="pixel-panel cannon-status-panel">
-        <h2>Cannons</h2>
-        <p className="shop-note">All cannons on your active ship currently use this cannon tier.</p>
-        <div className="summary-stat-grid">
-          <Stat label="Current Tier" value={`Tier ${currentCannon.tier}`} />
-          <Stat label="Cannon Name" value={currentCannon.name} />
-          <Stat label="Total Cannons" value={formatNumber(currentShip.cannons)} />
-          <Stat label="Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} />
-          <Stat label="Base Cannon Damage" value={formatNumber(combatStats.baseCannonDamage)} />
-          <Stat label="Effective Cannons" value={formatNumber(combatStats.effectiveCannons)} />
-          <Stat label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} />
-          <Stat label="Crit Chance" value={`${formatNumber(combatStats.critChance * 100)}%`} />
-          <Stat label="Crit Multiplier" value={`${formatNumber(combatStats.critMultiplier)}x`} />
-        </div>
-      </article>
-
-      <article className="pixel-panel upgrade-bonuses-panel">
-        <h2>Shipwright Upgrades</h2>
-        <div className="summary-stat-grid">
-          <Stat
-            label="Reinforced Hull"
-            value={`Lv. ${gameState.craftedUpgrades.reinforcedHull} - ${getCraftingEffect("reinforcedHull", gameState.craftedUpgrades.reinforcedHull)}`}
-          />
-          <Stat
-            label="Speed Sails"
-            value={`Lv. ${gameState.craftedUpgrades.speedSails} - ${getCraftingEffect("speedSails", gameState.craftedUpgrades.speedSails)}`}
-          />
-          <Stat
-            label="Cannon Braces"
-            value={`Lv. ${gameState.craftedUpgrades.cannonBraces} - ${formatNumber(craftingBonuses.cannonballRefundChance * 100)}% refund chance`}
-          />
-        </div>
-      </article>
-
-      <article className="pixel-panel talent-bonuses-panel">
-        <h2>Combat Talents</h2>
-        <div className="summary-stat-grid">
-          <Stat label="Powder Kegs" value={`${formatNumber((talents.powderKegs ?? 0) * 2)}% damage`} />
-          <Stat label="Broadside Master" value={`+${formatNumber(talents.broadsideMaster ?? 0)} effective cannons`} />
-          <Stat label="Dead Eye" value={`${formatNumber((talents.deadEye ?? 0) * 1)}% crit chance`} />
-          <Stat label="Killing Blow" value={`+${formatNumber((talents.killingBlow ?? 0) * 0.05)} crit multiplier`} />
-          <Stat label="Iron Hull" value={`${formatNumber((talents.ironHull ?? 0) * 5)}% max hull`} />
-          <Stat label="Ghost Ship" value={`${formatNumber((talents.ghostShip ?? 0) * 1.5)}% damage reduction`} />
-        </div>
-      </article>
-
-      <article className="pixel-panel readiness-panel">
-        <h2>Combat Readiness</h2>
-        <div className="summary-stat-grid">
-          <Stat label="Selected Enemy" value={idleEstimate.enemy.name} />
-          <Stat label="Estimated Enemy HP" value={formatNumber(idleEstimate.enemy.maxHP)} />
-          <Stat label="Estimated Enemy Damage" value={formatNumber(idleEstimate.enemy.damage)} />
-          <Stat label="Volleys to Defeat" value={formatNumber(idleEstimate.volleysNeeded)} />
-          <Stat label="Cannonballs Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} />
-          <Stat label="Hull Damage Taken" value={formatNumber(idleEstimate.hullDamagePerEnemy)} />
-          <Stat label="Reward Gold" value={formatNumber(idleEstimate.goldPerEnemy)} />
-          <Stat label="Reward XP" value={formatNumber(idleEstimate.xpPerEnemy)} />
-        </div>
-      </article>
     </section>
   );
 }
 
-function Stat({ label, value }) {
+function Metric({ icon, label, value }) {
   return (
-    <div className="stat-box">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="shipyard-metric">
+      {icon ? <img alt={label} className="shipyard-metric-icon" src={icon} /> : null}
+      <div className="shipyard-metric-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }
