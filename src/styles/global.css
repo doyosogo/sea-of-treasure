@@ -1308,6 +1308,330 @@ h2 {
   margin: 0 auto;
 }
 
+.battle-page.battle-reset {
+  display: block;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: calc(100vh - 92px);
+}
+
+.battle-scene {
+  position: relative;
+  background-color: #050914;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
+  overflow: hidden;
+}
+
+.battle-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.55) 28%, rgba(5, 8, 14, 0.5)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.battle-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.55) 40%, rgba(5, 8, 14, 0.5)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.battle-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.battle-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 4px;
+}
+
+.battle-logo {
+  width: min(180px, 30vw);
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+.battle-title-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.battle-title-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.battle-title-copy p {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.battle-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.battle-panel h2 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.battle-active-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.battle-active-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.battle-portrait-column {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.battle-portrait-frame {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(4, 17, 31, 0.82);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.battle-portrait-image {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.battle-name-strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.battle-name-strip strong {
+  color: var(--gold-300);
+  font-size: 1.1rem;
+}
+
+.battle-name-strip span {
+  color: #d8c99c;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.battle-status-column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.battle-meter {
+  display: grid;
+  gap: 10px;
+}
+
+.battle-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.battle-metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.battle-metric-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: transparent;
+}
+
+.battle-metric-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.battle-metric-copy span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.battle-metric-copy strong {
+  color: var(--cream);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.battle-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.battle-main-button {
+  flex: 1 1 340px;
+  min-height: 68px;
+  font-size: 1.05rem;
+}
+
+.battle-repair-button {
+  flex: 0 0 auto;
+  min-height: 48px;
+}
+
+.battle-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.battle-selection-panel,
+.battle-idle-panel,
+.battle-log-panel {
+  align-content: start;
+}
+
+.battle-enemy-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.battle-enemy-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.battle-enemy-card.selected {
+  border-color: var(--gold-300);
+  background: rgba(69, 51, 14, 0.82);
+}
+
+.battle-enemy-card.locked {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.88);
+  opacity: 0.84;
+}
+
+.battle-enemy-art-frame {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 10px;
+  background: rgba(4, 17, 31, 0.84);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.battle-enemy-art {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  max-height: 150px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.battle-enemy-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.battle-enemy-header h3 {
+  margin: 0;
+  color: var(--gold-300);
+  font-size: 1.05rem;
+}
+
+.battle-enemy-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.battle-idle-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.battle-log-panel .activity-log {
+  max-height: 320px;
+  min-height: 250px;
+  overflow-y: auto;
+}
+
+.battle-log-panel .activity-log li,
+.battle-log-panel .empty-log {
+  margin: 0;
+}
+
+}
+
 .active-combat-panel {
   display: grid;
   gap: 18px;
