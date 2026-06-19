@@ -1630,8 +1630,6 @@ h2 {
   margin: 0;
 }
 
-}
-
 .active-combat-panel {
   display: grid;
   gap: 18px;
@@ -2610,6 +2608,55 @@ h2 {
     width: min(200px, 68vw);
   }
 
+  .battle-shell {
+    padding: 18px;
+  }
+
+  .battle-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .battle-active-layout,
+  .battle-secondary-grid,
+  .battle-stat-strip,
+  .battle-enemy-grid,
+  .battle-enemy-grid-stats,
+  .battle-idle-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-panel {
+    min-width: 0;
+    padding: 18px;
+  }
+
+  .battle-metric,
+  .battle-enemy-header,
+  .battle-name-strip,
+  .panel-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .battle-main-button {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .battle-repair-button {
+    width: 100%;
+  }
+
+  .battle-logo {
+    width: min(220px, 68vw);
+  }
+
+  .battle-portrait-image,
+  .battle-enemy-art {
+    max-width: 100%;
+  }
+
   .ship-art-image,
   .combat-portrait-image {
     max-width: 100%;
@@ -2658,4 +2705,24 @@ h2 {
   .crafting-cost-list {
     grid-template-columns: 1fr;
   }
+}
+
+.battle-page.battle-reset .battle-panel {
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.battle-page.battle-reset .battle-metric,
+.battle-page.battle-reset .battle-enemy-card {
+  background: rgba(18, 49, 84, 0.58);
+  border-color: rgba(109, 85, 32, 0.72);
+}
+
+.battle-page.battle-reset .battle-portrait-frame,
+.battle-page.battle-reset .battle-enemy-art-frame {
+  background: rgba(4, 17, 31, 0.82);
+  border-color: rgba(211, 165, 58, 0.78);
 }
