@@ -2997,6 +2997,402 @@ h2 {
   background: transparent;
 }
 
+.harbour-scene {
+  position: relative;
+  background-color: #050914;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
+  overflow: hidden;
+}
+
+.harbour-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.58) 28%, rgba(5, 8, 14, 0.52)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.harbour-reset {
+  display: block;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: calc(100vh - 92px);
+}
+
+.harbour-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.58) 40%, rgba(5, 8, 14, 0.52)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.harbour-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.harbour-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 4px;
+}
+
+.harbour-logo {
+  width: min(180px, 30vw);
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+.harbour-title-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.harbour-title-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.harbour-title-copy p {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.harbour-top-stats {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.harbour-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  padding: 10px 12px;
+  background: rgba(5, 15, 30, 0.78);
+  border: 2px solid rgba(211, 165, 58, 0.7);
+  box-shadow: 3px 3px 0 rgba(3, 16, 31, 0.9);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.harbour-chip img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.harbour-chip span {
+  display: block;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.harbour-chip strong {
+  color: var(--cream);
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.harbour-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.harbour-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.harbour-panel h2,
+.harbour-panel h3 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.harbour-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.harbour-metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.harbour-metric-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: transparent;
+}
+
+.harbour-metric-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.harbour-metric-copy span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.harbour-metric-copy strong {
+  color: var(--cream);
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.harbour-trade-grid {
+  grid-template-columns: 2fr 1fr;
+}
+
+.harbour-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.harbour-item-card,
+.harbour-resource-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 3px 3px 0 rgba(3, 16, 31, 0.9);
+}
+
+.harbour-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.harbour-item-heading h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.harbour-item-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.harbour-resource-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.harbour-resource-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.harbour-resource-title h3 {
+  margin: 0;
+}
+
+.harbour-resource-title p,
+.harbour-note {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.harbour-resource-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.harbour-resource-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(4, 17, 31, 0.62);
+  border: 1px solid rgba(109, 85, 32, 0.5);
+}
+
+.harbour-resource-row span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.harbour-resource-row strong {
+  color: var(--cream);
+}
+
+.harbour-button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.harbour-cannon-grid {
+  grid-template-columns: 1fr;
+}
+
+.harbour-cannon-art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.harbour-cannon-frame {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(4, 17, 31, 0.72);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.harbour-frame-caption {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.harbour-frame-image-shell {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 12px;
+  background: rgba(5, 15, 30, 0.66);
+  border: 1px solid rgba(211, 165, 58, 0.45);
+}
+
+.harbour-frame-image-shell img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.harbour-frame-empty {
+  color: var(--cream);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.harbour-cost-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(4, 17, 31, 0.62);
+  border: 1px solid rgba(109, 85, 32, 0.5);
+}
+
+.harbour-cost-panel h3 {
+  font-size: 0.95rem;
+}
+
+.harbour-cost-panel p {
+  margin: 0;
+  color: var(--cream);
+}
+
+.harbour-cost-list {
+  display: grid;
+  gap: 8px;
+}
+
+.harbour-cost-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: rgba(18, 49, 84, 0.5);
+  border: 1px solid rgba(109, 85, 32, 0.45);
+}
+
+.harbour-cost-list span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.harbour-cost-list strong {
+  color: var(--cream);
+}
+
+.harbour-button-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.harbour-button-row .chunky-button {
+  flex: 1 1 220px;
+}
+
 @media (max-width: 720px) {
   .fleet-page.shipyard-reset,
   .my-ship-page.shipyard-reset {
@@ -3038,6 +3434,50 @@ h2 {
   .shipyard-active-image,
   .shipyard-card-image,
   .shipyard-cannon-image {
+    max-width: 100%;
+  }
+
+  .harbour-shell {
+    padding: 18px;
+  }
+
+  .harbour-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .harbour-grid,
+  .harbour-stat-grid,
+  .harbour-card-grid,
+  .harbour-cannon-art-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .harbour-panel {
+    min-width: 0;
+    padding: 18px;
+  }
+
+  .harbour-metric,
+  .harbour-item-heading,
+  .harbour-button-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .harbour-logo {
+    width: min(220px, 68vw);
+  }
+
+  .harbour-button-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .harbour-resource-title {
+    align-items: flex-start;
+  }
+
+  .harbour-frame-image-shell img {
     max-width: 100%;
   }
 
