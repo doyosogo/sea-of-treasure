@@ -109,6 +109,7 @@ const initialState = {
   currentShipId: 1,
   ownedShips: [1],
   selectedEnemyId: "smugglerCutter",
+  lastBattleEnemyId: null,
   currentBattle: null,
   hull: {
     current: 140,
@@ -168,11 +169,11 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
     totalGoldEarned: Math.max(0, savedStats.totalGoldEarned ?? 0),
     totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
     treasureDigsCompleted: Math.max(0, savedStats.treasureDigsCompleted ?? 0),
-    rareTreasuresFound: Math.max(
-      0,
-      savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
-    ),
-    upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades))
+      rareTreasuresFound: Math.max(
+        0,
+        savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
+      ),
+      upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades))
   };
 }
 
@@ -291,6 +292,7 @@ function loadSavedState() {
       activeTreasureDig: parsedState.activeTreasureDig ?? null,
       treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
       selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
+      lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
       currentBattle: parsedState.currentBattle ?? null,
       claimedAchievements: Array.isArray(parsedState.claimedAchievements) ? parsedState.claimedAchievements : [],
       isIdling: false,
@@ -650,11 +652,11 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Stop idling before starting an active battle.", "warning");
       }
 
-      if (state.currentBattle || (state.hull?.current ?? 0) <= 0) {
+      if (state.currentBattle || ((state.hull?.current ?? 0) <= 0 && !state.lastBattleEnemyId)) {
         return state;
       }
 
-      const selectedEnemy = enemies.find((enemy) => enemy.id === state.selectedEnemyId);
+      const selectedEnemy = enemies.find((enemy) => enemy.id === (action.enemyId ?? state.selectedEnemyId));
 
       if (!selectedEnemy || state.playerLevel < selectedEnemy.unlockLevel) {
         return addActivityLogEntry(state, "That enemy is not available yet.", "warning");
@@ -664,6 +666,8 @@ function gameStateReducer(state, action) {
 
       return addActivityLogEntry(clampHull({
         ...state,
+        selectedEnemyId: selectedEnemy.id,
+        lastBattleEnemyId: selectedEnemy.id,
         currentBattle: {
           enemy,
           shotsFired: 0,

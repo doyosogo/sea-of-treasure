@@ -1,344 +1,193 @@
+import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_ICONS } from "../data/assets.js";
 import {
-  calcOfflineCap,
-  formatDuration,
   formatNumber,
-  getCargoCapacity,
-  getCraftingBonuses,
-  getEstimatedCargoValue,
-  getEstimatedResourceValue,
-  getIdleCombatEstimate,
+  getCurrentCannon,
   getCurrentShip,
-  getPlayerCombatStats,
-  getMarketCooldownRemaining,
-  getTalentBonuses,
-  getUsedCargo,
-  getXpRequired,
-  getClaimableAchievements
+  getIdleCombatEstimate,
+  getXpRequired
 } from "../utils/gameEngine.js";
-import { achievements } from "../data/achievements.js";
 import { skills } from "../data/skills.js";
-import { treasureSites } from "../data/treasures.js";
 
 function Dashboard({ gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
-  const talentBonuses = getTalentBonuses(gameState);
+  const currentCannon = getCurrentCannon(gameState);
+  const idleEstimate = getIdleCombatEstimate(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
-  const visibleActivityLog = (gameState.activityLog ?? []).slice(0, 6);
-  const usedCargo = getUsedCargo(gameState);
-  const cargoCapacity = getCargoCapacity(gameState);
-  const marketCooldown = getMarketCooldownRemaining(gameState);
-  const craftingBonuses = getCraftingBonuses(gameState);
-  const combatStats = getPlayerCombatStats(gameState);
-  const idleEstimate = getIdleCombatEstimate(gameState);
-  const activeTreasureDig = gameState.activeTreasureDig;
-  const activeTreasureSite = treasureSites.find((site) => site.id === activeTreasureDig?.siteId);
-  const activeTreasureRemaining = activeTreasureDig
-    ? Math.max(0, activeTreasureDig.finishesAt - Date.now())
-    : 0;
-  const recentMapLog = (gameState.activityLog ?? []).find((entry) => (
-    getLogMessage(entry).toLowerCase().includes("treasure map")
-  ));
-  const claimableAchievements = getClaimableAchievements(gameState);
-  const latestClaimableAchievement = claimableAchievements[0];
+  const recentLogs = (gameState.activityLog ?? []).slice(0, 5);
+  const resourceRows = [
+    { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold },
+    { label: "Cannonballs", value: gameState.cannonballs, icon: UI_ICONS.cannonballs },
+    { label: "Treasure Maps", value: gameState.treasureMaps, icon: UI_ICONS.treasureMaps },
+    { label: "Rare Map Pieces", value: gameState.rareMapPieces, icon: RESOURCE_ICONS.rareMapPiece },
+    { label: "Gunpowder", value: gameState.materials.gunpowder, icon: RESOURCE_ICONS.gunpowder },
+    { label: "Cannon Parts", value: gameState.materials.cannonParts, icon: RESOURCE_ICONS.cannonParts },
+    { label: "Ancient Relics", value: gameState.materials.ancientRelics, icon: RESOURCE_ICONS.ancientRelics }
+  ];
 
-  function getLogMessage(entry) {
-    return typeof entry === "string" ? entry : entry.message;
-  }
+  const skillCards = skills.map((skill) => {
+    const skillState = gameState.skills[skill.id];
+    const level = skillState?.level ?? 1;
+    const nextXp = skillState ? skill.xpPerLevel[Math.min(level - 1, skill.xpPerLevel.length - 1)] ?? 0 : 0;
+    const progress = nextXp > 0 ? Math.min(100, ((skillState?.xp ?? 0) / nextXp) * 100) : 100;
 
-  function getLogClassName(entry) {
-    const type = typeof entry === "string" ? "info" : entry.type;
-    return type === "warning" ? "warning" : "info";
-  }
+    return {
+      ...skill,
+      icon: SKILL_ICONS[skill.id],
+      level,
+      progress
+    };
+  });
 
   return (
-    <section className="dashboard">
-      <div className="hero-panel pixel-panel">
-        <div>
-          <p className="eyebrow">Idle Pirate Game</p>
-          <h1>Sea of Treasure</h1>
-        </div>
-        <div className={gameState.isIdling ? "status-pill active" : "status-pill"}>
-          {gameState.isIdling ? "Idling" : "Docked"}
-        </div>
-      </div>
+    <section
+      className="dashboard dashboard-cabin dashboard-reset"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5, 8, 14, 0.45), rgba(5, 8, 14, 0.7)), url(${SCENES.dashboard})`
+      }}
+    >
+      <div className="dashboard-overlay" aria-hidden="true" />
+      <div className="dashboard-shell">
+        <header className="dashboard-topbar">
+          <img alt="Sea of Treasure logo" className="dashboard-logo" src={LOGO} />
+          <div className="dashboard-title-copy">
+            <p className="eyebrow">Captain&apos;s Cabin</p>
+            <h1>Captain&apos;s Cabin</h1>
+            <p>Overview of your voyage, ship, crew and resources.</p>
+          </div>
+          <div className={gameState.isIdling ? "status-pill active" : "status-pill"}>
+            {gameState.isIdling ? "Idling" : "Docked"}
+          </div>
+        </header>
 
-      <div className="dashboard-grid">
-        <article className="pixel-panel captain-card">
-          <h2>Captain</h2>
-          <div className="level-row">
-            <span>Level {gameState.playerLevel}</span>
-            <span>
-              {formatNumber(gameState.playerXP)} / {formatNumber(xpRequired)} XP
-            </span>
-          </div>
-          <div className="progress-track" aria-label="XP progress">
-            <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
-          </div>
-          <div className="stat-grid">
-            <div className="stat-box">
-              <span>Gold</span>
-              <strong>{formatNumber(gameState.gold)}</strong>
+        <section className="dashboard-main-grid">
+          <article className="dashboard-panel dashboard-captain-panel">
+            <h2>Captain Overview</h2>
+            <div className="dashboard-progress">
+              <div className="level-row">
+                <span>Level {gameState.playerLevel}</span>
+                <span>
+                  {formatNumber(gameState.playerXP)} / {formatNumber(xpRequired)} XP
+                </span>
+              </div>
+              <div className="progress-track" aria-label="XP progress">
+                <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
+              </div>
             </div>
-            <div className="stat-box">
-              <span>Talent Points</span>
-              <strong>{formatNumber(gameState.talentPoints)}</strong>
+            <div className="dashboard-stat-stack">
+              <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.gold)} />
+              <Metric label="Talent Points" icon={UI_ICONS.talentPoints} value={formatNumber(gameState.talentPoints)} />
+              <Metric label="Ships Sunk" icon={UI_ICONS.xp} value={formatNumber(gameState.totalShipsSunk)} />
+              <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / 31`} />
             </div>
-            <div className="stat-box">
-              <span>Ships Sunk</span>
-              <strong>{formatNumber(gameState.totalShipsSunk)}</strong>
-            </div>
-          </div>
-        </article>
+          </article>
 
-        <article className="pixel-panel ship-card">
-          <h2>Current Voyage</h2>
-          <div className="info-list">
-            <div>
-              <span>Ship</span>
+          <article className="dashboard-panel dashboard-voyage-panel">
+            <h2>Current Voyage</h2>
+            <div className="voyage-ship-art">
+              <img alt={currentShip.name} className="ship-art-image" src={SHIP_IMAGES[currentShip.id]} />
+            </div>
+            <div className="voyage-name-row">
               <strong>{currentShip.name}</strong>
+              <span>{currentShip.mapName}</span>
             </div>
-            <div>
-              <span>Map</span>
-              <strong>{currentShip.mapName}</strong>
+            <div className="voyage-grid">
+              <Metric label="Hull" icon={UI_ICONS.hull} value={`${formatNumber(gameState.hull.current)} / ${formatNumber(gameState.hull.max)}`} />
+              <Metric label="Cannonballs" icon={UI_ICONS.cannonballs} value={formatNumber(gameState.cannonballs)} />
+              <Metric label="Cannon Tier" icon={UI_ICONS.gold} value={`Tier ${currentCannon.tier}`} />
+              <Metric label="Cannon Name" icon={UI_ICONS.gold} value={currentCannon.name} />
             </div>
-            <div>
-              <span>Cannons</span>
-              <strong>{currentShip.cannons}</strong>
-            </div>
-          </div>
-        </article>
+          </article>
 
-        <article className="pixel-panel combat-summary-card">
-          <h2>Combat Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Selected Enemy</span>
+          <article className="dashboard-panel dashboard-combat-panel">
+            <h2>Combat Summary</h2>
+            <div className="combat-portrait-frame">
+              <img alt={idleEstimate.enemy.name} className="combat-portrait-image" src={ENEMY_IMAGES[idleEstimate.enemy.id]} />
+            </div>
+            <div className="voyage-name-row">
               <strong>{idleEstimate.enemy.name}</strong>
+              <span>{idleEstimate.enemy.difficulty}</span>
             </div>
-            <div className="stat-box">
-              <span>Hull</span>
-              <strong>{formatNumber(combatStats.currentHull)} / {formatNumber(combatStats.maxHull)}</strong>
+            <div className="dashboard-stat-stack">
+              <Metric label="Gold / Hour" icon={UI_ICONS.gold} value={formatNumber(idleEstimate.goldPerHour)} />
+              <Metric label="XP / Hour" icon={UI_ICONS.xp} value={formatNumber(idleEstimate.xpPerHour)} />
             </div>
-            <div className="stat-box">
-              <span>Cannonballs</span>
-              <strong>{formatNumber(gameState.cannonballs)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Estimated Gold / Hour</span>
-              <strong>{formatNumber(idleEstimate.goldPerHour)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Estimated XP / Hour</span>
-              <strong>{formatNumber(idleEstimate.xpPerHour)}</strong>
-            </div>
-          </div>
-          <p className="shop-note">Use the Battle page to fight enemies.</p>
-          <button className="chunky-button primary nav-hint-button" onClick={() => onNavigate?.("battle")} type="button">
-            Open Battle
-          </button>
-        </article>
+            <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("battle")} type="button">
+              Open Battle
+            </button>
+          </article>
+        </section>
 
-        <article className="pixel-panel skills-summary-card">
-          <h2>Skills Summary</h2>
-          <div className="skills-summary-grid">
-            {skills.map((skill) => {
-              const skillState = gameState.skills[skill.id];
-              const isActive = Boolean(skillState?.active);
-
-              return (
-                <div className={isActive ? "skill-summary-item active" : "skill-summary-item"} key={skill.id}>
-                  <span>{skill.name}</span>
-                  <strong>Level {skillState?.level ?? 1}</strong>
-                  {isActive && <em>{skill.actionName}</em>}
+        <section className="dashboard-secondary-grid">
+          <article className="dashboard-panel dashboard-skills-panel">
+            <h2>Skills Summary</h2>
+            <div className="skills-icon-grid">
+              {skillCards.map((skill) => (
+                <div className="skill-summary-card" key={skill.id}>
+                  <div className="skill-summary-top">
+                    <img alt={skill.name} className="skill-summary-icon" src={skill.icon} />
+                    <div>
+                      <strong>{skill.name}</strong>
+                      <span>Level {skill.level}</span>
+                    </div>
+                  </div>
+                  <div className="progress-track skill-progress-track" aria-label={`${skill.name} XP progress`}>
+                    <div className="progress-fill" style={{ width: `${skill.progress}%` }} />
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </article>
-
-        <article className="pixel-panel talent-summary-card">
-          <h2>Talent Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Available Points</span>
-              <strong>{formatNumber(gameState.talentPoints)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Gold Multiplier</span>
-              <strong>{formatNumber(talentBonuses.goldMultiplier)}x</strong>
-            </div>
-            <div className="stat-box">
-              <span>XP Multiplier</span>
-              <strong>{formatNumber(talentBonuses.xpMultiplier)}x</strong>
-            </div>
-            <div className="stat-box">
-              <span>Passive Gold / Hour</span>
-              <strong>{formatNumber(talentBonuses.passiveGoldPerHour)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Offline Cap</span>
-              <strong>{formatDuration(calcOfflineCap(gameState))}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel trading-summary-card">
-          <h2>Trading Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Cargo</span>
-              <strong>{formatNumber(usedCargo)} / {formatNumber(cargoCapacity)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Trading Level</span>
-              <strong>{gameState.skills.trading?.level ?? 1}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Market Allowance</span>
-              <strong>
-                {formatNumber(gameState.marketTradeUsed)} / {formatNumber(gameState.marketTradeLimit)}
-              </strong>
-            </div>
-            <div className="stat-box">
-              <span>Cargo Value</span>
-              <strong>{formatNumber(getEstimatedCargoValue(gameState))}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Next Market Cycle</span>
-              <strong>{marketCooldown > 0 ? formatDuration(marketCooldown) : "Ready"}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel treasure-summary-card">
-          <h2>Treasure Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Treasure Maps</span>
-              <strong>{formatNumber(gameState.treasureMaps)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Recent Map Find</span>
-              <strong>{recentMapLog ? getLogMessage(recentMapLog) : "None"}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Active Dig</span>
-              <strong>{activeTreasureSite ? activeTreasureSite.name : "None"}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Time Remaining</span>
-              <strong>{activeTreasureDig ? formatDuration(activeTreasureRemaining) : "None"}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Rare Finds</span>
-              <strong>{formatNumber(gameState.treasureInventory.length)}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel resource-summary-card">
-          <h2>Resource Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Fish</span>
-              <strong>{formatNumber(gameState.resources.fish)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Whale Oil</span>
-              <strong>{formatNumber(gameState.resources.whaleOil)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Estimated Value</span>
-              <strong>{formatNumber(getEstimatedResourceValue(gameState))}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel materials-summary-card">
-          <h2>Materials Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Gunpowder</span>
-              <strong>{formatNumber(gameState.materials.gunpowder)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Cannon Parts</span>
-              <strong>{formatNumber(gameState.materials.cannonParts)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Ancient Relics</span>
-              <strong>{formatNumber(gameState.materials.ancientRelics)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Rare Map Pieces</span>
-              <strong>{formatNumber(gameState.rareMapPieces)}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel shipwright-summary-card">
-          <h2>Shipwright Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Reinforced Hull</span>
-              <strong>Lv. {gameState.craftedUpgrades.reinforcedHull} Future Hull</strong>
-            </div>
-            <div className="stat-box">
-              <span>Speed Sails</span>
-              <strong>Lv. {gameState.craftedUpgrades.speedSails}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Cannon Braces</span>
-              <strong>Lv. {gameState.craftedUpgrades.cannonBraces}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Ships / Hour Bonus</span>
-              <strong>{formatNumber((craftingBonuses.shipsPerHourMultiplier - 1) * 100)}%</strong>
-            </div>
-            <div className="stat-box">
-              <span>Cannonball Refund Chance</span>
-              <strong>{formatNumber(craftingBonuses.cannonballRefundChance * 100)}%</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel achievements-summary-card">
-          <h2>Achievements Summary</h2>
-          <div className="summary-stat-grid">
-            <div className="stat-box">
-              <span>Claimed</span>
-              <strong>
-                {formatNumber(gameState.claimedAchievements?.length ?? 0)} / {formatNumber(achievements.length)}
-              </strong>
-            </div>
-            <div className="stat-box">
-              <span>Claimable</span>
-              <strong>{formatNumber(claimableAchievements.length)}</strong>
-            </div>
-            <div className="stat-box">
-              <span>Latest Claimable</span>
-              <strong>{latestClaimableAchievement ? latestClaimableAchievement.name : "None"}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article className="pixel-panel log-card">
-          <h2>Activity Log</h2>
-          {visibleActivityLog.length > 0 ? (
-            <ul className="activity-log">
-              {visibleActivityLog.map((entry, index) => (
-                <li className={getLogClassName(entry)} key={`${getLogMessage(entry)}-${index}`}>
-                  {getLogMessage(entry)}
-                </li>
               ))}
-            </ul>
-          ) : (
-            <p className="empty-log">No ships sunk yet.</p>
-          )}
-        </article>
+            </div>
+          </article>
+
+          <article className="dashboard-panel dashboard-resources-panel">
+            <h2>Resources Summary</h2>
+            <div className="resource-summary-list">
+              {resourceRows.map((resource) => (
+                <div className="resource-summary-row" key={resource.label}>
+                  <div className="resource-summary-left">
+                    <img alt={resource.label} className="resource-summary-icon" src={resource.icon} />
+                    <span>{resource.label}</span>
+                  </div>
+                  <strong>{formatNumber(resource.value)}</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="dashboard-panel dashboard-feed-panel">
+            <h2>Activity Feed</h2>
+            {recentLogs.length > 0 ? (
+              <ul className="dashboard-log-list">
+                {recentLogs.map((entry, index) => {
+                  const message = typeof entry === "string" ? entry : entry.message;
+                  const type = typeof entry === "string" ? "info" : entry.type;
+
+                  return (
+                    <li className={type === "warning" ? "warning" : "info"} key={`${message}-${index}`}>
+                      {message}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="empty-log">No voyage notes yet.</p>
+            )}
+          </article>
+        </section>
       </div>
     </section>
+  );
+}
+
+function Metric({ icon, label, value }) {
+  return (
+    <div className="dashboard-metric">
+      {icon ? <img alt={label} className="dashboard-metric-icon" src={icon} /> : null}
+      <div className="dashboard-metric-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
   );
 }
 

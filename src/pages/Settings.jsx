@@ -1,5 +1,16 @@
 import { useMemo, useState } from "react";
 import {
+  CANNON_IMAGES,
+  ENEMY_IMAGES,
+  LOGO,
+  RESOURCE_ICONS,
+  SCENES,
+  SHIP_IMAGES,
+  SKILL_ICONS,
+  TALENT_ICONS,
+  UI_ICONS
+} from "../data/assets.js";
+import {
   formatNumber,
   getCurrentCannon,
   getCurrentShip,
@@ -18,6 +29,16 @@ function Settings({ gameState, dispatch }) {
   const currentCannon = getCurrentCannon(gameState);
   const selectedEnemy = getSelectedEnemyType(gameState);
   const debugJson = useMemo(() => JSON.stringify(gameState, null, 2), [gameState]);
+  const assetRegistrySummary = useMemo(() => ({
+    ships: Object.keys(SHIP_IMAGES).length,
+    enemies: Object.keys(ENEMY_IMAGES).length,
+    skills: Object.keys(SKILL_ICONS).length,
+    cannons: Object.keys(CANNON_IMAGES).length,
+    resources: Object.keys(RESOURCE_ICONS).length,
+    ui: Object.keys(UI_ICONS).length,
+    scenes: Object.keys(SCENES).length,
+    talents: Object.keys(TALENT_ICONS).length
+  }), []);
 
   function handleExportSave() {
     const json = JSON.stringify(gameState, null, 2);
@@ -225,6 +246,36 @@ function Settings({ gameState, dispatch }) {
 
         <textarea className="save-textarea debug-json" readOnly value={debugJson} />
       </details>
+
+      {import.meta.env.DEV && (
+        <article className="pixel-panel settings-panel">
+          <h2>Visual Asset System Ready</h2>
+          <div className="summary-stat-grid">
+            <Stat label="Logo Loaded" value="Yes" />
+            <Stat label="Scene Count" value={assetRegistrySummary.scenes} />
+            <Stat label="Icon Count" value={assetRegistrySummary.ui + assetRegistrySummary.resources + assetRegistrySummary.skills + assetRegistrySummary.cannons} />
+          </div>
+        </article>
+      )}
+
+      {import.meta.env.DEV && (
+        <article className="pixel-panel settings-panel">
+          <h2>Asset Registry Check</h2>
+          <p className="shop-note">
+            Central registry for shared artwork. Logo asset: <code>{LOGO}</code>
+          </p>
+          <div className="summary-stat-grid">
+            <Stat label="Ships registered" value={assetRegistrySummary.ships} />
+            <Stat label="Enemies registered" value={assetRegistrySummary.enemies} />
+            <Stat label="Skills registered" value={assetRegistrySummary.skills} />
+            <Stat label="Cannons registered" value={assetRegistrySummary.cannons} />
+            <Stat label="Resources registered" value={assetRegistrySummary.resources} />
+            <Stat label="UI icons registered" value={assetRegistrySummary.ui} />
+            <Stat label="Scenes registered" value={assetRegistrySummary.scenes} />
+            <Stat label="Talent icon entries" value={assetRegistrySummary.talents} />
+          </div>
+        </article>
+      )}
     </section>
   );
 }
