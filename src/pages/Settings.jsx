@@ -15,7 +15,8 @@ import {
   getCurrentCannon,
   getCurrentShip,
   getMaxHull,
-  getSelectedEnemyType
+  getSelectedEnemyType,
+  getActiveWorldEvent
 } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
@@ -28,6 +29,7 @@ function Settings({ gameState, dispatch }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const selectedEnemy = getSelectedEnemyType(gameState);
+  const activeWorldEvent = getActiveWorldEvent(gameState);
   const debugJson = useMemo(() => JSON.stringify(gameState, null, 2), [gameState]);
   const assetRegistrySummary = useMemo(() => ({
     ships: Object.keys(SHIP_IMAGES).length,
@@ -220,6 +222,9 @@ function Settings({ gameState, dispatch }) {
           <Stat label="Total Ships Sunk" value={formatNumber(gameState.totalShipsSunk)} />
           <Stat label="Total Gold Earned" value={formatNumber(gameState.lifetimeStats.totalGoldEarned)} />
           <Stat label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} />
+          <Stat label="World Events Seen" value={formatNumber(gameState.lifetimeStats?.worldEventsSeen ?? 0)} />
+          <Stat label="Cursed Fog Seen" value={formatNumber(gameState.lifetimeStats?.cursedFogEventsSeen ?? 0)} />
+          <Stat label="Active World Event" value={activeWorldEvent ? activeWorldEvent.name : "None"} />
         </div>
 
         <div className="debug-resource-grid">
@@ -242,6 +247,12 @@ function Settings({ gameState, dispatch }) {
           </button>
           <button className="chunky-button" onClick={() => dispatch({ type: "DEBUG_REPAIR_FULL" })} type="button">
             Repair Hull to Full
+          </button>
+          <button className="chunky-button" onClick={() => dispatch({ type: "TRIGGER_RANDOM_WORLD_EVENT" })} type="button">
+            Trigger Random World Event
+          </button>
+          <button className="chunky-button" onClick={() => dispatch({ type: "CLEAR_ACTIVE_WORLD_EVENT" })} type="button">
+            Clear Active World Event
           </button>
         </div>
 

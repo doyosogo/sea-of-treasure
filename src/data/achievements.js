@@ -77,6 +77,36 @@ export const achievements = [
     target: 1
   },
   {
+    id: "experience_1_world_event",
+    category: "World",
+    name: "Curious Horizon",
+    description: "Experience 1 world event.",
+    rewardGold: 2500,
+    rewardTalentPoints: 0,
+    rewardDoubloons: 1,
+    target: 1
+  },
+  {
+    id: "experience_10_world_events",
+    category: "World",
+    name: "Seasoned Weathered Sailor",
+    description: "Experience 10 world events.",
+    rewardGold: 50000,
+    rewardTalentPoints: 1,
+    rewardDoubloons: 2,
+    target: 10
+  },
+  {
+    id: "benefit_from_cursed_fog_once",
+    category: "World",
+    name: "Fog-Born",
+    description: "Benefit from Cursed Fog once.",
+    rewardGold: 100000,
+    rewardTalentPoints: 2,
+    rewardDoubloons: 3,
+    target: 1
+  },
+  {
     id: "reach_level_5",
     category: "Progression",
     name: "Seasoned Sailor",

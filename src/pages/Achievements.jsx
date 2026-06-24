@@ -7,7 +7,7 @@ import {
   isAchievementUnlocked
 } from "../utils/gameEngine.js";
 
-const categories = ["Combat", "Progression", "Fleet", "Economy", "Skills", "Treasure", "Crafting"];
+const categories = ["Combat", "World", "Progression", "Fleet", "Economy", "Skills", "Treasure", "Crafting"];
 
 function Achievements({ gameState, dispatch }) {
   const claimedAchievements = gameState.claimedAchievements ?? [];

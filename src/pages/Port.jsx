@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LOGO, RESOURCE_ICONS, SCENES, UI_CANNONBALLS, UI_GOLD } from "../data/assets.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import {
+  getActiveWorldEvent,
   formatDuration,
   formatNumber,
   getCargoCapacity,
@@ -15,6 +16,7 @@ import {
 
 function Port({ gameState, dispatch }) {
   const [now, setNow] = useState(Date.now());
+  const activeWorldEvent = getActiveWorldEvent(gameState);
   const usedCargo = getUsedCargo(gameState);
   const cargoCapacity = getCargoCapacity(gameState);
   const cooldownRemaining = getMarketCooldownRemaining(gameState, now);
@@ -48,6 +50,17 @@ function Port({ gameState, dispatch }) {
             <HarbourChip icon={UI_CANNONBALLS} label="Cargo" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
           </div>
         </header>
+
+        {activeWorldEvent?.id === "merchantConvoy" ? (
+          <article className="harbour-panel harbour-event-banner">
+            <div className="panel-heading-row">
+              <h2>World Event</h2>
+              <span className="resource-counter">{activeWorldEvent.name}</span>
+            </div>
+            <p className="harbour-note">{activeWorldEvent.description}</p>
+            <p className="harbour-note">{describeWorldEventEffects(activeWorldEvent)}</p>
+          </article>
+        ) : null}
 
         <section className="harbour-grid harbour-overview-grid">
           <article className="harbour-panel">
@@ -291,6 +304,14 @@ function ResourceMarketCard({ icon, label, value, sellValue, buttons }) {
       </div>
     </article>
   );
+}
+
+function describeWorldEventEffects(event) {
+  if ((event.effects?.tradeSellValueMultiplier ?? 1) > 1) {
+    return `Trade sell value +${Math.round((event.effects.tradeSellValueMultiplier - 1) * 100)}%`;
+  }
+
+  return "Temporary world modifiers are active.";
 }
 
 function WarehouseGroup({ title, items }) {

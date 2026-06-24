@@ -7,6 +7,7 @@ import {
   getCurrentShip,
   getIdleCombatEstimate,
   getActiveRegion,
+  getActiveWorldEvent,
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
@@ -15,6 +16,7 @@ function Dashboard({ gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const activeRegion = getActiveRegion(gameState);
+  const activeWorldEvent = getActiveWorldEvent(gameState);
   const idleEstimate = getIdleCombatEstimate(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
@@ -68,6 +70,27 @@ function Dashboard({ gameState, onNavigate }) {
             {gameState.isIdling ? "Idling" : "Docked"}
           </div>
         </header>
+
+        <section className="dashboard-panel dashboard-event-panel">
+          <h2>World Event</h2>
+          {activeWorldEvent ? (
+            <div className="world-event-card">
+              <div className="world-event-header">
+                <div>
+                  <p className="region-kicker">{activeWorldEvent.type}</p>
+                  <h3>{activeWorldEvent.name}</h3>
+                </div>
+                <span className="resource-counter">{formatDuration(Math.max(0, (activeWorldEvent.endsAt ?? Date.now()) - Date.now()))}</span>
+              </div>
+              <p className="world-event-description">{activeWorldEvent.description}</p>
+              <p className="world-event-effects">
+                {describeWorldEventEffects(activeWorldEvent)}
+              </p>
+            </div>
+          ) : (
+            <p className="empty-log">No world event active.</p>
+          )}
+        </section>
 
         <section className="dashboard-main-grid">
           <article className="dashboard-panel dashboard-captain-panel">
@@ -213,6 +236,36 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+}
+
+function describeWorldEventEffects(event) {
+  const effects = [];
+
+  if ((event.effects?.tradeSellValueMultiplier ?? 1) > 1) {
+    effects.push(`Trade sell value +${Math.round((event.effects.tradeSellValueMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.combatGoldMultiplier ?? 1) > 1) {
+    effects.push(`Combat gold +${Math.round((event.effects.combatGoldMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.treasureMapDropMultiplier ?? 1) > 1) {
+    effects.push(`Treasure maps +${Math.round((event.effects.treasureMapDropMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.hullDamageTakenMultiplier ?? 1) < 1) {
+    effects.push(`Hull damage -${Math.round((1 - event.effects.hullDamageTakenMultiplier) * 100)}%`);
+  }
+
+  if ((event.effects?.bossRewardMultiplier ?? 1) > 1) {
+    effects.push(`Boss rewards +${Math.round((event.effects.bossRewardMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.bossDamageMultiplier ?? 1) > 1) {
+    effects.push(`Boss damage +${Math.round((event.effects.bossDamageMultiplier - 1) * 100)}%`);
+  }
+
+  return effects.length > 0 ? effects.join(" • ") : "Temporary world modifiers are active.";
 }
 
 export default Dashboard;

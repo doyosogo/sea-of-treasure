@@ -7,6 +7,7 @@ import { craftableUpgrades } from "../data/crafting.js";
 import { dailyQuestPool, weeklyQuestPool } from "../data/quests.js";
 import { regions } from "../data/regions.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
+import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
 import {
@@ -39,6 +40,7 @@ import {
   getMarketCooldownRemaining,
   getBossById,
   getRegionById,
+  getWorldEventBonuses,
   getTalentBonuses,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
@@ -132,6 +134,8 @@ function createInitialLifetimeStats() {
     totalShipsSunk: 0,
     totalBossesDefeated: 0,
     defeatedLeviathan: false,
+    worldEventsSeen: 0,
+    cursedFogEventsSeen: 0,
     treasureDigsCompleted: 0,
     rareTreasuresFound: 0,
     upgradesCrafted: 0,
@@ -365,6 +369,93 @@ function claimQuestById(state, questId) {
   };
 }
 
+function createWorldEventState(event, now = Date.now()) {
+  return {
+    id: event.id,
+    name: event.name,
+    type: event.type,
+    description: event.description,
+    durationMs: event.durationMs,
+    effects: event.effects,
+    rarity: event.rarity,
+    startedAt: now,
+    endsAt: now + event.durationMs
+  };
+}
+
+function getWorldEventDefinition(eventId) {
+  return worldEvents.find((event) => event.id === eventId) ?? null;
+}
+
+function weightedRandomWorldEvent() {
+  const pool = [...worldEvents];
+  const totalWeight = pool.reduce((total, event) => total + (6 - (event.rarity ?? 3)), 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const event of pool) {
+    roll -= (6 - (event.rarity ?? 3));
+    if (roll <= 0) {
+      return event;
+    }
+  }
+
+  return pool[0] ?? null;
+}
+
+function refreshWorldEventStateForTime(state, now = Date.now()) {
+  const event = state.activeWorldEvent;
+  let nextState = state;
+  let updated = false;
+
+  if (event?.endsAt && now >= event.endsAt) {
+    const endedEventName = event.name ?? getWorldEventDefinition(event.id)?.name ?? "World Event";
+    nextState = {
+      ...state,
+      activeWorldEvent: null,
+      lastWorldEventGeneratedAt: now
+    };
+    nextState = addActivityLogEntry(nextState, `World Event Ended: ${endedEventName}.`);
+    updated = true;
+  }
+
+  const postEndState = nextState.activeWorldEvent ? nextState : nextState;
+  const canAttemptGeneration = !postEndState.activeWorldEvent && now - (postEndState.lastWorldEventGeneratedAt ?? 0) >= 30 * 60 * 1000;
+
+  if (!canAttemptGeneration) {
+    return updated ? nextState : state;
+  }
+
+  if (Math.random() < 0.35) {
+    const nextEvent = weightedRandomWorldEvent();
+
+    if (!nextEvent) {
+      return {
+        ...postEndState,
+        lastWorldEventGeneratedAt: now
+      };
+    }
+
+    const worldEventState = createWorldEventState(nextEvent, now);
+    const eventStartState = {
+      ...postEndState,
+      activeWorldEvent: worldEventState,
+      lastWorldEventGeneratedAt: now,
+      lifetimeStats: {
+        ...postEndState.lifetimeStats,
+        worldEventsSeen: (postEndState.lifetimeStats?.worldEventsSeen ?? 0) + 1,
+        cursedFogEventsSeen: (postEndState.lifetimeStats?.cursedFogEventsSeen ?? 0) + (nextEvent.id === "cursedFog" ? 1 : 0)
+      }
+    };
+
+    return addActivityLogEntry(eventStartState, `World Event Started: ${nextEvent.name}.`);
+  }
+
+  return {
+    ...postEndState,
+    lastWorldEventGeneratedAt: now
+  };
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -405,6 +496,9 @@ const initialState = {
   treasureMaps: 3,
   activeTreasureDig: null,
   treasureInventory: [],
+  activeWorldEvent: null,
+  lastWorldEventGeneratedAt: Date.now(),
+  worldEventsSeen: 0,
   activityLog: [],
   pendingOfflineRewards: null,
   offlineSummaryVisible: false,
@@ -488,6 +582,8 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
     totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
     totalBossesDefeated: Math.max(0, savedStats.totalBossesDefeated ?? 0),
     defeatedLeviathan: Boolean(savedStats.defeatedLeviathan ?? false),
+    worldEventsSeen: Math.max(0, savedStats.worldEventsSeen ?? 0),
+    cursedFogEventsSeen: Math.max(0, savedStats.cursedFogEventsSeen ?? 0),
     treasureDigsCompleted: Math.max(0, savedStats.treasureDigsCompleted ?? 0),
     rareTreasuresFound: Math.max(
       0,
@@ -667,6 +763,9 @@ function loadSavedState() {
       treasureMaps: parsedState.treasureMaps ?? 3,
       activeTreasureDig: parsedState.activeTreasureDig ?? null,
       treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
+      activeWorldEvent: parsedState.activeWorldEvent ?? null,
+      lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
+      worldEventsSeen: parsedState.worldEventsSeen ?? 0,
       activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", parsedState.playerLevel ?? 1),
       selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
       lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
@@ -694,29 +793,33 @@ function loadSavedState() {
       lifetimeStats: normalizeLifetimeStats(parsedState.lifetimeStats, restoredState),
       marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
       marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
-      marketTradeUsed: parsedState.marketTradeUsed ?? 0
+      marketTradeUsed: parsedState.marketTradeUsed ?? 0,
+      activeWorldEvent: parsedState.activeWorldEvent ?? null,
+      lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
+      worldEventsSeen: parsedState.worldEventsSeen ?? 0
     }, parsedState.hull?.current);
+    const worldEventState = refreshWorldEventStateForTime(normalizedState, now);
 
     if (parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible) {
       return {
-        ...normalizedState,
+        ...worldEventState,
         pendingOfflineRewards: parsedState.pendingOfflineRewards,
         offlineSummaryVisible: true,
         lastSeen: now
       };
     }
 
-    const offlineRewards = calcOfflineProgress(normalizedState.lastSeen, now, normalizedState);
+    const offlineRewards = calcOfflineProgress(worldEventState.lastSeen, now, worldEventState);
 
     if (!offlineRewards) {
       return {
-        ...normalizedState,
+        ...worldEventState,
         lastSeen: now
       };
     }
 
     return {
-      ...normalizedState,
+      ...worldEventState,
       pendingOfflineRewards: offlineRewards,
       offlineSummaryVisible: true,
       lastSeen: now
@@ -856,8 +959,9 @@ function addLifetimeBossDefeat(state, bossId) {
 function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
   const currentShip = getCurrentShip(state);
   const talentBonuses = getTalentBonuses(state);
+  const worldEventBonuses = getWorldEventBonuses(state);
   const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
-  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * goldBonusMultiplier;
+  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * goldBonusMultiplier * worldEventBonuses.combatGoldMultiplier;
   const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier;
   const xpState = applyXp(state, xpGained);
 
@@ -874,12 +978,21 @@ function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
 
 function applyVictoryRewards(state, battleEnemy, options = {}) {
   const talentBonuses = getTalentBonuses(state);
+  const worldEventBonuses = getWorldEventBonuses(state);
   const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
-  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * goldBonusMultiplier;
-  const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
-  const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
-  const rareMapPiecesFound = rollRareMapPieces(battleEnemy.rareMapPieceChance ?? 0.0005);
-  const doubloonsGained = rollDoubloonsFromCombat(battleEnemy, 1);
+  const combatEventGoldMultiplier = battleEnemy?.isBoss ? worldEventBonuses.combatGoldMultiplier : 1;
+  const bossRewardMultiplier = battleEnemy?.isBoss ? worldEventBonuses.bossRewardMultiplier : 1;
+  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * goldBonusMultiplier * combatEventGoldMultiplier * bossRewardMultiplier;
+  const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier * bossRewardMultiplier;
+  const mapFound = Math.random() < Math.min(1, battleEnemy.mapDropChance * bossRewardMultiplier) ? 1 : 0;
+  const rareMapPiecesFound = rollRareMapPieces((battleEnemy.rareMapPieceChance ?? 0.0005) * bossRewardMultiplier);
+  const doubloonRollEnemy = battleEnemy?.isBoss
+    ? {
+        ...battleEnemy,
+        doubloonChance: (battleEnemy.doubloonChance ?? 0.03) * bossRewardMultiplier
+      }
+    : battleEnemy;
+  const doubloonsGained = rollDoubloonsFromCombat(doubloonRollEnemy, 1);
   const xpState = applyXp(state, xpGained);
   const rewardState = addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
     ...xpState,
@@ -1079,8 +1192,11 @@ function applySkillXp(skillDefinition, skillState, xpAmount) {
 
 function gameStateReducer(state, action) {
   state = refreshQuestStateForTime(state, action.now ?? Date.now());
+  state = refreshWorldEventStateForTime(state, action.now ?? Date.now());
 
   switch (action.type) {
+    case "WORLD_EVENT_TICK":
+      return state;
     case "SELECT_ENEMY": {
       const enemy = enemies.find((enemyData) => enemyData.id === action.enemyId);
 
@@ -1247,7 +1363,7 @@ function gameStateReducer(state, action) {
           : rareMapPieceState;
       }
 
-      const incomingDamage = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction));
+      const incomingDamage = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction) * combatStats.incomingDamageTakenMultiplier);
       const nextHull = Math.max(0, combatStats.currentHull - incomingDamage);
 
       if (nextHull <= 0) {
@@ -2293,6 +2409,39 @@ function gameStateReducer(state, action) {
         },
         lastSeen: Date.now()
       }, "Developer tool used: repaired hull to full.", "warning");
+    case "TRIGGER_RANDOM_WORLD_EVENT": {
+      const nextEvent = weightedRandomWorldEvent();
+
+      if (!nextEvent) {
+        return state;
+      }
+
+      const now = action.now ?? Date.now();
+      const worldEventState = createWorldEventState(nextEvent, now);
+      return addActivityLogEntry({
+        ...state,
+        activeWorldEvent: worldEventState,
+        lastWorldEventGeneratedAt: now,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          worldEventsSeen: (state.lifetimeStats?.worldEventsSeen ?? 0) + 1,
+          cursedFogEventsSeen: (state.lifetimeStats?.cursedFogEventsSeen ?? 0) + (nextEvent.id === "cursedFog" ? 1 : 0)
+        }
+      }, `World Event Started: ${nextEvent.name}.`);
+    }
+    case "CLEAR_ACTIVE_WORLD_EVENT": {
+      if (!state.activeWorldEvent) {
+        return state;
+      }
+
+      const now = action.now ?? Date.now();
+      return addActivityLogEntry({
+        ...state,
+        activeWorldEvent: null,
+        lastWorldEventGeneratedAt: now,
+        lastSeen: now
+      }, `World Event Ended: ${state.activeWorldEvent.name}.`);
+    }
     default:
       return state;
   }
@@ -2332,6 +2481,14 @@ export function useGameState() {
   useEffect(() => {
     const timerId = window.setInterval(() => {
       dispatch({ type: "QUEST_CLOCK_TICK", now: Date.now() });
+    }, 60 * 1000);
+
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      dispatch({ type: "WORLD_EVENT_TICK", now: Date.now() });
     }, 60 * 1000);
 
     return () => window.clearInterval(timerId);

@@ -736,6 +736,47 @@ button:disabled {
   color: var(--gold-300);
 }
 
+.dashboard-event-panel,
+.battle-event-banner,
+.harbour-event-banner,
+.treasure-event-banner {
+  display: grid;
+  gap: 12px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.world-event-card {
+  display: grid;
+  gap: 12px;
+}
+
+.world-event-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.world-event-header h3 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.world-event-description,
+.world-event-effects {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.5;
+}
+
 .dashboard-stat-stack {
   display: grid;
   gap: 12px;
@@ -3053,6 +3094,12 @@ h2 {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.treasure-empty-text {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.5;
 }
 
 .treasure-active-contract strong {

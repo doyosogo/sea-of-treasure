@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { LOGO, RESOURCE_ICONS, SCENES, UI_GOLD, UI_TREASURE_MAPS, UI_XP } from "../data/assets.js";
 import { treasureSites } from "../data/treasures.js";
-import { formatDuration, formatNumber, getTalentBonuses } from "../utils/gameEngine.js";
+import { formatDuration, formatNumber, getActiveWorldEvent, getTalentBonuses } from "../utils/gameEngine.js";
 
 function Treasure({ gameState, dispatch }) {
   const [now, setNow] = useState(Date.now());
   const treasureSkill = gameState.skills.treasureHunting;
   const activeSite = treasureSites.find((site) => site.id === gameState.activeTreasureDig?.siteId);
+  const activeWorldEvent = getActiveWorldEvent(gameState);
   const remainingMs = gameState.activeTreasureDig
     ? Math.max(0, gameState.activeTreasureDig.finishesAt - now)
     : 0;
@@ -41,6 +42,17 @@ function Treasure({ gameState, dispatch }) {
             <StatChip icon={RESOURCE_ICONS.rareMapPiece} label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} />
           </div>
         </header>
+
+        {activeWorldEvent?.id === "treasureFleet" ? (
+          <article className="treasure-panel treasure-event-banner">
+            <div className="panel-heading-row">
+              <h2>World Event</h2>
+              <span className="resource-counter">{activeWorldEvent.name}</span>
+            </div>
+            <p className="treasure-empty-text">{activeWorldEvent.description}</p>
+            <p className="treasure-empty-text">{describeWorldEventEffects(activeWorldEvent)}</p>
+          </article>
+        ) : null}
 
         <section className="treasure-grid treasure-overview-grid">
           <article className="treasure-panel">
@@ -190,6 +202,14 @@ function TreasureRow({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function describeWorldEventEffects(event) {
+  if ((event.effects?.treasureMapDropMultiplier ?? 1) > 1) {
+    return `Treasure map drops +${Math.round((event.effects.treasureMapDropMultiplier - 1) * 100)}%`;
+  }
+
+  return "Temporary world modifiers are active.";
 }
 
 export default Treasure;

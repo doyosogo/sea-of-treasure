@@ -12,7 +12,8 @@ import {
   getCurrentCannon,
   getEffectiveBallsPerBattle,
   getIdleCombatEstimate,
-  getPlayerCombatStats
+  getPlayerCombatStats,
+  getActiveWorldEvent
 } from "../utils/gameEngine.js";
 import { enemies } from "../data/enemies.js";
 import { bosses } from "../data/bosses.js";
@@ -30,6 +31,7 @@ function Battle({ gameState, dispatch }) {
       null
     : null;
   const activeRegion = regions.find((region) => region.id === gameState.activeRegionId) ?? regions[0];
+  const activeWorldEvent = getActiveWorldEvent(gameState);
   const activeEnemy = battleEnemy ?? selectedEnemyType ?? lastBattleEnemy;
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const enemyHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
@@ -114,6 +116,17 @@ function Battle({ gameState, dispatch }) {
             {gameState.isIdling ? "Idling" : battleEnemy ? "In Battle" : "Ready"}
           </div>
         </header>
+
+        {activeWorldEvent && (activeWorldEvent.type === "combat" || activeWorldEvent.type === "idle" || activeWorldEvent.type === "high-risk") ? (
+          <article className="battle-panel battle-event-banner">
+            <div className="panel-heading-row">
+              <h2>World Event</h2>
+              <span className="resource-counter">{activeWorldEvent.name}</span>
+            </div>
+            <p className="region-description">{activeWorldEvent.description}</p>
+            <p className="battle-event-effects">{describeWorldEventEffects(activeWorldEvent)}</p>
+          </article>
+        ) : null}
 
         <article className="battle-panel battle-active-panel">
           <div className="panel-heading-row battle-panel-heading">
@@ -283,6 +296,9 @@ function Battle({ gameState, dispatch }) {
                 const unlocked = gameState.playerLevel >= (region?.requiredLevel ?? 1);
                 const selected = currentBattle?.enemy?.id === boss.id || (!currentBattle && gameState.lastBattleEnemyId === boss.id && Boolean(lastBattleEnemy));
                 const estimate = generateBoss(gameState, boss);
+                const combatRewardMultiplier = activeWorldEvent?.id === "pirateInvasion" ? 1.25 : 1;
+                const bossRewardMultiplier = activeWorldEvent?.id === "cursedFog" ? 1.5 : 1;
+                const displayedRewardMultiplier = combatRewardMultiplier * bossRewardMultiplier;
                 const disabled = getBossBattleDisabled(!unlocked);
 
                 return (
@@ -299,8 +315,8 @@ function Battle({ gameState, dispatch }) {
                       <div className="battle-enemy-grid-stats">
                         <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} />
                         <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} />
-                        <Metric label="Gold Reward" value={formatNumber(estimate.goldReward)} icon={UI_ICONS.gold} />
-                        <Metric label="XP Reward" value={formatNumber(estimate.xpReward)} icon={UI_ICONS.xp} />
+                        <Metric label="Gold Reward" value={formatNumber(estimate.goldReward * displayedRewardMultiplier)} icon={UI_ICONS.gold} />
+                        <Metric label="XP Reward" value={formatNumber(estimate.xpReward * bossRewardMultiplier)} icon={UI_ICONS.xp} />
                       </div>
                       <button
                         className="chunky-button primary battle-card-button"
@@ -387,6 +403,28 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+}
+
+function describeWorldEventEffects(event) {
+  const effects = [];
+
+  if ((event.effects?.combatGoldMultiplier ?? 1) > 1) {
+    effects.push(`Combat gold +${Math.round((event.effects.combatGoldMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.hullDamageTakenMultiplier ?? 1) < 1) {
+    effects.push(`Hull damage -${Math.round((1 - event.effects.hullDamageTakenMultiplier) * 100)}%`);
+  }
+
+  if ((event.effects?.bossRewardMultiplier ?? 1) > 1) {
+    effects.push(`Boss rewards +${Math.round((event.effects.bossRewardMultiplier - 1) * 100)}%`);
+  }
+
+  if ((event.effects?.bossDamageMultiplier ?? 1) > 1) {
+    effects.push(`Boss damage +${Math.round((event.effects.bossDamageMultiplier - 1) * 100)}%`);
+  }
+
+  return effects.length > 0 ? effects.join(" • ") : "Temporary world modifiers are active.";
 }
 
 export default Battle;

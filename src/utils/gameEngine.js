@@ -7,6 +7,7 @@ import { levels } from "../data/levels.js";
 import { regions } from "../data/regions.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
+import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 
 const CANNON_ORDER = cannons.map((cannon) => cannon.id);
@@ -62,6 +63,43 @@ export function getRegionCombatModifiersById(regionId) {
     difficultyMultiplier,
     goldMultiplier: region.goldMultiplier,
     xpMultiplier: region.xpMultiplier
+  };
+}
+
+export function getActiveWorldEvent(gameState) {
+  const eventState = gameState.activeWorldEvent;
+
+  if (!eventState?.id) {
+    return null;
+  }
+
+  const definition = worldEvents.find((event) => event.id === eventState.id);
+
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    ...definition,
+    ...eventState,
+    effects: {
+      ...definition.effects,
+      ...(eventState.effects ?? {})
+    }
+  };
+}
+
+export function getWorldEventBonuses(gameState) {
+  const activeEvent = getActiveWorldEvent(gameState);
+
+  return {
+    activeEvent,
+    tradeSellValueMultiplier: activeEvent?.effects?.tradeSellValueMultiplier ?? 1,
+    combatGoldMultiplier: activeEvent?.effects?.combatGoldMultiplier ?? 1,
+    treasureMapDropMultiplier: activeEvent?.effects?.treasureMapDropMultiplier ?? 1,
+    hullDamageTakenMultiplier: activeEvent?.effects?.hullDamageTakenMultiplier ?? 1,
+    bossRewardMultiplier: activeEvent?.effects?.bossRewardMultiplier ?? 1,
+    bossDamageMultiplier: activeEvent?.effects?.bossDamageMultiplier ?? 1
   };
 }
 
@@ -337,6 +375,7 @@ export function getSelectedEnemyType(gameState) {
 export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameState)) {
   const currentShip = getCurrentShip(gameState);
   const regionModifiers = getRegionCombatModifiers(gameState);
+  const worldEventBonuses = getWorldEventBonuses(gameState);
   const baseHP = 40 + gameState.playerLevel * 25;
   const baseDamage = 2 + gameState.playerLevel * 1.5;
   const enemyData = typeof enemyType === "string"
@@ -354,14 +393,14 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
     maxHP: Math.round(baseHP * selectedEnemy.hpMultiplier * regionDifficultyMultiplier),
     currentHP: Math.round(baseHP * selectedEnemy.hpMultiplier * regionDifficultyMultiplier),
     damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier * beginnerDamageMultiplier * regionDifficultyMultiplier)),
-    goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier * regionModifiers.goldMultiplier,
+    goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier * regionModifiers.goldMultiplier * worldEventBonuses.combatGoldMultiplier,
     xpReward: currentShip.xpPerShip * selectedEnemy.xpMultiplier * regionModifiers.xpMultiplier,
     mapDropChance: Math.min(1, getTreasureMapDropChance(gameState) * selectedEnemy.mapDropMultiplier)
   };
 }
 
 export function getBossById(bossId) {
-  return bosses.find((boss) => boss.id === bossId) ?? bosses[0];
+  return bosses.find((boss) => boss.id === bossId) ?? null;
 }
 
 export function getUnlockedBosses(gameState) {
@@ -379,7 +418,11 @@ export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[
   const baseHP = 40 + gameState.playerLevel * 25;
   const baseDamage = 2 + gameState.playerLevel * 1.5;
   const regionModifiers = getRegionCombatModifiersById(bossData.regionId);
+  const worldEventBonuses = getWorldEventBonuses(gameState);
   const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
+  const bossDamageMultiplier = bossData.id && worldEventBonuses.activeEvent?.id === "cursedFog"
+    ? worldEventBonuses.bossDamageMultiplier
+    : 1;
 
   return {
     id: bossData.id,
@@ -390,7 +433,7 @@ export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[
     isBoss: true,
     maxHP: Math.round(baseHP * bossData.hpMultiplier * regionModifiers.difficultyMultiplier),
     currentHP: Math.round(baseHP * bossData.hpMultiplier * regionModifiers.difficultyMultiplier),
-    damage: Math.max(1, Math.round(baseDamage * bossData.damageMultiplier * regionModifiers.difficultyMultiplier * beginnerDamageMultiplier)),
+    damage: Math.max(1, Math.round(baseDamage * bossData.damageMultiplier * regionModifiers.difficultyMultiplier * beginnerDamageMultiplier * bossDamageMultiplier)),
     goldReward: currentShip.goldPerShip * bossData.goldReward * regionModifiers.goldMultiplier,
     xpReward: currentShip.xpPerShip * bossData.xpReward * regionModifiers.xpMultiplier,
     mapDropChance: Math.min(1, bossData.mapDropChance ?? getTreasureMapDropChance(gameState)),
@@ -402,6 +445,7 @@ export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[
 export function getPlayerCombatStats(gameState) {
   const equippedCannons = getEquippedCannons(gameState);
   const talentBonuses = getTalentBonuses(gameState);
+  const worldEventBonuses = getWorldEventBonuses(gameState);
   const maxHull = getMaxHull(gameState);
   const totalEquippedCannons = Object.values(equippedCannons).reduce((total, value) => total + value, 0);
   const baseLoadoutDamage = Object.entries(equippedCannons).reduce((total, [cannonId, quantity]) => {
@@ -425,6 +469,7 @@ export function getPlayerCombatStats(gameState) {
     maxHull,
     currentHull: Math.min(gameState.hull?.current ?? maxHull, maxHull),
     incomingDamageReduction: Math.min(0.75, talentBonuses.incomingDamageReduction),
+    incomingDamageTakenMultiplier: worldEventBonuses.hullDamageTakenMultiplier,
     totalEquippedCannons,
     loadoutDamage: baseLoadoutDamage,
     averageCannonDamageMultiplier
@@ -432,7 +477,7 @@ export function getPlayerCombatStats(gameState) {
 }
 
 export function getTreasureMapDropChance(gameState) {
-  return 0.15 * getTalentBonuses(gameState).treasureChanceMultiplier;
+  return 0.15 * getTalentBonuses(gameState).treasureChanceMultiplier * getWorldEventBonuses(gameState).treasureMapDropMultiplier;
 }
 
 export function rollTreasureMapDrops(gameState, shipsSunk) {
@@ -552,7 +597,8 @@ export function getMarketCooldownRemaining(gameState, now = Date.now()) {
 export function getTradingSellMultiplier(gameState) {
   const tradingLevel = gameState.skills?.trading?.level ?? 1;
   const talentBonuses = getTalentBonuses(gameState);
-  return (1 + tradingLevel * 0.01) * talentBonuses.sellPriceMultiplier;
+  const worldEventBonuses = getWorldEventBonuses(gameState);
+  return (1 + tradingLevel * 0.01) * talentBonuses.sellPriceMultiplier * worldEventBonuses.tradeSellValueMultiplier;
 }
 
 export function getFishSellValue(gameState) {
@@ -615,7 +661,7 @@ export function getIdleCombatEstimate(gameState) {
   const volleyIntervalSeconds = 10 / craftingBonuses.shipsPerHourMultiplier;
   const secondsPerEnemy = volleysNeeded * volleyIntervalSeconds;
   const enemiesPerHour = secondsPerEnemy > 0 ? 3600 / secondsPerEnemy : 0;
-  const hullDamagePerEnemy = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction));
+  const hullDamagePerEnemy = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction) * combatStats.incomingDamageTakenMultiplier);
   const cannonballsPerEnemy = volleysNeeded * ballsPerVolley;
 
   return {
@@ -786,6 +832,13 @@ export function getAchievementProgress(achievement, gameState) {
       break;
     case "defeat_the_leviathan":
       current = lifetimeStats.defeatedLeviathan ? 1 : 0;
+      break;
+    case "experience_1_world_event":
+    case "experience_10_world_events":
+      current = lifetimeStats.worldEventsSeen ?? 0;
+      break;
+    case "benefit_from_cursed_fog_once":
+      current = lifetimeStats.cursedFogEventsSeen ?? 0;
       break;
     case "max_one_crafted_upgrade":
       current = craftedLevels.length > 0 ? Math.max(...craftedLevels) : 0;
