@@ -4,6 +4,7 @@ import {
   SCENES,
   UI_ICONS
 } from "../data/assets.js";
+import { regions } from "../data/regions.js";
 import {
   formatNumber,
   generateEnemy,
@@ -24,6 +25,7 @@ function Battle({ gameState, dispatch }) {
   const lastBattleEnemy = gameState.lastBattleEnemyId
     ? enemies.find((enemy) => enemy.id === gameState.lastBattleEnemyId) ?? null
     : null;
+  const activeRegion = regions.find((region) => region.id === gameState.activeRegionId) ?? regions[0];
   const activeEnemy = battleEnemy ?? selectedEnemyType ?? lastBattleEnemy;
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const enemyHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
@@ -157,6 +159,46 @@ function Battle({ gameState, dispatch }) {
             >
               Repair Hull
             </button>
+          </div>
+        </article>
+
+        <article className="battle-panel battle-region-panel">
+          <div className="panel-heading-row">
+            <h2>Region Selection</h2>
+            <span className="resource-counter">{activeRegion.name}</span>
+          </div>
+          <div className="region-card-grid">
+            {regions.map((region) => {
+              const unlocked = gameState.playerLevel >= region.requiredLevel;
+              const selected = gameState.activeRegionId === region.id;
+
+              return (
+                <article className={`region-card ${selected ? "selected" : ""} ${unlocked ? "" : "locked"}`} key={region.id}>
+                  <div className="region-card-header">
+                    <div>
+                      <p className="region-kicker">Level {region.requiredLevel}</p>
+                      <h3>{region.name}</h3>
+                    </div>
+                    <span className="region-status">{unlocked ? (selected ? "Active" : "Unlocked") : "Locked"}</span>
+                  </div>
+                  <p className="region-description">{region.description}</p>
+                  <div className="region-stat-grid">
+                    <Metric icon={UI_ICONS.gold} label="Gold" value={`${formatNumber((region.goldMultiplier - 1) * 100)}%`} />
+                    <Metric icon={UI_ICONS.xp} label="XP" value={`${formatNumber((region.xpMultiplier - 1) * 100)}%`} />
+                    <Metric icon={UI_ICONS.hull} label="Difficulty" value={`${formatNumber(region.backgroundDifficultyModifier * 100)}%`} />
+                    <Metric icon={UI_ICONS.cannonballs} label="Ship Req." value={region.recommendedShipLevel} />
+                  </div>
+                  <button
+                    className="chunky-button primary region-select-button"
+                    disabled={!unlocked || selected}
+                    onClick={() => dispatch({ type: "SELECT_REGION", regionId: region.id })}
+                    type="button"
+                  >
+                    {selected ? "Current Region" : unlocked ? "Enter Region" : `Unlocks Lv. ${region.requiredLevel}`}
+                  </button>
+                </article>
+              );
+            })}
           </div>
         </article>
 

@@ -5,6 +5,7 @@ import {
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
+  getActiveRegion,
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
@@ -12,6 +13,7 @@ import { skills } from "../data/skills.js";
 function Dashboard({ gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
+  const activeRegion = getActiveRegion(gameState);
   const idleEstimate = getIdleCombatEstimate(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
@@ -99,6 +101,7 @@ function Dashboard({ gameState, onNavigate }) {
               <span>{currentShip.mapName}</span>
             </div>
             <div className="voyage-grid">
+              <Metric label="Current Region" icon={UI_ICONS.gold} value={activeRegion.name} />
               <Metric label="Hull" icon={UI_ICONS.hull} value={`${formatNumber(gameState.hull.current)} / ${formatNumber(gameState.hull.max)}`} />
               <Metric label="Cannonballs" icon={UI_ICONS.cannonballs} value={formatNumber(gameState.cannonballs)} />
               <Metric label="Cannon Tier" icon={UI_ICONS.gold} value={`Tier ${currentCannon.tier}`} />

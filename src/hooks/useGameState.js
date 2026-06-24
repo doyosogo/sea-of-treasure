@@ -5,6 +5,7 @@ import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import { dailyQuestPool, weeklyQuestPool } from "../data/quests.js";
+import { regions } from "../data/regions.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
@@ -217,6 +218,18 @@ function createInitialQuestState(now = Date.now()) {
   };
 }
 
+function normalizeActiveRegionId(savedRegionId, playerLevel = 1) {
+  const defaultRegion = regions[0]?.id ?? "coastalWaters";
+  const validRegion = regions.find((region) => region.id === savedRegionId);
+
+  if (validRegion && playerLevel >= validRegion.requiredLevel) {
+    return validRegion.id;
+  }
+
+  const unlockedRegions = regions.filter((region) => playerLevel >= region.requiredLevel);
+  return unlockedRegions.at(-1)?.id ?? defaultRegion;
+}
+
 function normalizeQuestState(savedQuests, now = Date.now()) {
   const dailyState = normalizeQuestSet(savedQuests, "daily", now);
   const weeklyState = normalizeQuestSet(savedQuests, "weekly", now);
@@ -356,6 +369,7 @@ const initialState = {
   selectedEnemyId: "smugglerCutter",
   lastBattleEnemyId: null,
   currentBattle: null,
+  activeRegionId: "coastalWaters",
   hull: {
     current: 140,
     max: 140
@@ -646,6 +660,7 @@ function loadSavedState() {
       treasureMaps: parsedState.treasureMaps ?? 3,
       activeTreasureDig: parsedState.activeTreasureDig ?? null,
       treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
+      activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", parsedState.playerLevel ?? 1),
       selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
       lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
       currentBattle: parsedState.currentBattle ?? null,
@@ -1054,6 +1069,31 @@ function gameStateReducer(state, action) {
         selectedEnemyId: enemy.id,
         lastSeen: Date.now()
       };
+    }
+    case "SELECT_REGION": {
+      const region = regions.find((regionData) => regionData.id === action.regionId);
+
+      if (!region || (state.playerLevel ?? 1) < region.requiredLevel) {
+        return state;
+      }
+
+      if (state.currentBattle) {
+        return addActivityLogEntry(state, "Finish your current battle before changing regions.", "warning");
+      }
+
+      if (state.isIdling) {
+        return addActivityLogEntry(state, "Stop idling before changing regions.", "warning");
+      }
+
+      if (state.activeRegionId === region.id) {
+        return state;
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        activeRegionId: region.id,
+        lastSeen: Date.now()
+      }, `Entered ${region.name}.`);
     }
     case "START_BATTLE": {
       if (state.isIdling) {

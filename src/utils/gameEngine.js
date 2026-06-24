@@ -3,6 +3,7 @@ import { achievements } from "../data/achievements.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import { enemies } from "../data/enemies.js";
 import { levels } from "../data/levels.js";
+import { regions } from "../data/regions.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
@@ -18,6 +19,37 @@ export function getXpRequired(level) {
 
 export function getCurrentShip(gameState) {
   return ships.find((ship) => ship.id === gameState.currentShipId) ?? ships[0];
+}
+
+export function getRegionById(regionId) {
+  return regions.find((region) => region.id === regionId) ?? regions[0];
+}
+
+export function getActiveRegion(gameState) {
+  return getRegionById(gameState.activeRegionId ?? "coastalWaters");
+}
+
+export function getUnlockedRegions(gameState) {
+  return regions.filter((region) => (gameState.playerLevel ?? 1) >= region.requiredLevel);
+}
+
+export function getRecommendedRegion(gameState) {
+  const unlocked = getUnlockedRegions(gameState);
+  const currentShip = getCurrentShip(gameState);
+  const preferred = [...unlocked].reverse().find((region) => currentShip.level >= region.recommendedShipLevel) ?? unlocked[0] ?? regions[0];
+  return preferred;
+}
+
+export function getRegionCombatModifiers(gameState) {
+  const region = getActiveRegion(gameState);
+  const difficultyMultiplier = 1 + region.backgroundDifficultyModifier;
+
+  return {
+    region,
+    difficultyMultiplier,
+    goldMultiplier: region.goldMultiplier,
+    xpMultiplier: region.xpMultiplier
+  };
 }
 
 export function getCannonKeyByTier(tier) {
@@ -291,6 +323,7 @@ export function getSelectedEnemyType(gameState) {
 
 export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameState)) {
   const currentShip = getCurrentShip(gameState);
+  const regionModifiers = getRegionCombatModifiers(gameState);
   const baseHP = 40 + gameState.playerLevel * 25;
   const baseDamage = 2 + gameState.playerLevel * 1.5;
   const enemyData = typeof enemyType === "string"
@@ -298,17 +331,18 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
     : enemyType;
   const selectedEnemy = enemyData ?? getSelectedEnemyType(gameState);
   const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
+  const regionDifficultyMultiplier = regionModifiers.difficultyMultiplier;
 
   return {
     id: selectedEnemy.id,
     name: selectedEnemy.name,
     difficulty: selectedEnemy.difficulty,
     description: selectedEnemy.description,
-    maxHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
-    currentHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
-    damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier * beginnerDamageMultiplier)),
-    goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier,
-    xpReward: currentShip.xpPerShip * selectedEnemy.xpMultiplier,
+    maxHP: Math.round(baseHP * selectedEnemy.hpMultiplier * regionDifficultyMultiplier),
+    currentHP: Math.round(baseHP * selectedEnemy.hpMultiplier * regionDifficultyMultiplier),
+    damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier * beginnerDamageMultiplier * regionDifficultyMultiplier)),
+    goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier * regionModifiers.goldMultiplier,
+    xpReward: currentShip.xpPerShip * selectedEnemy.xpMultiplier * regionModifiers.xpMultiplier,
     mapDropChance: Math.min(1, getTreasureMapDropChance(gameState) * selectedEnemy.mapDropMultiplier)
   };
 }
@@ -612,16 +646,11 @@ export function calcReloadTime(baseCooldown, talentBonuses) {
 }
 
 export function calcGoldPerHour(gameState) {
-  const currentShip = getCurrentShip(gameState);
-  const talentBonuses = getTalentBonuses(gameState);
-  return (getEffectiveShipsPerHour(gameState) * currentShip.goldPerShip * talentBonuses.goldMultiplier) +
-    talentBonuses.passiveGoldPerHour;
+  return getIdleCombatEstimate(gameState).goldPerHour;
 }
 
 export function calcXpPerHour(gameState) {
-  const currentShip = getCurrentShip(gameState);
-  const talentBonuses = getTalentBonuses(gameState);
-  return getEffectiveShipsPerHour(gameState) * currentShip.xpPerShip * talentBonuses.xpMultiplier;
+  return getIdleCombatEstimate(gameState).xpPerHour;
 }
 
 export function formatNumber(value) {

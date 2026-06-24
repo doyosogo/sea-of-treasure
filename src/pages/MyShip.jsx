@@ -13,6 +13,8 @@ import {
   getCargoCapacity,
   getCraftingBonuses,
   getCraftingEffect,
+  getActiveRegion,
+  getRecommendedRegion,
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
@@ -37,6 +39,8 @@ function MyShip({ gameState, dispatch }) {
   const equippedCannons = getEquippedCannons(gameState);
   const totalEquippedCannons = getTotalEquippedCannons(gameState);
   const cannonCapacity = getCannonCapacity(gameState);
+  const activeRegion = getActiveRegion(gameState);
+  const recommendedRegion = getRecommendedRegion(gameState);
 
   return (
     <section
@@ -71,6 +75,8 @@ function MyShip({ gameState, dispatch }) {
                 <h3>{currentShip.name}</h3>
                 <p>Manage your cannon loadout below. The highest cannon tier you own is shown here for inspection.</p>
                 <div className="shipyard-active-stats">
+                  <Metric icon={UI_GOLD} label="Current Region" value={activeRegion.name} />
+                  <Metric icon={UI_GOLD} label="Recommended Region" value={recommendedRegion.name} />
                   <Metric icon={UI_HULL} label="Ship Level" value={currentShip.level} />
                   <Metric icon={UI_CANNONBALLS} label="Cannons" value={formatNumber(currentShip.cannons)} />
                   <Metric icon={UI_GOLD} label="Cargo Capacity" value={formatNumber(getCargoCapacity(gameState))} />

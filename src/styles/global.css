@@ -1783,6 +1783,86 @@ h2 {
   gap: 18px;
 }
 
+.battle-region-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.region-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.region-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.region-card.selected {
+  border-color: var(--gold-300);
+  background: rgba(69, 51, 14, 0.82);
+}
+
+.region-card.locked {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.88);
+  opacity: 0.84;
+}
+
+.region-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.region-kicker {
+  margin: 0 0 4px;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.region-card-header h3 {
+  margin: 0;
+  color: var(--gold-300);
+  font-size: 1.05rem;
+}
+
+.region-status {
+  padding: 6px 10px;
+  color: #f6e5b5;
+  background: rgba(4, 17, 31, 0.72);
+  border: 1px solid rgba(211, 165, 58, 0.72);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.region-description {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.region-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.region-select-button {
+  justify-self: start;
+}
+
 .battle-active-layout {
   display: grid;
   grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
