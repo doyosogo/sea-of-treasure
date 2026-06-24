@@ -42,6 +42,12 @@ function Skills({ gameState, dispatch, onNavigate }) {
           <Metric icon={UI_TALENT_POINTS} label="Talent Points" value={formatNumber(gameState.talentPoints)} />
         </section>
 
+        <article className="academy-panel academy-note-panel">
+          <p className="academy-note">
+            If you run out of gold, train Fishing to gather Fish and sell them at Port.
+          </p>
+        </article>
+
         <section className="academy-grid">
           {skills.map((skill) => {
             const skillState = gameState.skills[skill.id];
@@ -96,7 +102,7 @@ function Skills({ gameState, dispatch, onNavigate }) {
                 )}
 
                 <div className="academy-detail-grid">
-                  <Detail label="Gold Cost" value={formatNumber(skill.goldCostPerAction)} />
+                  <Detail label="Gold Cost" value={skill.goldCostPerAction === 0 ? "Free" : formatNumber(skill.goldCostPerAction)} />
                   <Detail label="Rewards" value={skill.rewardType} />
                   <Detail label="Current Action" value={skillState.active ? skill.actionName : "Idle"} />
                   <Detail label="Countdown" value={skillState.active ? (isFinished ? "Ready to complete" : formatDuration(remainingMs)) : "Not active"} />

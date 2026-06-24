@@ -5,26 +5,26 @@ export const skills = [
   {
     id: "navigation",
     name: "Navigation",
-    description: "Produces navigation materials for future voyage upgrades.",
+    description: "Produces navigation materials for future voyage upgrades. Free recovery action.",
     actionName: "Chart Sea Route",
     maxLevel: 10,
     xpPerLevel,
-    goldCostPerAction: 50,
+    goldCostPerAction: 0,
     actionTimeSeconds: 10,
     rewardType: "Navigation XP + Navigation Charts, rare Compass Fragments",
-    unlockText: "Chart routes to gather navigation materials."
+    unlockText: "Chart routes to gather navigation materials for free."
   },
   {
     id: "fishing",
     name: "Fishing",
-    description: "Produces Fish and rare Whale Oil.",
+    description: "Produces Fish and rare Whale Oil. Free recovery action.",
     actionName: "Cast Nets",
     maxLevel: 10,
     xpPerLevel,
-    goldCostPerAction: 75,
+    goldCostPerAction: 0,
     actionTimeSeconds: 15,
     rewardType: "Fishing XP + Fish, rare Whale Oil",
-    unlockText: "Gather fish and rare whale oil for future crafting."
+    unlockText: "Gather fish and rare whale oil for free recovery and crafting."
   },
   {
     id: "treasureHunting",
@@ -65,13 +65,13 @@ export const skills = [
   {
     id: "gunnery",
     name: "Gunnery",
-    description: "Produces cannon upgrade materials.",
+    description: "Produces cannon upgrade materials. Free recovery action.",
     actionName: "Target Practice",
     maxLevel: 10,
     xpPerLevel,
-    goldCostPerAction: 100,
+    goldCostPerAction: 0,
     actionTimeSeconds: 20,
     rewardType: "Gunnery XP + Gunpowder, rare Cannon Parts",
-    unlockText: "Practice gathers cannon materials for future upgrades."
+    unlockText: "Practice gathers cannon materials for free progression."
   }
 ];
