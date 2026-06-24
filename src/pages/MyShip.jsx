@@ -6,15 +6,20 @@ import {
   UI_GOLD,
   UI_HULL
 } from "../data/assets.js";
+import { cannons } from "../data/cannons.js";
 import {
   formatNumber,
+  getCannonCapacity,
   getCargoCapacity,
   getCraftingBonuses,
   getCraftingEffect,
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
-  getPlayerCombatStats
+  getPlayerCombatStats,
+  getCannonInventory,
+  getEquippedCannons,
+  getTotalEquippedCannons
 } from "../utils/gameEngine.js";
 
 function MyShip({ gameState, dispatch }) {
@@ -28,6 +33,10 @@ function MyShip({ gameState, dispatch }) {
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
   const talents = gameState.talents ?? {};
   const cannonImage = CANNON_IMAGES[currentCannon.tier];
+  const cannonInventory = getCannonInventory(gameState);
+  const equippedCannons = getEquippedCannons(gameState);
+  const totalEquippedCannons = getTotalEquippedCannons(gameState);
+  const cannonCapacity = getCannonCapacity(gameState);
 
   return (
     <section
@@ -60,7 +69,7 @@ function MyShip({ gameState, dispatch }) {
               </div>
               <div className="shipyard-active-copy">
                 <h3>{currentShip.name}</h3>
-                <p>All cannons on your active ship currently use this cannon tier.</p>
+                <p>Manage your cannon loadout below. The highest cannon tier you own is shown here for inspection.</p>
                 <div className="shipyard-active-stats">
                   <Metric icon={UI_HULL} label="Ship Level" value={currentShip.level} />
                   <Metric icon={UI_CANNONBALLS} label="Cannons" value={formatNumber(currentShip.cannons)} />
@@ -104,9 +113,67 @@ function MyShip({ gameState, dispatch }) {
               <Metric icon={UI_GOLD} label="Current Tier" value={`Tier ${currentCannon.tier}`} />
               <Metric icon={UI_GOLD} label="Cannon Name" value={currentCannon.name} />
               <Metric icon={UI_CANNONBALLS} label="Total Cannons" value={formatNumber(currentShip.cannons)} />
-              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} />
+              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(combatStats.cannonDamageMultiplier)}x`} />
               <Metric icon={UI_GOLD} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} />
               <Metric icon={UI_HULL} label="Effective Cannons" value={formatNumber(combatStats.effectiveCannons)} />
+            </div>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Cannon Loadout</h2>
+            <div className="shipyard-card-stats">
+              <Metric icon={UI_CANNONBALLS} label="Cannon Capacity" value={formatNumber(cannonCapacity)} />
+              <Metric icon={UI_CANNONBALLS} label="Cannons Equipped" value={formatNumber(totalEquippedCannons)} />
+            </div>
+            <div className="shipyard-loadout-grid">
+              {cannons.map((cannon) => {
+                const owned = cannonInventory[cannon.id] ?? 0;
+                const equipped = equippedCannons[cannon.id] ?? 0;
+
+                if (owned <= 0) {
+                  return null;
+                }
+
+                const canEquip = owned > equipped && totalEquippedCannons < cannonCapacity;
+                const canUnequip = equipped > 0 && totalEquippedCannons > 1;
+
+                return (
+                  <article className="shipyard-loadout-card" key={cannon.id}>
+                    <div className="shipyard-loadout-image-frame">
+                      <img alt={cannon.name} src={CANNON_IMAGES[cannon.tier]} />
+                    </div>
+                    <div className="shipyard-card-header">
+                      <div>
+                        <p className="shipyard-kicker">Tier {cannon.tier}</p>
+                        <h3>{cannon.name}</h3>
+                      </div>
+                      <span className="upgrade-level-badge">{formatNumber(cannon.damageMultiplier)}x</span>
+                    </div>
+                    <div className="shipyard-card-stats">
+                      <Metric icon={UI_CANNONBALLS} label="Owned" value={formatNumber(owned)} />
+                      <Metric icon={UI_CANNONBALLS} label="Equipped" value={formatNumber(equipped)} />
+                    </div>
+                    <div className="shipyard-loadout-actions">
+                      <button
+                        className="chunky-button primary"
+                        disabled={!canEquip}
+                        onClick={() => dispatch({ type: "EQUIP_CANNON", cannonId: cannon.id, quantity: 1 })}
+                        type="button"
+                      >
+                        Equip 1
+                      </button>
+                      <button
+                        className="chunky-button"
+                        disabled={!canUnequip}
+                        onClick={() => dispatch({ type: "UNEQUIP_CANNON", cannonId: cannon.id, quantity: 1 })}
+                        type="button"
+                      >
+                        Unequip 1
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </article>
 

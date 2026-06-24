@@ -3,22 +3,26 @@ export const BASE_CANNON_DAMAGE = 10;
 
 export const cannons = [
   {
+    id: "iron",
     tier: 1,
     name: "Iron Cannon",
     damageMultiplier: 1,
     unlockLevel: 1,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 250,
     goldUpgradeCost: 0,
     materialUpgradeCost: null
   },
   {
+    id: "steel",
     tier: 2,
     name: "Steel Cannon",
     damageMultiplier: 1.2,
     unlockLevel: 3,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 7500,
     goldUpgradeCost: 25000,
     materialUpgradeCost: {
       gold: 8000,
@@ -28,12 +32,14 @@ export const cannons = [
     }
   },
   {
+    id: "silver",
     tier: 3,
     name: "Silver Cannon",
     damageMultiplier: 1.4,
     unlockLevel: 6,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 35000,
     goldUpgradeCost: 150000,
     materialUpgradeCost: {
       gold: 40000,
@@ -44,12 +50,14 @@ export const cannons = [
     }
   },
   {
+    id: "golden",
     tier: 4,
     name: "Golden Cannon",
     damageMultiplier: 1.6,
     unlockLevel: 9,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 150000,
     goldUpgradeCost: 750000,
     materialUpgradeCost: {
       gold: 180000,
@@ -61,12 +69,14 @@ export const cannons = [
     }
   },
   {
+    id: "diamond",
     tier: 5,
     name: "Diamond Cannon",
     damageMultiplier: 2,
     unlockLevel: 12,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 650000,
     goldUpgradeCost: 3500000,
     materialUpgradeCost: {
       gold: 750000,
@@ -79,12 +89,14 @@ export const cannons = [
     }
   },
   {
+    id: "leviathan",
     tier: 6,
     name: "Leviathan Cannon",
     damageMultiplier: 2.5,
     unlockLevel: 15,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
+    purchaseCost: 2500000,
     goldUpgradeCost: 25000000,
     materialUpgradeCost: {
       gold: 5000000,

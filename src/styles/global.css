@@ -4236,6 +4236,59 @@ h2 {
   background: transparent;
 }
 
+.shipyard-loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.shipyard-loadout-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.shipyard-loadout-image-frame {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  padding: 10px;
+  background: rgba(4, 17, 31, 0.84);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.shipyard-loadout-image-frame img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shipyard-loadout-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shipyard-loadout-actions .chunky-button {
+  flex: 1 1 180px;
+}
+
+.shipyard-kicker {
+  margin: 0 0 4px;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .harbour-scene {
   position: relative;
   background-color: #050914;
@@ -5097,6 +5150,37 @@ h2 {
   opacity: 0.9;
   background: rgba(8, 18, 32, 0.88);
   border-color: #485c73;
+}
+
+.shop-cannon-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.shop-cannon-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.shop-cannon-card.locked {
+  background: rgba(8, 18, 32, 0.88);
+  border-color: #485c73;
+  opacity: 0.85;
+}
+
+.shop-cannon-card .shop-card-image-frame {
+  min-height: 160px;
+}
+
+.shop-cannon-card .shop-card-image {
+  max-width: 220px;
+  max-height: 130px;
 }
 
 @media (max-width: 720px) {

@@ -10,23 +10,32 @@ import {
   UI_HULL,
   UI_XP
 } from "../data/assets.js";
+import { cannons } from "../data/cannons.js";
 import { ships } from "../data/ships.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import {
   calcCannonUpgradeCost,
   formatNumber,
   getCannonMaterialUpgradeCost,
+  getCannonCapacity,
   getCurrentCannon,
+  getCannonInventory,
+  getEquippedCannons,
   getCraftingCost,
   getCraftingEffect,
   getNextCannon,
-  hasCannonMaterialUpgradeResources
+  hasCannonMaterialUpgradeResources,
+  getTotalEquippedCannons
 } from "../utils/gameEngine.js";
 
 function Shop({ gameState, dispatch }) {
   const [activeCategory, setActiveCategory] = useState("ships");
   const currentCannon = getCurrentCannon(gameState);
   const nextCannon = getNextCannon(gameState);
+  const cannonInventory = getCannonInventory(gameState);
+  const equippedCannons = getEquippedCannons(gameState);
+  const totalEquippedCannons = getTotalEquippedCannons(gameState);
+  const cannonCapacity = getCannonCapacity(gameState);
   const goldUpgradeCost = calcCannonUpgradeCost(gameState);
   const materialUpgradeCost = getCannonMaterialUpgradeCost(gameState);
   const canBuyCannonUpgrade =
@@ -136,6 +145,63 @@ function Shop({ gameState, dispatch }) {
 
         {activeCategory === "cannons" && (
           <section className="shop-grid">
+            <article className="shop-panel">
+              <h2>Cannon Arsenal</h2>
+              <div className="shop-stat-grid">
+                <Metric icon={UI_CANNONBALLS} label="Equipped / Capacity" value={`${formatNumber(totalEquippedCannons)} / ${formatNumber(cannonCapacity)}`} />
+                <Metric icon={UI_GOLD} label="Highest Cannon" value={currentCannon.name} />
+                <Metric icon={UI_GOLD} label="Upgrade Tier" value={`Tier ${currentCannon.tier}`} />
+              </div>
+              <div className="shop-cannon-inventory-grid">
+                {cannons.map((cannon) => {
+                  const owned = cannonInventory[cannon.id] ?? 0;
+                  const equipped = equippedCannons[cannon.id] ?? 0;
+                  const locked = gameState.playerLevel < cannon.unlockLevel;
+                  const canBuy1 = gameState.playerLevel >= cannon.unlockLevel && gameState.gold >= cannon.purchaseCost;
+                  const canBuy10 = gameState.playerLevel >= cannon.unlockLevel && gameState.gold >= cannon.purchaseCost * 10;
+
+                  return (
+                    <article className={locked ? "shop-cannon-card locked" : "shop-cannon-card"} key={cannon.id}>
+                      <div className="shop-card-image-frame">
+                        <img alt={cannon.name} className="shop-card-image" src={CANNON_IMAGES[cannon.tier]} />
+                      </div>
+                      <div className="shop-card-header">
+                        <div>
+                          <p className="shop-kicker">Tier {cannon.tier}</p>
+                          <h3>{cannon.name}</h3>
+                        </div>
+                        <span className="ship-status">{formatNumber(cannon.damageMultiplier)}x damage</span>
+                      </div>
+                      <div className="shop-card-stats">
+                        <Metric icon={UI_GOLD} label="Owned" value={formatNumber(owned)} />
+                        <Metric icon={UI_CANNONBALLS} label="Equipped" value={formatNumber(equipped)} />
+                        <Metric icon={UI_GOLD} label="Purchase Cost" value={formatNumber(cannon.purchaseCost)} />
+                        <Metric icon={UI_XP} label="Unlock Level" value={cannon.unlockLevel} />
+                      </div>
+                      <div className="shop-button-row">
+                        <button
+                          className="chunky-button primary"
+                          disabled={!canBuy1}
+                          onClick={() => dispatch({ type: "BUY_CANNON", cannonId: cannon.id, quantity: 1 })}
+                          type="button"
+                        >
+                          Buy 1
+                        </button>
+                        <button
+                          className="chunky-button primary"
+                          disabled={!canBuy10}
+                          onClick={() => dispatch({ type: "BUY_CANNON", cannonId: cannon.id, quantity: 10 })}
+                          type="button"
+                        >
+                          Buy 10
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </article>
+
             <article className="shop-panel">
               <h2>Cannon Upgrades</h2>
               <div className="shop-cannon-art-grid">

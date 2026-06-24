@@ -11,6 +11,10 @@ import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
   canSpendTalentPoint,
+  getCannonById,
+  getCannonInventory,
+  getCannonKeyByTier,
+  getCannonCapacity,
   generateEnemy,
   generateMarketPrices,
   getCargoCapacity,
@@ -22,6 +26,8 @@ import {
   getIdleCombatEstimate,
   getMaxHull,
   getPlayerCombatStats,
+  getHighestOwnedCannonTier,
+  getEquippedCannons,
   hasCannonMaterialUpgradeResources,
   isAchievementUnlocked,
   getCurrentCannon,
@@ -33,6 +39,7 @@ import {
   getTradeGoodSellPrice,
   getUsedCargo,
   getWhaleOilSellValue,
+  getTotalEquippedCannons,
   getXpRequired,
   rollCannonballRecovery,
   rollEnemyMapDrops,
@@ -92,6 +99,24 @@ function createInitialCraftedUpgrades() {
   };
 }
 
+function createInitialCannonInventory(defaultTierId = "iron", capacity = getShipCannonCapacity(1)) {
+  return Object.fromEntries(["iron", "steel", "silver", "golden", "diamond", "leviathan"].map((cannonId) => [
+    cannonId,
+    cannonId === defaultTierId ? capacity : 0
+  ]));
+}
+
+function createInitialEquippedCannons(defaultTierId = "iron", capacity = getShipCannonCapacity(1)) {
+  return Object.fromEntries(["iron", "steel", "silver", "golden", "diamond", "leviathan"].map((cannonId) => [
+    cannonId,
+    cannonId === defaultTierId ? capacity : 0
+  ]));
+}
+
+function getShipCannonCapacity(shipLevel) {
+  return ships.find((ship) => ship.level === shipLevel)?.cannonCapacity ?? 4;
+}
+
 function createInitialLifetimeStats() {
   return {
     totalGoldEarned: 0,
@@ -116,6 +141,8 @@ const initialState = {
     max: 140
   },
   cannonTier: 1,
+  cannonInventory: createInitialCannonInventory(),
+  equippedCannons: createInitialEquippedCannons(),
   cannonballs: 100,
   totalShipsSunk: 0,
   talentPoints: 0,
@@ -162,6 +189,56 @@ function sumCraftedUpgradeLevels(upgrades = {}) {
   return Object.values(upgrades).reduce((total, level) => total + (level ?? 0), 0);
 }
 
+function getCannonIds() {
+  return ["iron", "steel", "silver", "golden", "diamond", "leviathan"];
+}
+
+function getTotalEquippedCannonsFromState(state) {
+  return getCannonIds().reduce((total, cannonId) => total + (state.equippedCannons?.[cannonId] ?? 0), 0);
+}
+
+function getLowestEquippedCannonId(state) {
+  return getCannonIds().find((cannonId) => (state.equippedCannons?.[cannonId] ?? 0) > 0) ?? null;
+}
+
+function getHighestEquippedCannonId(state) {
+  const ids = getCannonIds();
+
+  for (let index = ids.length - 1; index >= 0; index -= 1) {
+    if ((state.equippedCannons?.[ids[index]] ?? 0) > 0) {
+      return ids[index];
+    }
+  }
+
+  return null;
+}
+
+function getHighestOwnedCannonId(state) {
+  const ids = getCannonIds();
+
+  for (let index = ids.length - 1; index >= 0; index -= 1) {
+    if ((state.cannonInventory?.[ids[index]] ?? 0) > 0 || (state.equippedCannons?.[ids[index]] ?? 0) > 0) {
+      return ids[index];
+    }
+  }
+
+  return "iron";
+}
+
+function getEquippedCapacityRemaining(state) {
+  return Math.max(0, getCannonCapacity(state) - getTotalEquippedCannonsFromState(state));
+}
+
+function setCannonOwnership(state, cannonId, amount) {
+  return {
+    ...state,
+    cannonInventory: {
+      ...state.cannonInventory,
+      [cannonId]: Math.max(0, (state.cannonInventory?.[cannonId] ?? 0) + amount)
+    }
+  };
+}
+
 function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
   const craftedUpgrades = normalizeCraftedUpgrades(restoredState.craftedUpgrades);
 
@@ -182,6 +259,59 @@ function normalizeCraftedUpgrades(savedUpgrades = {}) {
     upgrade.id,
     Math.min(upgrade.maxLevel, Math.max(0, savedUpgrades[upgrade.id] ?? 0))
   ]));
+}
+
+function normalizeCannonInventory(savedInventory = {}, fallbackTier = "iron", capacity = getShipCannonCapacity(1)) {
+  const cannonIds = ["iron", "steel", "silver", "golden", "diamond", "leviathan"];
+  const normalized = Object.fromEntries(cannonIds.map((cannonId) => [
+    cannonId,
+    Math.max(0, savedInventory[cannonId] ?? 0)
+  ]));
+
+  const hasAnyCannons = cannonIds.some((cannonId) => normalized[cannonId] > 0);
+
+  if (!hasAnyCannons) {
+    normalized[fallbackTier] = capacity;
+  }
+
+  return normalized;
+}
+
+function normalizeEquippedCannons(savedEquipped = {}, inventory = {}, fallbackTier = "iron", capacity = getShipCannonCapacity(1)) {
+  const cannonIds = ["iron", "steel", "silver", "golden", "diamond", "leviathan"];
+  const normalized = Object.fromEntries(cannonIds.map((cannonId) => [
+    cannonId,
+    Math.max(0, Math.min(savedEquipped[cannonId] ?? 0, inventory[cannonId] ?? 0))
+  ]));
+
+  const equippedTotal = cannonIds.reduce((total, cannonId) => total + normalized[cannonId], 0);
+
+  if (equippedTotal <= 0) {
+    const preferredTier = inventory[fallbackTier] > 0
+      ? fallbackTier
+      : [...cannonIds].reverse().find((cannonId) => (inventory[cannonId] ?? 0) > 0) ?? fallbackTier;
+    normalized[preferredTier] = Math.min(capacity, inventory[preferredTier] ?? capacity);
+  }
+
+  const finalTotal = cannonIds.reduce((total, cannonId) => total + normalized[cannonId], 0);
+
+  if (finalTotal > capacity) {
+    let remaining = finalTotal - capacity;
+
+    for (let index = 0; index < cannonIds.length && remaining > 0; index += 1) {
+      const cannonId = cannonIds[index];
+      const reduction = Math.min(normalized[cannonId], remaining);
+      normalized[cannonId] -= reduction;
+      remaining -= reduction;
+    }
+  }
+
+  if (cannonIds.every((cannonId) => normalized[cannonId] === 0)) {
+    const preferredTier = [...cannonIds].reverse().find((cannonId) => (inventory[cannonId] ?? 0) > 0) ?? fallbackTier;
+    normalized[preferredTier] = Math.min(1, inventory[preferredTier] ?? 1);
+  }
+
+  return normalized;
 }
 
 function normalizeResources(savedResources = {}) {
@@ -300,8 +430,20 @@ function loadSavedState() {
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
+    const currentShip = getCurrentShip(restoredState);
+    const shipCapacity = currentShip.cannonCapacity ?? getShipCannonCapacity(currentShip.level);
+    const fallbackTierId = getCannonKeyByTier(parsedState.cannonTier ?? 1);
+    const normalizedInventory = normalizeCannonInventory(parsedState.cannonInventory, fallbackTierId, shipCapacity);
+    const normalizedEquippedCannons = normalizeEquippedCannons(parsedState.equippedCannons, normalizedInventory, fallbackTierId, shipCapacity);
     const normalizedState = clampHull({
       ...restoredState,
+      cannonInventory: normalizedInventory,
+      equippedCannons: normalizedEquippedCannons,
+      cannonTier: getHighestOwnedCannonTier({
+        ...restoredState,
+        cannonInventory: normalizedInventory,
+        equippedCannons: normalizedEquippedCannons
+      }).tier,
       lifetimeStats: normalizeLifetimeStats(parsedState.lifetimeStats, restoredState),
       marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
       marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
@@ -430,9 +572,9 @@ function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
 
   return {
     state: addLifetimeShipsSunk(addLifetimeGold({
-    ...xpState,
-    gold: xpState.gold + goldGained,
-    totalShipsSunk: xpState.totalShipsSunk + battles
+      ...xpState,
+      gold: xpState.gold + goldGained,
+      totalShipsSunk: xpState.totalShipsSunk + battles
     }, goldGained), battles),
     goldGained,
     xpGained
@@ -818,6 +960,108 @@ function gameStateReducer(state, action) {
         currentShipId: action.shipId,
         lastSeen: Date.now()
       });
+    case "BUY_CANNON": {
+      const cannonId = getCannonIds().includes(action.cannonId) ? action.cannonId : null;
+      const cannon = cannonId ? getCannonById(cannonId) : null;
+      const quantity = Math.max(1, Math.floor(action.quantity ?? 1));
+      const totalCost = cannon ? cannon.purchaseCost * quantity : 0;
+
+      if (!cannon || state.playerLevel < cannon.unlockLevel || state.gold < totalCost) {
+        return addActivityLogEntry(state, "That cannon is not available right now.", "warning");
+      }
+
+      const inventory = {
+        ...state.cannonInventory,
+        [cannon.id]: (state.cannonInventory?.[cannon.id] ?? 0) + quantity
+      };
+      const nextCannonTier = getCannonById(getHighestOwnedCannonId({
+        ...state,
+        cannonInventory: inventory
+      })).tier;
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - totalCost,
+        cannonInventory: inventory,
+        cannonTier: nextCannonTier,
+        lastSeen: Date.now()
+      }, `Bought ${quantity} ${cannon.name}${quantity === 1 ? "" : "s"}.`);
+    }
+    case "EQUIP_CANNON": {
+      const cannonId = getCannonIds().includes(action.cannonId) ? action.cannonId : null;
+      const cannon = cannonId ? getCannonById(cannonId) : null;
+      const quantity = Math.max(1, Math.floor(action.quantity ?? 1));
+      const owned = cannon ? state.cannonInventory?.[cannon.id] ?? 0 : 0;
+      const equipped = cannon ? state.equippedCannons?.[cannon.id] ?? 0 : 0;
+      const capacityRemaining = getEquippedCapacityRemaining(state);
+
+      if (!cannon || owned <= equipped || quantity <= 0) {
+        return state;
+      }
+
+      if (capacityRemaining <= 0) {
+        return addActivityLogEntry(state, "Cannon loadout is at full capacity.", "warning");
+      }
+
+      const equipAmount = Math.min(quantity, owned - equipped, capacityRemaining);
+
+      if (equipAmount <= 0) {
+        return state;
+      }
+
+      const nextEquipped = {
+        ...state.equippedCannons,
+        [cannon.id]: equipped + equipAmount
+      };
+      const nextCannonTier = getCannonById(getHighestOwnedCannonId({
+        ...state,
+        equippedCannons: nextEquipped
+      })).tier;
+
+      return addActivityLogEntry({
+        ...state,
+        equippedCannons: nextEquipped,
+        cannonTier: nextCannonTier,
+        lastSeen: Date.now()
+      }, `Equipped ${equipAmount} ${cannon.name}${equipAmount === 1 ? "" : "s"}.`);
+    }
+    case "UNEQUIP_CANNON": {
+      const cannonId = getCannonIds().includes(action.cannonId) ? action.cannonId : null;
+      const cannon = cannonId ? getCannonById(cannonId) : null;
+      const quantity = Math.max(1, Math.floor(action.quantity ?? 1));
+      const equipped = cannon ? state.equippedCannons?.[cannon.id] ?? 0 : 0;
+      const totalEquipped = getTotalEquippedCannonsFromState(state);
+
+      if (!cannon || equipped <= 0) {
+        return state;
+      }
+
+      if (totalEquipped <= 1) {
+        return addActivityLogEntry(state, "At least one cannon must remain equipped.", "warning");
+      }
+
+      const unequipAmount = Math.min(quantity, equipped, totalEquipped - 1);
+
+      if (unequipAmount <= 0) {
+        return state;
+      }
+
+      const nextEquipped = {
+        ...state.equippedCannons,
+        [cannon.id]: equipped - unequipAmount
+      };
+      const nextCannonTier = getCannonById(getHighestOwnedCannonId({
+        ...state,
+        equippedCannons: nextEquipped
+      })).tier;
+
+      return addActivityLogEntry({
+        ...state,
+        equippedCannons: nextEquipped,
+        cannonTier: nextCannonTier,
+        lastSeen: Date.now()
+      }, `Unequipped ${unequipAmount} ${cannon.name}${unequipAmount === 1 ? "" : "s"}.`);
+    }
     case "GAIN_XP":
       return {
         ...applyXp(state, (action.amount ?? 0) * getTalentBonuses(state).xpMultiplier),
@@ -1222,10 +1466,29 @@ function gameStateReducer(state, action) {
         return state;
       }
 
+      const inventory = {
+        ...state.cannonInventory,
+        [nextCannon.id]: (state.cannonInventory?.[nextCannon.id] ?? 0) + 1
+      };
+      const equipped = { ...state.equippedCannons };
+      const capacity = getCannonCapacity(state);
+      const equippedTotal = getTotalEquippedCannonsFromState(state);
+      const lowestEquipped = getLowestEquippedCannonId(state);
+
+      if (equippedTotal < capacity) {
+        equipped[nextCannon.id] = (equipped[nextCannon.id] ?? 0) + 1;
+      } else if (lowestEquipped) {
+        equipped[lowestEquipped] = Math.max(0, (equipped[lowestEquipped] ?? 0) - 1);
+        equipped[nextCannon.id] = (equipped[nextCannon.id] ?? 0) + 1;
+      }
+
       return addActivityLogEntry({
         ...state,
         gold: state.gold - upgradeCost,
-        cannonTier: nextCannon.tier
+        cannonInventory: inventory,
+        equippedCannons: equipped,
+        cannonTier: nextCannon.tier,
+        lastSeen: Date.now()
       }, `Bought cannon upgrade: ${nextCannon.name}.`);
     }
     case "UPGRADE_CANNONS_WITH_MATERIALS": {
@@ -1240,9 +1503,29 @@ function gameStateReducer(state, action) {
         return state;
       }
 
+      const upgradedState = spendCannonMaterialCost(state, materialCost);
+      const inventory = {
+        ...upgradedState.cannonInventory,
+        [nextCannon.id]: (upgradedState.cannonInventory?.[nextCannon.id] ?? 0) + 1
+      };
+      const equipped = { ...upgradedState.equippedCannons };
+      const capacity = getCannonCapacity(upgradedState);
+      const equippedTotal = getTotalEquippedCannonsFromState(upgradedState);
+      const lowestEquipped = getLowestEquippedCannonId(upgradedState);
+
+      if (equippedTotal < capacity) {
+        equipped[nextCannon.id] = (equipped[nextCannon.id] ?? 0) + 1;
+      } else if (lowestEquipped) {
+        equipped[lowestEquipped] = Math.max(0, (equipped[lowestEquipped] ?? 0) - 1);
+        equipped[nextCannon.id] = (equipped[nextCannon.id] ?? 0) + 1;
+      }
+
       return addActivityLogEntry({
-        ...spendCannonMaterialCost(state, materialCost),
-        cannonTier: nextCannon.tier
+        ...upgradedState,
+        cannonInventory: inventory,
+        equippedCannons: equipped,
+        cannonTier: nextCannon.tier,
+        lastSeen: Date.now()
       }, `Crafted cannon upgrade: ${nextCannon.name}.`);
     }
     case "SINK_ENEMY_SHIP": {
