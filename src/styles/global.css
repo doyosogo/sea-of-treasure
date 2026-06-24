@@ -89,6 +89,19 @@ button:disabled {
   border-color: var(--gold-300);
 }
 
+.nav-link.battle-nav {
+  color: #ffe0cb;
+  background: linear-gradient(180deg, #562619, #342014);
+  border-color: #d66b4a;
+}
+
+.nav-link.battle-nav:hover,
+.nav-link.battle-nav.active {
+  color: #04111f;
+  background: linear-gradient(180deg, #ffd36a, #d9a53a);
+  border-color: #ffe08c;
+}
+
 .page-frame {
   width: min(1180px, calc(100% - 32px));
   margin: 32px auto;
@@ -4619,9 +4632,480 @@ h2 {
   flex: 1 1 220px;
 }
 
+.shop-scene {
+  position: relative;
+  background-color: #050914;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
+  overflow: hidden;
+}
+
+.shop-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.55) 28%, rgba(5, 8, 14, 0.5)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.shop-reset {
+  display: block;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: calc(100vh - 92px);
+}
+
+.shop-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.4), rgba(5, 8, 14, 0.55) 40%, rgba(5, 8, 14, 0.5)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.shop-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.shop-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 4px;
+}
+
+.shop-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 0 2px;
+}
+
+.shop-tab {
+  min-height: 46px;
+  padding: 10px 16px;
+  color: var(--cream);
+  background: linear-gradient(180deg, #1c3454, #102b49);
+  border: 2px solid #6d5520;
+  box-shadow: 3px 3px 0 var(--shadow);
+  cursor: pointer;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-tab.active {
+  color: #04111f;
+  background: linear-gradient(180deg, #ffd36a, #d9a53a);
+  border-color: #ffe08c;
+}
+
+.shop-logo {
+  width: min(180px, 30vw);
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+.shop-title-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.shop-title-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.shop-title-copy p {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.shop-top-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.shop-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  padding: 12px 14px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.shop-chip img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shop-chip span {
+  display: block;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-chip strong {
+  color: var(--cream);
+  font-size: 1.1rem;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.shop-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.shop-panel h2,
+.shop-panel h3 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.shop-note {
+  margin: 0;
+  padding: 12px;
+  color: var(--cream);
+  background: rgba(4, 17, 31, 0.72);
+  border-left: 4px solid var(--gold-500);
+  font-family: "Courier New", Courier, monospace;
+}
+
+.shop-stat-grid,
+.shop-supply-grid,
+.shop-card-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.shop-metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.shop-metric-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shop-metric-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shop-metric-copy span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-metric-copy strong {
+  color: var(--cream);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.shop-ship-grid,
+.shop-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.shop-ship-card,
+.shop-upgrade-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 3px solid var(--navy-600);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.shop-ship-card.active {
+  border-color: var(--gold-300);
+  background: rgba(69, 51, 14, 0.82);
+}
+
+.shop-ship-card.locked,
+.shop-ship-card.unaffordable {
+  border-color: #485c73;
+  background: rgba(8, 18, 32, 0.88);
+  opacity: 0.86;
+}
+
+.shop-card-image-frame {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 10px;
+  background: rgba(4, 17, 31, 0.84);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.shop-card-image {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  max-height: 150px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shop-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-kicker {
+  margin: 0 0 4px;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ship-status,
+.upgrade-level-badge,
+.active-ship-label {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  color: var(--cream);
+  background: var(--navy-700);
+  border: 2px solid var(--navy-600);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ship-status.active,
+.active-ship-label {
+  color: #04111f;
+  background: var(--gold-500);
+  border-color: var(--gold-300);
+}
+
+.ship-status.locked,
+.ship-status.unaffordable {
+  color: #d6dceb;
+  background: rgba(12, 24, 39, 0.9);
+}
+
+.shop-actions,
+.shop-button-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shop-actions .chunky-button,
+.shop-actions .active-ship-label,
+.shop-button-row .chunky-button {
+  flex: 1 1 200px;
+}
+
+.shop-cannon-art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.shop-frame-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(4, 17, 31, 0.72);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.shop-frame-caption {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-frame-image-shell {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 12px;
+  background: rgba(5, 15, 30, 0.66);
+  border: 1px solid rgba(211, 165, 58, 0.45);
+}
+
+.shop-frame-image-shell img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shop-frame-empty {
+  color: var(--cream);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.shop-cost-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(4, 17, 31, 0.62);
+  border: 1px solid rgba(109, 85, 32, 0.5);
+}
+
+.shop-cost-panel h3 {
+  font-size: 0.95rem;
+}
+
+.shop-cost-panel p {
+  margin: 0;
+  color: var(--cream);
+}
+
+.shop-cost-list {
+  display: grid;
+  gap: 8px;
+}
+
+.shop-cost-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: rgba(18, 49, 84, 0.5);
+  border: 1px solid rgba(109, 85, 32, 0.45);
+}
+
+.shop-cost-list span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.shop-cost-list strong {
+  color: var(--cream);
+}
+
+.shop-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: rgba(18, 49, 84, 0.5);
+  border: 1px solid rgba(109, 85, 32, 0.45);
+}
+
+.shop-cost-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shop-cost-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: transparent;
+}
+
+.shop-bonus-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: rgba(4, 17, 31, 0.66);
+  border-left: 4px solid var(--gold-500);
+}
+
+.shop-upgrade-card.maxed {
+  opacity: 0.9;
+  background: rgba(8, 18, 32, 0.88);
+  border-color: #485c73;
+}
+
 @media (max-width: 720px) {
   .fleet-page.shipyard-reset,
   .my-ship-page.shipyard-reset {
+    min-height: calc(100vh - 92px);
+  }
+
+  .shop-reset {
     min-height: calc(100vh - 92px);
   }
 
@@ -4661,6 +5145,49 @@ h2 {
   .shipyard-card-image,
   .shipyard-cannon-image {
     max-width: 100%;
+  }
+
+  .shop-shell {
+    padding: 18px;
+  }
+
+  .shop-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shop-grid,
+  .shop-stat-grid,
+  .shop-supply-grid,
+  .shop-card-stats,
+  .shop-ship-grid,
+  .shop-upgrade-grid,
+  .shop-cannon-art-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-panel {
+    min-width: 0;
+    padding: 18px;
+  }
+
+  .shop-card-header {
+    flex-direction: column;
+  }
+
+  .shop-logo {
+    width: min(200px, 68vw);
+  }
+
+  .shop-chip {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .shop-actions .chunky-button,
+  .shop-actions .active-ship-label,
+  .shop-button-row .chunky-button {
+    flex: 1 1 auto;
   }
 
   .harbour-shell {

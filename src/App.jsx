@@ -6,6 +6,7 @@ import Fleet from "./pages/Fleet.jsx";
 import MyShip from "./pages/MyShip.jsx";
 import Skills from "./pages/Skills.jsx";
 import Talents from "./pages/Talents.jsx";
+import Shop from "./pages/Shop.jsx";
 import Port from "./pages/Port.jsx";
 import Treasure from "./pages/Treasure.jsx";
 import Shipwright from "./pages/Shipwright.jsx";
@@ -14,39 +15,42 @@ import Materials from "./pages/Materials.jsx";
 import Settings from "./pages/Settings.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 
-const pages = {
+const pageRegistry = {
   dashboard: { label: "Dashboard", component: Dashboard },
-  battle: { label: "Battle", component: Battle },
-  fleet: { label: "Fleet", component: Fleet },
   myShip: { label: "My Ship", component: MyShip },
-  treasure: { label: "Treasure", component: Treasure },
-  shipwright: { label: "Shipwright", component: Shipwright },
-  materials: { label: "Materials", component: Materials },
-  achievements: { label: "Achievements", component: Achievements },
+  battle: { label: "Battle", component: Battle },
   skills: { label: "Skills", component: Skills },
   talents: { label: "Talents", component: Talents },
+  shop: { label: "Shop", component: Shop },
   port: { label: "Port", component: Port },
-  settings: { label: "Settings", component: Settings }
+  achievements: { label: "Achievements", component: Achievements },
+  settings: { label: "Settings", component: Settings },
+  fleet: { label: "Fleet", component: Fleet },
+  shipwright: { label: "Shipwright", component: Shipwright },
+  materials: { label: "Materials", component: Materials },
+  treasure: { label: "Treasure", component: Treasure }
 };
+
+const navOrder = ["dashboard", "myShip", "battle", "skills", "talents", "shop", "port", "achievements", "settings"];
 
 function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const { gameState, dispatch } = useGameState();
-  const ActivePage = pages[activePage].component;
+  const ActivePage = pageRegistry[activePage].component;
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">Sea of Treasure</div>
         <nav className="main-nav" aria-label="Primary navigation">
-          {Object.entries(pages).map(([pageId, page]) => (
+          {navOrder.map((pageId) => (
             <button
-              className={activePage === pageId ? "nav-link active" : "nav-link"}
+              className={getNavClass(pageId, activePage)}
               key={pageId}
               onClick={() => setActivePage(pageId)}
               type="button"
             >
-              {page.label}
+              {pageRegistry[pageId].label}
             </button>
           ))}
         </nav>
@@ -59,6 +63,11 @@ function App() {
       <OfflineSummary gameState={gameState} dispatch={dispatch} />
     </div>
   );
+}
+
+function getNavClass(pageId, activePage) {
+  const baseClass = pageId === "battle" ? "nav-link battle-nav" : "nav-link";
+  return activePage === pageId ? `${baseClass} active` : baseClass;
 }
 
 export default App;

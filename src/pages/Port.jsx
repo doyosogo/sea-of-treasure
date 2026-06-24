@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
-import { CANNON_IMAGES, LOGO, RESOURCE_ICONS, SCENES, UI_CANNONBALLS, UI_GOLD } from "../data/assets.js";
+import { LOGO, RESOURCE_ICONS, SCENES, UI_CANNONBALLS, UI_GOLD } from "../data/assets.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import {
-  calcCannonUpgradeCost,
   formatDuration,
   formatNumber,
   getCargoCapacity,
-  getCannonMaterialUpgradeCost,
-  getCurrentCannon,
   getFishSellValue,
   getMarketCooldownRemaining,
-  getNextCannon,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
   getUsedCargo,
-  hasCannonMaterialUpgradeResources,
   getWhaleOilSellValue
 } from "../utils/gameEngine.js";
 
@@ -25,18 +20,6 @@ function Port({ gameState, dispatch }) {
   const cooldownRemaining = getMarketCooldownRemaining(gameState, now);
   const tradingLevel = gameState.skills.trading?.level ?? 1;
   const tradeAllowanceRemaining = Math.max(0, gameState.marketTradeLimit - gameState.marketTradeUsed);
-  const currentCannon = getCurrentCannon(gameState);
-  const nextCannon = getNextCannon(gameState);
-  const goldUpgradeCost = calcCannonUpgradeCost(gameState);
-  const materialUpgradeCost = getCannonMaterialUpgradeCost(gameState);
-  const canBuyCannonUpgrade =
-    Boolean(nextCannon) &&
-    gameState.playerLevel >= nextCannon.unlockLevel &&
-    gameState.gold >= goldUpgradeCost;
-  const canCraftCannonUpgrade =
-    Boolean(nextCannon) &&
-    gameState.playerLevel >= nextCannon.unlockLevel &&
-    hasCannonMaterialUpgradeResources(gameState);
 
   useEffect(() => {
     const timerId = window.setInterval(() => setNow(Date.now()), 1000);
@@ -58,11 +41,11 @@ function Port({ gameState, dispatch }) {
           <div className="harbour-title-copy">
             <p className="eyebrow">Harbour</p>
             <h1>Harbour</h1>
-            <p>Trade goods, restock supplies, and upgrade your cannons.</p>
+            <p>Trade goods, restock supplies, and manage your warehouse.</p>
           </div>
           <div className="harbour-top-stats">
-            <IconChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
-            <IconChip icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
+            <HarbourChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
+            <HarbourChip icon={UI_CANNONBALLS} label="Cargo" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
           </div>
         </header>
 
@@ -72,15 +55,14 @@ function Port({ gameState, dispatch }) {
             <div className="harbour-stat-grid">
               <Metric icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
               <Metric icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
-              <Metric icon={UI_GOLD} label="Cargo Used / Capacity" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
-              <Metric icon={UI_GOLD} label="Current Cannon Tier" value={`Tier ${currentCannon.tier} - ${currentCannon.name}`} />
+              <Metric icon={UI_CANNONBALLS} label="Cargo Used / Capacity" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
+              <Metric icon={UI_GOLD} label="Trading Level" value={formatNumber(tradingLevel)} />
             </div>
           </article>
 
           <article className="harbour-panel">
             <h2>Market Cycle</h2>
             <div className="harbour-stat-grid">
-              <Metric icon={UI_GOLD} label="Trading Level" value={formatNumber(tradingLevel)} />
               <Metric
                 icon={UI_GOLD}
                 label="Time Until Next Market Cycle"
@@ -173,9 +155,7 @@ function Port({ gameState, dispatch }) {
 
           <article className="harbour-panel">
             <h2>Resource Market</h2>
-            <p className="harbour-note">
-              Some resources are better kept for crafting.
-            </p>
+            <p className="harbour-note">Some resources are better kept for crafting.</p>
             <div className="harbour-resource-grid">
               <ResourceMarketCard
                 icon={RESOURCE_ICONS.fish}
@@ -183,21 +163,9 @@ function Port({ gameState, dispatch }) {
                 value={formatNumber(gameState.resources.fish)}
                 sellValue={formatNumber(getFishSellValue(gameState))}
                 buttons={[
-                  {
-                    label: "Sell 1",
-                    disabled: gameState.resources.fish < 1,
-                    onClick: () => dispatch({ type: "SELL_FISH", quantity: 1 })
-                  },
-                  {
-                    label: "Sell 10",
-                    disabled: gameState.resources.fish < 10,
-                    onClick: () => dispatch({ type: "SELL_FISH", quantity: 10 })
-                  },
-                  {
-                    label: "Sell All",
-                    disabled: gameState.resources.fish < 1,
-                    onClick: () => dispatch({ type: "SELL_FISH", quantity: "all" })
-                  }
+                  { label: "Sell 1", disabled: gameState.resources.fish < 1, onClick: () => dispatch({ type: "SELL_FISH", quantity: 1 }) },
+                  { label: "Sell 10", disabled: gameState.resources.fish < 10, onClick: () => dispatch({ type: "SELL_FISH", quantity: 10 }) },
+                  { label: "Sell All", disabled: gameState.resources.fish < 1, onClick: () => dispatch({ type: "SELL_FISH", quantity: "all" }) }
                 ]}
               />
 
@@ -207,89 +175,55 @@ function Port({ gameState, dispatch }) {
                 value={formatNumber(gameState.resources.whaleOil)}
                 sellValue={formatNumber(getWhaleOilSellValue(gameState))}
                 buttons={[
-                  {
-                    label: "Sell 1",
-                    disabled: gameState.resources.whaleOil < 1,
-                    onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: 1 })
-                  },
-                  {
-                    label: "Sell 5",
-                    disabled: gameState.resources.whaleOil < 5,
-                    onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: 5 })
-                  },
-                  {
-                    label: "Sell All",
-                    disabled: gameState.resources.whaleOil < 1,
-                    onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: "all" })
-                  }
+                  { label: "Sell 1", disabled: gameState.resources.whaleOil < 1, onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: 1 }) },
+                  { label: "Sell 5", disabled: gameState.resources.whaleOil < 5, onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: 5 }) },
+                  { label: "Sell All", disabled: gameState.resources.whaleOil < 1, onClick: () => dispatch({ type: "SELL_WHALE_OIL", quantity: "all" }) }
                 ]}
               />
             </div>
           </article>
         </section>
 
-        <section className="harbour-grid harbour-cannon-grid">
-          <article className="harbour-panel harbour-cannon-panel">
-            <h2>Cannon Upgrades</h2>
-            <div className="harbour-cannon-art-grid">
-              <CannonFrame
-                caption="Current Cannon"
-                image={CANNON_IMAGES[currentCannon.tier]}
-                title={`${currentCannon.name} - Tier ${currentCannon.tier}`}
+        <section className="harbour-grid harbour-warehouse-grid">
+          <article className="harbour-panel">
+            <h2>Warehouse</h2>
+            <p className="harbour-note">Track resources, crafting materials, and rare discoveries.</p>
+            <div className="harbour-warehouse-grid">
+              <WarehouseGroup
+                title="Fishing"
+                items={[
+                  [RESOURCE_ICONS.fish, "Fish", gameState.resources.fish],
+                  [RESOURCE_ICONS.whaleOil, "Whale Oil", gameState.resources.whaleOil]
+                ]}
               />
-              <CannonFrame
-                caption="Next Cannon"
-                image={nextCannon ? CANNON_IMAGES[nextCannon.tier] : null}
-                title={nextCannon ? `${nextCannon.name} - Tier ${nextCannon.tier}` : "Max Tier"}
+              <WarehouseGroup
+                title="Navigation"
+                items={[
+                  [RESOURCE_ICONS.navigationCharts, "Navigation Charts", gameState.materials.navigationCharts],
+                  [RESOURCE_ICONS.compassFragments, "Compass Fragments", gameState.materials.compassFragments]
+                ]}
               />
-            </div>
-
-            <div className="harbour-stat-grid">
-              <Metric icon={UI_GOLD} label="Current Tier" value={`Tier ${currentCannon.tier}`} />
-              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} />
-              <Metric icon={UI_GOLD} label="Next Tier" value={nextCannon ? `Tier ${nextCannon.tier}` : "Max"} />
-              <Metric icon={UI_GOLD} label="Next Damage Multiplier" value={nextCannon ? `${formatNumber(nextCannon.damageMultiplier)}x` : "Complete"} />
-              <Metric icon={UI_GOLD} label="Unlock Level" value={nextCannon ? nextCannon.unlockLevel : "Max"} />
-            </div>
-
-            <div className="harbour-cost-panel">
-              <h3>Gold Upgrade Cost</h3>
-              <p>{nextCannon ? formatNumber(goldUpgradeCost) : "Complete"}</p>
-            </div>
-
-            <div className="harbour-cost-panel">
-              <h3>Material Upgrade Cost</h3>
-              {materialUpgradeCost ? (
-                <div className="harbour-cost-list">
-                  {Object.entries(materialUpgradeCost).map(([resourceId, amount]) => (
-                    <div key={resourceId}>
-                      <span>{formatResourceName(resourceId)}</span>
-                      <strong>{formatNumber(amount)}</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>Cannon tier is fully upgraded.</p>
-              )}
-            </div>
-
-            <div className="harbour-button-row">
-              <button
-                className="chunky-button primary"
-                disabled={!canBuyCannonUpgrade}
-                onClick={() => dispatch({ type: "UPGRADE_CANNONS_WITH_GOLD" })}
-                type="button"
-              >
-                Buy Upgrade
-              </button>
-              <button
-                className="chunky-button"
-                disabled={!canCraftCannonUpgrade}
-                onClick={() => dispatch({ type: "UPGRADE_CANNONS_WITH_MATERIALS" })}
-                type="button"
-              >
-                Craft Upgrade
-              </button>
+              <WarehouseGroup
+                title="Gunnery"
+                items={[
+                  [RESOURCE_ICONS.gunpowder, "Gunpowder", gameState.materials.gunpowder],
+                  [RESOURCE_ICONS.cannonParts, "Cannon Parts", gameState.materials.cannonParts]
+                ]}
+              />
+              <WarehouseGroup
+                title="Trading"
+                items={[
+                  [RESOURCE_ICONS.tradeContracts, "Trade Contracts", gameState.materials.tradeContracts],
+                  [RESOURCE_ICONS.tradeSeals, "Trade Seals", gameState.materials.tradeSeals]
+                ]}
+              />
+              <WarehouseGroup
+                title="Treasure"
+                items={[
+                  [RESOURCE_ICONS.ancientRelics, "Ancient Relics", gameState.materials.ancientRelics],
+                  [RESOURCE_ICONS.rareMapPiece, "Rare Map Pieces", gameState.rareMapPieces]
+                ]}
+              />
             </div>
           </article>
         </section>
@@ -298,7 +232,7 @@ function Port({ gameState, dispatch }) {
   );
 }
 
-function IconChip({ icon, label, value }) {
+function HarbourChip({ icon, label, value }) {
   return (
     <div className="harbour-chip">
       <img alt={label} src={icon} />
@@ -334,13 +268,11 @@ function ResourceRow({ label, value }) {
 function ResourceMarketCard({ icon, label, value, sellValue, buttons }) {
   return (
     <article className="harbour-resource-card">
-      <div className="harbour-item-heading">
-        <div className="harbour-resource-title">
-          <img alt={label} className="harbour-resource-icon" src={icon} />
-          <div>
-            <h3>{label}</h3>
-            <p>Sell price {sellValue} Gold</p>
-          </div>
+      <div className="harbour-resource-title">
+        <img alt={label} className="harbour-resource-icon" src={icon} />
+        <div>
+          <h3>{label}</h3>
+          <p>Sell price {sellValue} Gold</p>
         </div>
       </div>
       <ResourceRow label="Owned" value={value} />
@@ -361,32 +293,35 @@ function ResourceMarketCard({ icon, label, value, sellValue, buttons }) {
   );
 }
 
-function CannonFrame({ caption, image, title }) {
+function WarehouseGroup({ title, items }) {
   return (
-    <div className="harbour-cannon-frame">
-      <span className="harbour-frame-caption">{caption}</span>
-      <div className="harbour-frame-image-shell">
-        {image ? <img alt={title} src={image} /> : <span className="harbour-frame-empty">No cannon available</span>}
+    <article className="harbour-warehouse-card">
+      <h3>{title}</h3>
+      <div className="harbour-warehouse-list">
+        {items.map(([icon, label, value]) => (
+          <div className="harbour-warehouse-row" key={label}>
+            <div className="harbour-warehouse-left">
+              <img alt={label} className="harbour-warehouse-icon" src={icon} />
+              <span>{label}</span>
+            </div>
+            <strong>{formatNumber(value)}</strong>
+          </div>
+        ))}
       </div>
-      <strong>{title}</strong>
-    </div>
+    </article>
   );
 }
 
-function formatResourceName(resourceId) {
-  const names = {
-    gold: "Gold",
-    gunpowder: "Gunpowder",
-    cannonParts: "Cannon Parts",
-    navigationCharts: "Navigation Charts",
-    compassFragments: "Compass Fragments",
-    ancientRelics: "Ancient Relics",
-    tradeSeals: "Trade Seals",
-    rareMapPieces: "Rare Map Pieces",
-    whaleOil: "Whale Oil"
+function getShipStatusLabel(shipState) {
+  const labels = {
+    active: "Active",
+    owned: "Owned",
+    available: "Available",
+    locked: "Locked by Level",
+    unaffordable: "Not Enough Gold"
   };
 
-  return names[resourceId] ?? resourceId;
+  return labels[shipState];
 }
 
 export default Port;

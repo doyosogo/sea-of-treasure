@@ -7,7 +7,7 @@ function getSkillXpRequired(skillDefinition, skillState) {
   return skillState.level >= skillDefinition.maxLevel ? Infinity : skillDefinition.xpPerLevel[skillState.level - 1];
 }
 
-function Skills({ gameState, dispatch }) {
+function Skills({ gameState, dispatch, onNavigate }) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -87,7 +87,12 @@ function Skills({ gameState, dispatch }) {
 
                 <p className="academy-card-copy">{skill.description}</p>
                 {skill.id === "treasureHunting" && (
-                  <p className="academy-note">Advanced treasure digs are available in the Treasure section.</p>
+                  <>
+                    <p className="academy-note">Advanced treasure digs are available in the Treasure section.</p>
+                    <button className="chunky-button" onClick={() => onNavigate?.("treasure")} type="button">
+                      Open Treasure Vault
+                    </button>
+                  </>
                 )}
 
                 <div className="academy-detail-grid">

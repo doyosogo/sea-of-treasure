@@ -7,6 +7,7 @@ export const SCENES = {
   dashboard: "/assets/scenes/Captains_Cabin.png",
   battle: "/assets/scenes/Battle_Board.png",
   harbour: "/assets/scenes/Harbour.png",
+  shop: "/assets/scenes/Shop.png",
   shipyard: "/assets/scenes/Shipyard.png",
   treasure: "/assets/scenes/Treasure_Vault.png",
   academy: "/assets/scenes/Crew_Academy.png",
