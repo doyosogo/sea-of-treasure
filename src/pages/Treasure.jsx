@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LOGO, RESOURCE_ICONS, SCENES, UI_GOLD, UI_TREASURE_MAPS, UI_XP } from "../data/assets.js";
+import Tooltip from "../components/Tooltip.jsx";
 import { treasureSites } from "../data/treasures.js";
 import { formatDuration, formatNumber, getActiveWorldEvent, getTalentBonuses } from "../utils/gameEngine.js";
 
@@ -38,8 +39,8 @@ function Treasure({ gameState, dispatch }) {
             <p>Spend treasure maps, recover rare relics, and uncover forgotten fortunes.</p>
           </div>
           <div className="treasure-top-stats">
-            <StatChip icon={UI_TREASURE_MAPS} label="Treasure Maps" value={formatNumber(gameState.treasureMaps)} />
-            <StatChip icon={RESOURCE_ICONS.rareMapPiece} label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} />
+            <StatChip icon={UI_TREASURE_MAPS} label="Treasure Maps" value={formatNumber(gameState.treasureMaps)} tooltip="Treasure maps are recovered from combat and used to start treasure digs." />
+            <StatChip icon={RESOURCE_ICONS.rareMapPiece} label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} tooltip="Rare Map Pieces are uncommon loot used for later progression." />
           </div>
         </header>
 
@@ -58,10 +59,10 @@ function Treasure({ gameState, dispatch }) {
           <article className="treasure-panel">
             <h2>Treasure Overview</h2>
             <div className="treasure-stat-grid">
-              <Metric icon={UI_TREASURE_MAPS} label="Treasure Maps Owned" value={formatNumber(gameState.treasureMaps)} />
-              <Metric icon={RESOURCE_ICONS.rareMapPiece} label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} />
-              <Metric icon={UI_XP} label="Treasure Hunting Level" value={formatNumber(treasureSkill.level)} />
-              <Metric icon={UI_GOLD} label="Rare Finds" value={formatNumber(treasureCount)} />
+              <Metric icon={UI_TREASURE_MAPS} label="Treasure Maps Owned" value={formatNumber(gameState.treasureMaps)} tooltip="Treasure maps are recovered from combat and spent to begin treasure digs." />
+              <Metric icon={RESOURCE_ICONS.rareMapPiece} label="Rare Map Pieces" value={formatNumber(gameState.rareMapPieces)} tooltip="Rare Map Pieces are very uncommon loot used for later progression." />
+              <Metric icon={UI_XP} label="Treasure Hunting Level" value={formatNumber(treasureSkill.level)} tooltip="Treasure Hunting skill level unlocks longer and more rewarding dig sites." />
+              <Metric icon={UI_GOLD} label="Rare Finds" value={formatNumber(treasureCount)} tooltip="Rare finds are special treasures uncovered by your crew." />
             </div>
           </article>
 
@@ -75,16 +76,16 @@ function Treasure({ gameState, dispatch }) {
                   <p>{isReady ? "Your crew is waiting on your command." : "The crew is still digging through the sand."}</p>
                 </div>
                 <div className="treasure-active-stats">
-                  <Metric icon={UI_TREASURE_MAPS} label="Map Cost" value={activeSite.mapCost} />
-                  <Metric icon={UI_GOLD} label="Gold Range" value={`${formatNumber(activeSite.goldMin)} - ${formatNumber(activeSite.goldMax)}`} />
-                  <Metric icon={UI_XP} label="XP Reward" value={formatNumber(activeSite.xpReward)} />
-                  <Metric icon={UI_GOLD} label="Rare Chance" value={`${formatNumber(activeSite.rareChance * treasureChanceMultiplier * 100)}%`} />
+                  <Metric icon={UI_TREASURE_MAPS} label="Map Cost" value={activeSite.mapCost} tooltip="Treasure maps are consumed when a dig starts." />
+                  <Metric icon={UI_GOLD} label="Gold Range" value={`${formatNumber(activeSite.goldMin)} - ${formatNumber(activeSite.goldMax)}`} tooltip="The amount of gold you can uncover from this dig site." />
+                  <Metric icon={UI_XP} label="XP Reward" value={formatNumber(activeSite.xpReward)} tooltip="Treasure Hunting XP awarded when the dig completes." />
+                  <Metric icon={UI_GOLD} label="Rare Chance" value={`${formatNumber(activeSite.rareChance * treasureChanceMultiplier * 100)}%`} tooltip="Chance to uncover a rare treasure item at this dig site." />
                 </div>
               </div>
             ) : (
               <div className="treasure-empty-state">
                 <strong>No active dig</strong>
-                <p>Select a dig site below and send your crew searching for buried fortunes.</p>
+                <p>Pick a dig site below to send your crew searching for buried fortunes.</p>
               </div>
             )}
             <div className="treasure-button-row">
@@ -127,11 +128,11 @@ function Treasure({ gameState, dispatch }) {
                       </span>
                     </div>
                     <div className="treasure-contract-grid">
-                      <TreasureRow label="Duration" value={formatDuration(site.durationSeconds * 1000)} />
-                      <TreasureRow label="Map Cost" value={site.mapCost} />
-                      <TreasureRow label="Gold Range" value={`${formatNumber(site.goldMin)} - ${formatNumber(site.goldMax)}`} />
-                      <TreasureRow label="XP Reward" value={formatNumber(site.xpReward)} />
-                      <TreasureRow label="Rare Chance" value={`${formatNumber(rareChance * 100)}%`} />
+                      <TreasureRow label="Duration" value={formatDuration(site.durationSeconds * 1000)} tooltip="How long your crew needs to complete this dig." />
+                      <TreasureRow label="Map Cost" value={site.mapCost} tooltip="Treasure maps are consumed when the dig starts." />
+                      <TreasureRow label="Gold Range" value={`${formatNumber(site.goldMin)} - ${formatNumber(site.goldMax)}`} tooltip="Possible gold range from this site." />
+                      <TreasureRow label="XP Reward" value={formatNumber(site.xpReward)} tooltip="Treasure Hunting XP gained when the dig completes." />
+                      <TreasureRow label="Rare Chance" value={`${formatNumber(rareChance * 100)}%`} tooltip="Chance to uncover a rare treasure item." />
                     </div>
                     <button
                       className="chunky-button primary"
@@ -160,7 +161,7 @@ function Treasure({ gameState, dispatch }) {
               </div>
             ) : (
               <div className="treasure-empty-state chest-state">
-                <strong>An empty chest rests here.</strong>
+                <strong>No rare finds yet.</strong>
                 <p>Rare treasures will appear here once your crew uncovers them.</p>
               </div>
             )}
@@ -171,8 +172,8 @@ function Treasure({ gameState, dispatch }) {
   );
 }
 
-function StatChip({ icon, label, value }) {
-  return (
+function StatChip({ icon, label, value, tooltip }) {
+  const content = (
     <div className="treasure-chip">
       <img alt={label} src={icon} />
       <div>
@@ -181,10 +182,16 @@ function StatChip({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="treasure-metric">
       {icon ? <img alt={label} className="treasure-metric-icon" src={icon} /> : null}
       <div className="treasure-metric-copy">
@@ -193,15 +200,27 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
-function TreasureRow({ label, value }) {
-  return (
+function TreasureRow({ label, value, tooltip }) {
+  const content = (
     <div className="treasure-row">
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function describeWorldEventEffects(event) {

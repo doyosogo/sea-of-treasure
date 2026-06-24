@@ -1,6 +1,7 @@
 import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
 import { crewMembers } from "../data/crew.js";
+import Tooltip from "../components/Tooltip.jsx";
 import {
   formatNumber,
   formatDuration,
@@ -43,14 +44,14 @@ function Dashboard({ gameState, onNavigate }) {
     ? crewMembers.find((member) => member.id === highestCrewEntry[0]) ?? null
     : null;
   const resourceRows = [
-    { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold },
-    { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS },
-    { label: "Cannonballs", value: gameState.cannonballs, icon: UI_ICONS.cannonballs },
-    { label: "Treasure Maps", value: gameState.treasureMaps, icon: UI_ICONS.treasureMaps },
-    { label: "Rare Map Pieces", value: gameState.rareMapPieces, icon: RESOURCE_ICONS.rareMapPiece },
-    { label: "Gunpowder", value: gameState.materials.gunpowder, icon: RESOURCE_ICONS.gunpowder },
-    { label: "Cannon Parts", value: gameState.materials.cannonParts, icon: RESOURCE_ICONS.cannonParts },
-    { label: "Ancient Relics", value: gameState.materials.ancientRelics, icon: RESOURCE_ICONS.ancientRelics }
+    { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold, tooltip: "Gold is earned from combat, trading, quests, and events. Spend it on ships, cannons, repairs, and upgrades." },
+    { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS, tooltip: "Doubloons are rare account currency earned from bosses, treasure, quests, and achievements." },
+    { label: "Cannonballs", value: gameState.cannonballs, icon: UI_ICONS.cannonballs, tooltip: "Cannonballs are spent when firing volleys in combat. Buy or restock them in the Shop." },
+    { label: "Treasure Maps", value: gameState.treasureMaps, icon: UI_ICONS.treasureMaps, tooltip: "Treasure maps are recovered from defeated ships and used to start treasure digs." },
+    { label: "Rare Map Pieces", value: gameState.rareMapPieces, icon: RESOURCE_ICONS.rareMapPiece, tooltip: "Rare Map Pieces are very uncommon loot used for later upgrades and progression." },
+    { label: "Gunpowder", value: gameState.materials.gunpowder, icon: RESOURCE_ICONS.gunpowder, tooltip: "Gunpowder is produced by Gunnery and used for cannon upgrades, crew, and future crafting." },
+    { label: "Cannon Parts", value: gameState.materials.cannonParts, icon: RESOURCE_ICONS.cannonParts, tooltip: "Cannon Parts are produced by Gunnery and used for cannons, crew, and upgrades." },
+    { label: "Ancient Relics", value: gameState.materials.ancientRelics, icon: RESOURCE_ICONS.ancientRelics, tooltip: "Ancient Relics come from treasure digs and are used for upgrades and crew training." }
   ];
 
   const skillCards = skills.map((skill) => {
@@ -105,7 +106,7 @@ function Dashboard({ gameState, onNavigate }) {
               </p>
             </div>
           ) : (
-            <p className="empty-log">No world event active.</p>
+            <p className="empty-log">No world event is active right now. The seas are calm until the next event stirs.</p>
           )}
         </section>
 
@@ -124,12 +125,12 @@ function Dashboard({ gameState, onNavigate }) {
               </div>
             </div>
             <div className="dashboard-stat-stack">
-              <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.gold)} />
-              <Metric label="Doubloons" icon={UI_DOUBLOONS} value={formatNumber(gameState.doubloons)} />
-              <Metric label="Talent Points" icon={UI_ICONS.talentPoints} value={formatNumber(gameState.talentPoints)} />
-              <Metric label="Ships Sunk" icon={UI_ICONS.xp} value={formatNumber(gameState.totalShipsSunk)} />
-              <Metric label="Bosses Defeated" icon={UI_ICONS.gold} value={formatNumber(gameState.lifetimeStats?.totalBossesDefeated ?? 0)} />
-              <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / ${formatNumber(achievements.length)}`} />
+              <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.gold)} tooltip="Gold is earned from combat, trading, quests, and events. Spend it on ships, cannons, repairs, and upgrades." />
+              <Metric label="Doubloons" icon={UI_DOUBLOONS} value={formatNumber(gameState.doubloons)} tooltip="Doubloons are rare account currency earned from bosses, treasure, quests, and achievements." />
+              <Metric label="Talent Points" icon={UI_ICONS.talentPoints} value={formatNumber(gameState.talentPoints)} tooltip="Talent Points are spent on permanent talent tree upgrades." />
+              <Metric label="Ships Sunk" icon={UI_ICONS.xp} value={formatNumber(gameState.totalShipsSunk)} tooltip="Ships sunk track your combat victories across active, idle, and offline play." />
+              <Metric label="Bosses Defeated" icon={UI_ICONS.gold} value={formatNumber(gameState.lifetimeStats?.totalBossesDefeated ?? 0)} tooltip="Bosses are regional milestone fights with large rewards." />
+              <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / ${formatNumber(achievements.length)}`} tooltip="Achievements reward milestones with gold, talent points, and sometimes Doubloons." />
             </div>
           </article>
 
@@ -143,11 +144,11 @@ function Dashboard({ gameState, onNavigate }) {
               <span>{currentShip.mapName}</span>
             </div>
             <div className="voyage-grid">
-              <Metric label="Current Region" icon={UI_ICONS.gold} value={activeRegion.name} />
-              <Metric label="Hull" icon={UI_ICONS.hull} value={`${formatNumber(gameState.hull.current)} / ${formatNumber(gameState.hull.max)}`} />
-              <Metric label="Cannonballs" icon={UI_ICONS.cannonballs} value={formatNumber(gameState.cannonballs)} />
-              <Metric label="Cannon Tier" icon={UI_ICONS.gold} value={`Tier ${currentCannon.tier}`} />
-              <Metric label="Cannon Name" icon={UI_ICONS.gold} value={currentCannon.name} />
+              <Metric label="Current Region" icon={UI_ICONS.gold} value={activeRegion.name} tooltip="Your active region changes enemy difficulty and rewards." />
+              <Metric label="Hull" icon={UI_ICONS.hull} value={`${formatNumber(gameState.hull.current)} / ${formatNumber(gameState.hull.max)}`} tooltip="Hull is your ship health. If it reaches zero, combat ends." />
+              <Metric label="Cannonballs" icon={UI_ICONS.cannonballs} value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are consumed when firing volleys in combat." />
+              <Metric label="Cannon Tier" icon={UI_ICONS.gold} value={`Tier ${currentCannon.tier}`} tooltip="Cannon tier controls your cannon quality and damage multiplier." />
+              <Metric label="Cannon Name" icon={UI_ICONS.gold} value={currentCannon.name} tooltip="This is the currently equipped cannon quality." />
             </div>
           </article>
 
@@ -161,8 +162,8 @@ function Dashboard({ gameState, onNavigate }) {
               <span>{idleEstimate.enemy.difficulty}</span>
             </div>
             <div className="dashboard-stat-stack">
-              <Metric label="Gold / Hour" icon={UI_ICONS.gold} value={formatNumber(idleEstimate.goldPerHour)} />
-              <Metric label="XP / Hour" icon={UI_ICONS.xp} value={formatNumber(idleEstimate.xpPerHour)} />
+              <Metric label="Gold / Hour" icon={UI_ICONS.gold} value={formatNumber(idleEstimate.goldPerHour)} tooltip="Estimated gold gained per hour from idling against the selected enemy." />
+              <Metric label="XP / Hour" icon={UI_ICONS.xp} value={formatNumber(idleEstimate.xpPerHour)} tooltip="Estimated XP gained per hour from idling against the selected enemy." />
             </div>
             <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("battle")} type="button">
               Open Battle
@@ -198,7 +199,9 @@ function Dashboard({ gameState, onNavigate }) {
                 <div className="resource-summary-row" key={resource.label}>
                   <div className="resource-summary-left">
                     <img alt={resource.label} className="resource-summary-icon" src={resource.icon} />
-                    <span>{resource.label}</span>
+                    <Tooltip label={resource.label} text={resource.tooltip}>
+                      <span>{resource.label}</span>
+                    </Tooltip>
                   </div>
                   <strong>{formatNumber(resource.value)}</strong>
                 </div>
@@ -229,9 +232,9 @@ function Dashboard({ gameState, onNavigate }) {
           <article className="dashboard-panel dashboard-quests-panel">
             <h2>Quest Summary</h2>
             <div className="dashboard-stat-stack">
-              <Metric label="Daily Quests" icon={UI_ICONS.xp} value={`${formatNumber(dailyComplete)} / ${formatNumber((quests.daily ?? []).length)}`} />
-              <Metric label="Weekly Quests" icon={UI_ICONS.xp} value={`${formatNumber(weeklyComplete)} / ${formatNumber((quests.weekly ?? []).length)}`} />
-              <Metric label="Daily Reset" icon={UI_ICONS.xp} value={formatDuration(dailyResetRemaining)} />
+              <Metric label="Daily Quests" icon={UI_ICONS.xp} value={`${formatNumber(dailyComplete)} / ${formatNumber((quests.daily ?? []).length)}`} tooltip="Daily quests reset every 24 hours and award small rewards." />
+              <Metric label="Weekly Quests" icon={UI_ICONS.xp} value={`${formatNumber(weeklyComplete)} / ${formatNumber((quests.weekly ?? []).length)}`} tooltip="Weekly quests reset every 7 days and award larger rewards." />
+              <Metric label="Daily Reset" icon={UI_ICONS.xp} value={formatDuration(dailyResetRemaining)} tooltip="Time remaining before daily quests refresh." />
             </div>
             <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("quests")} type="button">
               Open Quests
@@ -241,13 +244,23 @@ function Dashboard({ gameState, onNavigate }) {
           <article className="dashboard-panel dashboard-crew-panel">
             <h2>Crew Summary</h2>
             <div className="dashboard-stat-stack">
-              <Metric label="Average Crew Level" icon={UI_ICONS.xp} value={crewAverageLevel.toFixed(1)} />
-              <Metric label="Highest Crew Member" icon={UI_ICONS.xp} value={highestCrewEntry ? `${highestCrewMember?.name ?? highestCrewEntry[0]} Lv. ${highestCrewEntry[1].level}` : "None"} />
-              <Metric label="Combat Gold Bonus" icon={UI_ICONS.gold} value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} />
+              <Metric label="Average Crew Level" icon={UI_ICONS.xp} value={crewAverageLevel.toFixed(1)} tooltip="Crew members gain levels from crew upgrades and provide passive account bonuses." />
+              <Metric label="Highest Crew Member" icon={UI_ICONS.xp} value={highestCrewEntry ? `${highestCrewMember?.name ?? highestCrewEntry[0]} Lv. ${highestCrewEntry[1].level}` : "None"} tooltip="Your highest-trained officer." />
+              <Metric label="Combat Gold Bonus" icon={UI_ICONS.gold} value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} tooltip="Quartermaster levels increase combat gold gains." />
             </div>
             <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("crew")} type="button">
               Open Crew
             </button>
+          </article>
+
+          <article className="dashboard-panel dashboard-tips-panel">
+            <h2>New Player Tips</h2>
+            <ul className="dashboard-tip-list">
+              <li>Fight enemies on Battle page.</li>
+              <li>Buy better ships and cannons in Shop.</li>
+              <li>Train skills to gather materials.</li>
+              <li>Complete quests for Doubloons.</li>
+            </ul>
           </article>
         </section>
       </div>
@@ -255,8 +268,8 @@ function Dashboard({ gameState, onNavigate }) {
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="dashboard-metric">
       {icon ? <img alt={label} className="dashboard-metric-icon" src={icon} /> : null}
       <div className="dashboard-metric-copy">
@@ -265,6 +278,12 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function describeWorldEventEffects(event) {

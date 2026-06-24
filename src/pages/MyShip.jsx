@@ -6,6 +6,7 @@ import {
   UI_GOLD,
   UI_HULL
 } from "../data/assets.js";
+import Tooltip from "../components/Tooltip.jsx";
 import { cannons } from "../data/cannons.js";
 import {
   formatNumber,
@@ -79,12 +80,12 @@ function MyShip({ gameState, dispatch }) {
                 <h3>{currentShip.name}</h3>
                 <p>Manage your cannon loadout below. The highest cannon tier you own is shown here for inspection.</p>
                 <div className="shipyard-active-stats">
-                  <Metric icon={UI_GOLD} label="Current Region" value={activeRegion.name} />
-                  <Metric icon={UI_GOLD} label="Recommended Region" value={recommendedRegion.name} />
-                  <Metric icon={UI_HULL} label="Ship Level" value={currentShip.level} />
-                  <Metric icon={UI_CANNONBALLS} label="Cannons" value={formatNumber(currentShip.cannons)} />
-                  <Metric icon={UI_GOLD} label="Cargo Capacity" value={formatNumber(getCargoCapacity(gameState))} />
-                  <Metric icon={UI_GOLD} label="Owned Status" value={gameState.ownedShips.includes(currentShip.id) ? "Owned" : "Not Owned"} />
+                  <Metric icon={UI_GOLD} label="Current Region" value={activeRegion.name} tooltip="Your current region determines enemy difficulty and reward scaling." />
+                  <Metric icon={UI_GOLD} label="Recommended Region" value={recommendedRegion.name} tooltip="A region suggested for your current ship level." />
+                  <Metric icon={UI_HULL} label="Ship Level" value={currentShip.level} tooltip="Ship level determines ship size, cannon capacity, and voyage stats." />
+                  <Metric icon={UI_CANNONBALLS} label="Cannons" value={formatNumber(currentShip.cannons)} tooltip="Total cannon mount points on the active ship." />
+                  <Metric icon={UI_GOLD} label="Cargo Capacity" value={formatNumber(getCargoCapacity(gameState))} tooltip="Cargo capacity sets how many trade goods your ship can carry." />
+                  <Metric icon={UI_GOLD} label="Owned Status" value={gameState.ownedShips.includes(currentShip.id) ? "Owned" : "Not Owned"} tooltip="Shows whether the current ship is already in your fleet." />
                 </div>
               </div>
             </div>
@@ -98,11 +99,11 @@ function MyShip({ gameState, dispatch }) {
               <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullPercent)}%` }} />
             </div>
             <div className="shipyard-card-stats">
-              <Metric icon={UI_HULL} label="Current Hull" value={`${formatNumber(combatStats.currentHull)} / ${formatNumber(combatStats.maxHull)}`} />
-              <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} />
-              <Metric icon={UI_GOLD} label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} />
-              <Metric icon={UI_HULL} label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} />
-              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(repairCost)} Gold`} />
+              <Metric icon={UI_HULL} label="Current Hull" value={`${formatNumber(combatStats.currentHull)} / ${formatNumber(combatStats.maxHull)}`} tooltip="Hull is your ship health. If it reaches zero, combat ends." />
+              <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} tooltip="Base hull comes from the ship's level before bonuses." />
+              <Metric icon={UI_GOLD} label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} tooltip="Shipwright Reinforced Hull is a future durability bonus." />
+              <Metric icon={UI_HULL} label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} tooltip="Iron Hull increases maximum hull through the talent tree." />
+              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(repairCost)} Gold`} tooltip="Repairing hull costs gold per missing hull, reduced by Carpenter crew levels." />
             </div>
             <button
               className="chunky-button"
@@ -120,20 +121,20 @@ function MyShip({ gameState, dispatch }) {
               <img alt={currentCannon.name} className="shipyard-cannon-image" src={cannonImage} />
             </div>
             <div className="shipyard-card-stats">
-              <Metric icon={UI_GOLD} label="Current Tier" value={`Tier ${currentCannon.tier}`} />
-              <Metric icon={UI_GOLD} label="Cannon Name" value={currentCannon.name} />
-              <Metric icon={UI_CANNONBALLS} label="Total Cannons" value={formatNumber(currentShip.cannons)} />
-              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(combatStats.cannonDamageMultiplier)}x`} />
-              <Metric icon={UI_GOLD} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} />
-              <Metric icon={UI_HULL} label="Effective Cannons" value={formatNumber(combatStats.effectiveCannons)} />
+              <Metric icon={UI_GOLD} label="Current Tier" value={`Tier ${currentCannon.tier}`} tooltip="Cannon tier controls the quality of all equipped cannons on this ship." />
+              <Metric icon={UI_GOLD} label="Cannon Name" value={currentCannon.name} tooltip="The current cannon model used by your active loadout." />
+              <Metric icon={UI_CANNONBALLS} label="Total Cannons" value={formatNumber(currentShip.cannons)} tooltip="Total cannon mount points on the active ship." />
+              <Metric icon={UI_GOLD} label="Damage Multiplier" value={`${formatNumber(combatStats.cannonDamageMultiplier)}x`} tooltip="Average cannon quality multiplier before talents and crew." />
+              <Metric icon={UI_GOLD} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} tooltip="Total damage dealt by a single volley before crits." />
+              <Metric icon={UI_HULL} label="Effective Cannons" value={formatNumber(combatStats.effectiveCannons)} tooltip="Effective cannons include Broadside Master bonuses." />
             </div>
           </article>
 
           <article className="shipyard-panel">
             <h2>Cannon Loadout</h2>
             <div className="shipyard-card-stats">
-              <Metric icon={UI_CANNONBALLS} label="Cannon Capacity" value={formatNumber(cannonCapacity)} />
-              <Metric icon={UI_CANNONBALLS} label="Cannons Equipped" value={formatNumber(totalEquippedCannons)} />
+              <Metric icon={UI_CANNONBALLS} label="Cannon Capacity" value={formatNumber(cannonCapacity)} tooltip="The maximum number of cannons that can be equipped on this ship." />
+              <Metric icon={UI_CANNONBALLS} label="Cannons Equipped" value={formatNumber(totalEquippedCannons)} tooltip="The total number of cannons currently equipped across all tiers." />
             </div>
             <div className="shipyard-loadout-grid">
               {cannons.map((cannon) => {
@@ -241,14 +242,14 @@ function MyShip({ gameState, dispatch }) {
           <article className="shipyard-panel">
             <h2>Combat Readiness</h2>
             <div className="shipyard-card-stats">
-              <Metric label="Selected Enemy" value={idleEstimate.enemy.name} icon={UI_HULL} />
-              <Metric label="Estimated Enemy HP" value={formatNumber(idleEstimate.enemy.maxHP)} icon={UI_HULL} />
-              <Metric label="Estimated Enemy Damage" value={formatNumber(idleEstimate.enemy.damage)} icon={UI_HULL} />
-              <Metric label="Volleys to Defeat" value={formatNumber(idleEstimate.volleysNeeded)} icon={UI_CANNONBALLS} />
-              <Metric label="Cannonballs Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} icon={UI_CANNONBALLS} />
-              <Metric label="Hull Damage Taken" value={formatNumber(idleEstimate.hullDamagePerEnemy)} icon={UI_HULL} />
-              <Metric label="Reward Gold" value={formatNumber(idleEstimate.goldPerEnemy)} icon={UI_GOLD} />
-              <Metric label="Reward XP" value={formatNumber(idleEstimate.xpPerEnemy)} icon={UI_GOLD} />
+              <Metric label="Selected Enemy" value={idleEstimate.enemy.name} icon={UI_HULL} tooltip="The currently selected combat target used for idle and combat estimates." />
+              <Metric label="Estimated Enemy HP" value={formatNumber(idleEstimate.enemy.maxHP)} icon={UI_HULL} tooltip="Estimated enemy hull in the selected region." />
+              <Metric label="Estimated Enemy Damage" value={formatNumber(idleEstimate.enemy.damage)} icon={UI_HULL} tooltip="Estimated damage dealt back to your ship per enemy hit." />
+              <Metric label="Volleys to Defeat" value={formatNumber(idleEstimate.volleysNeeded)} icon={UI_CANNONBALLS} tooltip="How many volleys are expected to sink the selected enemy." />
+              <Metric label="Cannonballs Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} icon={UI_CANNONBALLS} tooltip="Estimated cannonballs needed to defeat one enemy." />
+              <Metric label="Hull Damage Taken" value={formatNumber(idleEstimate.hullDamagePerEnemy)} icon={UI_HULL} tooltip="Estimated hull damage taken when that enemy wins a hit." />
+              <Metric label="Reward Gold" value={formatNumber(idleEstimate.goldPerEnemy)} icon={UI_GOLD} tooltip="Estimated gold rewarded for defeating the selected enemy." />
+              <Metric label="Reward XP" value={formatNumber(idleEstimate.xpPerEnemy)} icon={UI_GOLD} tooltip="Estimated XP rewarded for defeating the selected enemy." />
             </div>
           </article>
         </section>
@@ -257,8 +258,8 @@ function MyShip({ gameState, dispatch }) {
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="shipyard-metric">
       {icon ? <img alt={label} className="shipyard-metric-icon" src={icon} /> : null}
       <div className="shipyard-metric-copy">
@@ -267,6 +268,12 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 export default MyShip;

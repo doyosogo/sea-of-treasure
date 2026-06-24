@@ -11,6 +11,7 @@ import {
   UI_HULL,
   UI_XP
 } from "../data/assets.js";
+import Tooltip from "../components/Tooltip.jsx";
 import { cannons } from "../data/cannons.js";
 import { ships } from "../data/ships.js";
 import { craftableUpgrades } from "../data/crafting.js";
@@ -67,9 +68,9 @@ function Shop({ gameState, dispatch }) {
             <p className="shop-note">Doubloon purchases will unlock in a future update.</p>
           </div>
           <div className="shop-top-stats">
-            <ShopChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
-            <ShopChip icon={UI_DOUBLOONS} label="Doubloons" value={formatNumber(gameState.doubloons)} />
-            <ShopChip icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
+            <ShopChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} tooltip="Gold is the main currency used for ships, repairs, and most upgrades." />
+            <ShopChip icon={UI_DOUBLOONS} label="Doubloons" value={formatNumber(gameState.doubloons)} tooltip="Doubloons are rare premium currency earned from milestones and special rewards." />
+            <ShopChip icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent in combat. Restock them here when supplies run low." />
           </div>
         </header>
 
@@ -83,7 +84,7 @@ function Shop({ gameState, dispatch }) {
         {activeCategory === "ships" && (
           <section className="shop-grid">
             <article className="shop-panel">
-              <h2>Shipyard Inventory</h2>
+              <h2><Tooltip label="Shipyard Inventory" text="Buy ships here and set the active ship for your voyage." position="right">Shipyard Inventory</Tooltip></h2>
               <p className="shop-note">Ships can be bought and activated here. My Ship remains the inspection screen.</p>
               <div className="shop-ship-grid">
                 {ships.map((ship) => {
@@ -153,11 +154,11 @@ function Shop({ gameState, dispatch }) {
         {activeCategory === "cannons" && (
           <section className="shop-grid">
             <article className="shop-panel">
-              <h2>Cannon Arsenal</h2>
+              <h2><Tooltip label="Cannon Arsenal" text="Purchase individual cannons here and build a loadout from your inventory." position="right">Cannon Arsenal</Tooltip></h2>
               <div className="shop-stat-grid">
-                <Metric icon={UI_CANNONBALLS} label="Equipped / Capacity" value={`${formatNumber(totalEquippedCannons)} / ${formatNumber(cannonCapacity)}`} />
-                <Metric icon={UI_GOLD} label="Highest Cannon" value={currentCannon.name} />
-                <Metric icon={UI_GOLD} label="Upgrade Tier" value={`Tier ${currentCannon.tier}`} />
+                <Metric icon={UI_CANNONBALLS} label="Equipped / Capacity" value={`${formatNumber(totalEquippedCannons)} / ${formatNumber(cannonCapacity)}`} tooltip="Your active loadout cannot exceed the ship's cannon capacity." />
+                <Metric icon={UI_GOLD} label="Highest Cannon" value={currentCannon.name} tooltip="This is the strongest cannon tier you currently own." />
+                <Metric icon={UI_GOLD} label="Upgrade Tier" value={`Tier ${currentCannon.tier}`} tooltip="This is the cannon tier your upgrade system currently reaches." />
               </div>
               <div className="shop-cannon-inventory-grid">
                 {cannons.map((cannon) => {
@@ -180,10 +181,10 @@ function Shop({ gameState, dispatch }) {
                         <span className="ship-status">{formatNumber(cannon.damageMultiplier)}x damage</span>
                       </div>
                       <div className="shop-card-stats">
-                        <Metric icon={UI_GOLD} label="Owned" value={formatNumber(owned)} />
-                        <Metric icon={UI_CANNONBALLS} label="Equipped" value={formatNumber(equipped)} />
-                        <Metric icon={UI_GOLD} label="Purchase Cost" value={formatNumber(cannon.purchaseCost)} />
-                        <Metric icon={UI_XP} label="Unlock Level" value={cannon.unlockLevel} />
+                        <Metric icon={UI_GOLD} label="Owned" value={formatNumber(owned)} tooltip="How many cannons of this tier are in your inventory." />
+                        <Metric icon={UI_CANNONBALLS} label="Equipped" value={formatNumber(equipped)} tooltip="How many cannons of this tier are currently mounted." />
+                        <Metric icon={UI_GOLD} label="Purchase Cost" value={formatNumber(cannon.purchaseCost)} tooltip="Gold cost to buy this cannon from the shop." />
+                        <Metric icon={UI_XP} label="Unlock Level" value={cannon.unlockLevel} tooltip="Your player level must meet this requirement to buy the cannon." />
                       </div>
                       <div className="shop-button-row">
                         <button
@@ -210,15 +211,15 @@ function Shop({ gameState, dispatch }) {
             </article>
 
             <article className="shop-panel">
-              <h2>Cannon Upgrades</h2>
+              <h2><Tooltip label="Cannon Upgrades" text="Upgrade the whole cannon system by one tier using gold or materials." position="right">Cannon Upgrades</Tooltip></h2>
               <div className="shop-cannon-art-grid">
                 <CannonFrame caption="Current Cannon" image={CANNON_IMAGES[currentCannon.tier]} title={`${currentCannon.name} - Tier ${currentCannon.tier}`} />
                 <CannonFrame caption="Next Cannon" image={nextCannon ? CANNON_IMAGES[nextCannon.tier] : null} title={nextCannon ? `${nextCannon.name} - Tier ${nextCannon.tier}` : "Max Tier"} />
               </div>
               <div className="shop-stat-grid">
-                <Metric icon={UI_GOLD} label="Current Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} />
-                <Metric icon={UI_GOLD} label="Next Damage Multiplier" value={nextCannon ? `${formatNumber(nextCannon.damageMultiplier)}x` : "Complete"} />
-                <Metric icon={UI_XP} label="Unlock Level" value={nextCannon ? nextCannon.unlockLevel : "Max"} />
+                <Metric icon={UI_GOLD} label="Current Damage Multiplier" value={`${formatNumber(currentCannon.damageMultiplier)}x`} tooltip="Damage multiplier for the current cannon tier." />
+                <Metric icon={UI_GOLD} label="Next Damage Multiplier" value={nextCannon ? `${formatNumber(nextCannon.damageMultiplier)}x` : "Complete"} tooltip="The next cannon tier's damage multiplier." />
+                <Metric icon={UI_XP} label="Unlock Level" value={nextCannon ? nextCannon.unlockLevel : "Max"} tooltip="The player level required for the next cannon tier." />
               </div>
               <div className="shop-cost-panel">
                 <h3>Gold Upgrade Path</h3>
@@ -254,10 +255,10 @@ function Shop({ gameState, dispatch }) {
         {activeCategory === "cannonballs" && (
           <section className="shop-grid">
             <article className="shop-panel">
-              <h2>Supply Store</h2>
+              <h2><Tooltip label="Supply Store" text="Restock cannonballs here to keep combat going." position="right">Supply Store</Tooltip></h2>
               <div className="shop-supply-grid">
-                <Metric icon={UI_CANNONBALLS} label="Cannonballs Owned" value={formatNumber(gameState.cannonballs)} />
-                <Metric icon={UI_GOLD} label="Cost per 100" value={formatNumber(currentCannon.goldPer100Balls)} />
+                <Metric icon={UI_CANNONBALLS} label="Cannonballs Owned" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent in combat. Restock them here." />
+                <Metric icon={UI_GOLD} label="Cost per 100" value={formatNumber(currentCannon.goldPer100Balls)} tooltip="Gold cost for each bundle of 100 cannonballs." />
               </div>
               <button className="chunky-button primary" onClick={() => dispatch({ type: "BUY_CANNONBALLS", quantity: 100 })} type="button">
                 Buy 100 Cannonballs
@@ -269,7 +270,7 @@ function Shop({ gameState, dispatch }) {
         {activeCategory === "improvements" && (
           <section className="shop-grid">
             <article className="shop-panel">
-              <h2>Ship Improvements</h2>
+              <h2><Tooltip label="Ship Improvements" text="Craft Reinforced Hull, Speed Sails, and Cannon Braces with resources." position="right">Ship Improvements</Tooltip></h2>
               <div className="shop-upgrade-grid">
                 {craftableUpgrades.map((upgrade) => {
                   const currentLevel = gameState.craftedUpgrades[upgrade.id] ?? 0;
@@ -294,7 +295,9 @@ function Shop({ gameState, dispatch }) {
                       </div>
                       <p className="shop-note">{upgrade.effect}</p>
                       <div className="shop-bonus-row">
-                        <span>Current Bonus</span>
+                        <Tooltip label="Current Bonus" text="The bonus this ship improvement currently provides." position="right">
+                          <span>Current Bonus</span>
+                        </Tooltip>
                         <strong>{getCraftingEffect(upgrade.id, currentLevel)}</strong>
                       </div>
                       <div className="shop-cost-list">
@@ -335,8 +338,8 @@ function getShipStatusLabel(shipState) {
   return labels[shipState];
 }
 
-function ShopChip({ icon, label, value }) {
-  return (
+function ShopChip({ icon, label, value, tooltip }) {
+  const content = (
     <div className="shop-chip">
       <img alt={label} src={icon} />
       <div>
@@ -345,6 +348,12 @@ function ShopChip({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function TabButton({ active, label, onClick }) {
@@ -355,8 +364,8 @@ function TabButton({ active, label, onClick }) {
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="shop-metric">
       {icon ? <img alt={label} className="shop-metric-icon" src={icon} /> : null}
       <div className="shop-metric-copy">
@@ -365,10 +374,16 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
-function CostRow({ icon, label, value }) {
-  return (
+function CostRow({ icon, label, value, tooltip }) {
+  const content = (
     <div className="shop-cost-row">
       <div className="shop-cost-left">
         <img alt={label} className="shop-cost-icon" src={icon} />
@@ -377,6 +392,12 @@ function CostRow({ icon, label, value }) {
       <strong>{formatNumber(value)}</strong>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function CannonFrame({ caption, image, title }) {

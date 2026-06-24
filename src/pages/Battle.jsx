@@ -4,6 +4,7 @@ import {
   SCENES,
   UI_ICONS
 } from "../data/assets.js";
+import Tooltip from "../components/Tooltip.jsx";
 import { regions } from "../data/regions.js";
 import {
   formatNumber,
@@ -157,7 +158,7 @@ function Battle({ gameState, dispatch }) {
                   <span>
                     {battleEnemy
                       ? `${formatNumber(battleEnemy.currentHP)} / ${formatNumber(battleEnemy.maxHP)}`
-                      : "No active enemy"}
+                      : "Choose an enemy below to begin battle"}
                   </span>
                 </div>
                 <div className="progress-track enemy-hp-track" aria-label="Enemy hull">
@@ -176,10 +177,10 @@ function Battle({ gameState, dispatch }) {
               </div>
 
               <div className="battle-stat-strip">
-                <Metric icon={UI_ICONS.cannonballs} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
-                <Metric icon={UI_ICONS.gold} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} />
-                <Metric icon={UI_ICONS.xp} label="Shots Fired" value={battleEnemy ? formatNumber(currentBattle.shotsFired) : "0"} />
-                <Metric icon={UI_ICONS.hull} label="Repair Cost" value={formatNumber(repairCost)} />
+                <Metric icon={UI_ICONS.cannonballs} label="Cannonballs" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent every volley. Keep a reserve for longer fights." />
+                <Metric icon={UI_ICONS.gold} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} tooltip="Volley damage is the total damage of one firing cycle before crits." />
+                <Metric icon={UI_ICONS.xp} label="Shots Fired" value={battleEnemy ? formatNumber(currentBattle.shotsFired) : "0"} tooltip="Shots fired counts the number of volleys launched in the current battle." />
+                <Metric icon={UI_ICONS.hull} label="Repair Cost" value={formatNumber(repairCost)} tooltip="Repair cost is based on missing hull. Carpenter crew members can reduce it." />
               </div>
             </div>
           </div>
@@ -225,10 +226,10 @@ function Battle({ gameState, dispatch }) {
                   </div>
                   <p className="region-description">{region.description}</p>
                   <div className="region-stat-grid">
-                    <Metric icon={UI_ICONS.gold} label="Gold" value={`${formatNumber((region.goldMultiplier - 1) * 100)}%`} />
-                    <Metric icon={UI_ICONS.xp} label="XP" value={`${formatNumber((region.xpMultiplier - 1) * 100)}%`} />
-                    <Metric icon={UI_ICONS.hull} label="Difficulty" value={`${formatNumber(region.backgroundDifficultyModifier * 100)}%`} />
-                    <Metric icon={UI_ICONS.cannonballs} label="Ship Req." value={region.recommendedShipLevel} />
+                    <Metric icon={UI_ICONS.gold} label="Gold" value={`${formatNumber((region.goldMultiplier - 1) * 100)}%`} tooltip="Region gold multiplier increases combat and boss gold rewards." />
+                    <Metric icon={UI_ICONS.xp} label="XP" value={`${formatNumber((region.xpMultiplier - 1) * 100)}%`} tooltip="Region XP multiplier increases combat and boss XP rewards." />
+                    <Metric icon={UI_ICONS.hull} label="Difficulty" value={`${formatNumber(region.backgroundDifficultyModifier * 100)}%`} tooltip="Region difficulty makes enemies tougher and stronger." />
+                    <Metric icon={UI_ICONS.cannonballs} label="Ship Req." value={region.recommendedShipLevel} tooltip="Recommended ship level for this region." />
                   </div>
                   <button
                     className="chunky-button primary region-select-button"
@@ -264,13 +265,15 @@ function Battle({ gameState, dispatch }) {
                     </div>
                     <div className="enemy-card-header battle-enemy-header">
                       <h3>{enemy.name}</h3>
+                    <Tooltip label="Enemy Difficulty" text="Enemy difficulty reflects the challenge level and usually means more HP and damage.">
                       <span className="enemy-difficulty">{enemy.difficulty}</span>
-                    </div>
-                    <div className="battle-enemy-grid-stats">
-                      <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} />
-                      <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} />
-                      <Metric label="Gold Reward" value={formatNumber(estimate.goldReward)} icon={UI_ICONS.gold} />
-                      <Metric label="XP Reward" value={formatNumber(estimate.xpReward)} icon={UI_ICONS.xp} />
+                    </Tooltip>
+                  </div>
+                  <div className="battle-enemy-grid-stats">
+                      <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} tooltip="Estimated enemy hull before combat begins." />
+                      <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} tooltip="Estimated damage dealt back to your hull on a hit." />
+                      <Metric label="Gold Reward" value={formatNumber(estimate.goldReward)} icon={UI_ICONS.gold} tooltip="Gold earned when you defeat this enemy." />
+                      <Metric label="XP Reward" value={formatNumber(estimate.xpReward)} icon={UI_ICONS.xp} tooltip="XP earned when you defeat this enemy." />
                     </div>
                     <button
                       className="chunky-button primary battle-card-button"
@@ -310,14 +313,16 @@ function Battle({ gameState, dispatch }) {
                           <p className="region-kicker">{region?.name ?? "Unknown Region"}</p>
                           <h3>{boss.name}</h3>
                         </div>
+                      <Tooltip label="Enemy Difficulty" text="Bosses are regional milestone fights with much larger health and rewards.">
                         <span className="enemy-difficulty">Boss</span>
+                      </Tooltip>
                       </div>
                       <p className="region-description">{boss.description}</p>
                       <div className="battle-enemy-grid-stats">
-                        <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} />
-                        <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} />
-                        <Metric label="Gold Reward" value={formatNumber(estimate.goldReward * displayedRewardMultiplier)} icon={UI_ICONS.gold} />
-                        <Metric label="XP Reward" value={formatNumber(estimate.xpReward * bossRewardMultiplier)} icon={UI_ICONS.xp} />
+                        <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} tooltip="Estimated boss hull before combat begins." />
+                        <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} tooltip="Estimated boss damage per hit." />
+                        <Metric label="Gold Reward" value={formatNumber(estimate.goldReward * displayedRewardMultiplier)} icon={UI_ICONS.gold} tooltip="Boss gold reward scales with region and world events." />
+                        <Metric label="XP Reward" value={formatNumber(estimate.xpReward * bossRewardMultiplier)} icon={UI_ICONS.xp} tooltip="Boss XP reward scales with region and world events." />
                       </div>
                       <button
                         className="chunky-button primary battle-card-button"
@@ -358,11 +363,11 @@ function Battle({ gameState, dispatch }) {
               </button>
             </div>
             <div className="battle-idle-stats">
-              <Metric icon={UI_ICONS.xp} label="Kills / Hour" value={formatNumber(idleEstimate.enemiesPerHour)} />
-              <Metric icon={UI_ICONS.gold} label="Gold / Hour" value={formatNumber(idleEstimate.goldPerHour)} />
-              <Metric icon={UI_ICONS.xp} label="XP / Hour" value={formatNumber(idleEstimate.xpPerHour)} />
-              <Metric icon={UI_ICONS.cannonballs} label="Cannonballs / Hour" value={formatNumber(idleEstimate.cannonballsPerHour)} />
-              <Metric icon={UI_ICONS.hull} label="Hull Damage / Hour" value={formatNumber(idleEstimate.hullDamagePerHour)} />
+              <Metric icon={UI_ICONS.xp} label="Kills / Hour" value={formatNumber(idleEstimate.enemiesPerHour)} tooltip="Estimated enemy defeats per hour while idling." />
+              <Metric icon={UI_ICONS.gold} label="Gold / Hour" value={formatNumber(idleEstimate.goldPerHour)} tooltip="Estimated gold earned per hour while idling." />
+              <Metric icon={UI_ICONS.xp} label="XP / Hour" value={formatNumber(idleEstimate.xpPerHour)} tooltip="Estimated XP earned per hour while idling." />
+              <Metric icon={UI_ICONS.cannonballs} label="Cannonballs / Hour" value={formatNumber(idleEstimate.cannonballsPerHour)} tooltip="Estimated cannonballs spent per hour while idling." />
+              <Metric icon={UI_ICONS.hull} label="Hull Damage / Hour" value={formatNumber(idleEstimate.hullDamagePerHour)} tooltip="Estimated hull damage taken per hour while idling." />
             </div>
           </article>
         </section>
@@ -394,8 +399,8 @@ function Battle({ gameState, dispatch }) {
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="battle-metric">
       {icon ? <img alt={label} className="battle-metric-icon" src={icon} /> : null}
       <div className="battle-metric-copy">
@@ -404,6 +409,12 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function describeWorldEventEffects(event) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LOGO, RESOURCE_ICONS, SCENES, UI_CANNONBALLS, UI_GOLD } from "../data/assets.js";
 import { tradeGoods } from "../data/tradeGoods.js";
+import Tooltip from "../components/Tooltip.jsx";
 import {
   getActiveWorldEvent,
   formatDuration,
@@ -46,8 +47,8 @@ function Port({ gameState, dispatch }) {
             <p>Trade goods, restock supplies, and manage your warehouse.</p>
           </div>
           <div className="harbour-top-stats">
-            <HarbourChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
-            <HarbourChip icon={UI_CANNONBALLS} label="Cargo" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
+            <HarbourChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} tooltip="Gold is your main currency for trade, ships, repairs, and upgrades." />
+            <HarbourChip icon={UI_CANNONBALLS} label="Cargo" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} tooltip="Cargo space limits how many trade goods your ship can carry." />
           </div>
         </header>
 
@@ -245,8 +246,8 @@ function Port({ gameState, dispatch }) {
   );
 }
 
-function HarbourChip({ icon, label, value }) {
-  return (
+function HarbourChip({ icon, label, value, tooltip }) {
+  const content = (
     <div className="harbour-chip">
       <img alt={label} src={icon} />
       <div>
@@ -255,6 +256,12 @@ function HarbourChip({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 function Metric({ icon, label, value }) {

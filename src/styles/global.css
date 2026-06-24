@@ -246,6 +246,130 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.tooltip {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  text-align: inherit;
+  cursor: help;
+  outline: none;
+}
+
+.tooltip-trigger:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
+
+.tooltip-bubble {
+  position: absolute;
+  z-index: 40;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px 12px;
+  color: #f8efcf;
+  background: rgba(5, 15, 30, 0.96);
+  border: 2px solid rgba(211, 165, 58, 0.88);
+  box-shadow: 4px 4px 0 rgba(3, 16, 31, 0.95);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.tooltip:hover .tooltip-bubble,
+.tooltip:focus-within .tooltip-bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip-top .tooltip-bubble {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+}
+
+.tooltip-top:hover .tooltip-bubble,
+.tooltip-top:focus-within .tooltip-bubble {
+  transform: translate(-50%, 0);
+}
+
+.tooltip-bottom .tooltip-bubble {
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translate(-50%, -4px);
+}
+
+.tooltip-bottom:hover .tooltip-bubble,
+.tooltip-bottom:focus-within .tooltip-bubble {
+  transform: translate(-50%, 0);
+}
+
+.tooltip-left .tooltip-bubble {
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translate(4px, -50%);
+}
+
+.tooltip-left:hover .tooltip-bubble,
+.tooltip-left:focus-within .tooltip-bubble {
+  transform: translate(0, -50%);
+}
+
+.tooltip-right .tooltip-bubble {
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translate(-4px, -50%);
+}
+
+.tooltip-right:hover .tooltip-bubble,
+.tooltip-right:focus-within .tooltip-bubble {
+  transform: translate(0, -50%);
+}
+
+.tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  border: 8px solid transparent;
+}
+
+.tooltip-top .tooltip-bubble::after {
+  top: 100%;
+  left: 50%;
+  border-top-color: rgba(211, 165, 58, 0.88);
+  transform: translateX(-50%);
+}
+
+.tooltip-bottom .tooltip-bubble::after {
+  bottom: 100%;
+  left: 50%;
+  border-bottom-color: rgba(211, 165, 58, 0.88);
+  transform: translateX(-50%);
+}
+
+.tooltip-left .tooltip-bubble::after {
+  top: 50%;
+  left: 100%;
+  border-left-color: rgba(211, 165, 58, 0.88);
+  transform: translateY(-50%);
+}
+
+.tooltip-right .tooltip-bubble::after {
+  top: 50%;
+  right: 100%;
+  border-right-color: rgba(211, 165, 58, 0.88);
+  transform: translateY(-50%);
+}
+
 .dashboard,
 .battle-page,
 .fleet-page,
@@ -982,6 +1106,23 @@ button:disabled {
 .resource-summary-row strong {
   color: var(--cream);
   text-align: right;
+}
+
+.dashboard-tips-panel {
+  align-content: start;
+}
+
+.dashboard-tip-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--cream);
+  line-height: 1.5;
+}
+
+.dashboard-tip-list li {
+  padding-left: 4px;
 }
 
 .dashboard-log-list {

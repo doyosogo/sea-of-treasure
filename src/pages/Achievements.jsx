@@ -89,7 +89,7 @@ function Achievements({ gameState, dispatch }) {
             ) : (
               <div className="legend-empty-state">
                 <strong>No claimable achievements right now.</strong>
-                <p>Keep sailing to unlock your next honours.</p>
+                <p>Keep sailing, upgrading, and completing milestones to unlock your next honours.</p>
               </div>
             )}
           </article>

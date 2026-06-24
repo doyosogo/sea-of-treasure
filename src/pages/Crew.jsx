@@ -1,5 +1,6 @@
 import { LOGO, RESOURCE_ICONS, SCENES, UI_GOLD, UI_XP } from "../data/assets.js";
 import { crewMembers } from "../data/crew.js";
+import Tooltip from "../components/Tooltip.jsx";
 import {
   formatNumber,
   getCrewBonuses,
@@ -58,14 +59,15 @@ function Crew({ gameState, dispatch }) {
         </header>
 
         <section className="academy-summary-grid">
-          <Metric icon={UI_XP} label="Crew Average Level" value={averageLevel.toFixed(1)} />
+          <Metric icon={UI_XP} label="Crew Average Level" value={averageLevel.toFixed(1)} tooltip="Crew members gain levels from upgrades and provide passive account bonuses." />
           <Metric
             icon={UI_XP}
             label="Highest Crew Member"
             value={highestCrewMember ? `${highestCrewMember.name} Lv. ${highestCrewMember.level}` : "None"}
+            tooltip="Your highest-trained officer."
           />
-          <Metric icon={UI_GOLD} label="Combat Gold Bonus" value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} />
-          <Metric icon={UI_GOLD} label="Combat XP Bonus" value={`${formatNumber((crewBonuses.combatXpMultiplier - 1) * 100)}%`} />
+          <Metric icon={UI_GOLD} label="Combat Gold Bonus" value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} tooltip="Quartermaster levels increase combat gold gains." />
+          <Metric icon={UI_GOLD} label="Combat XP Bonus" value={`${formatNumber((crewBonuses.combatXpMultiplier - 1) * 100)}%`} tooltip="Navigator levels increase combat XP gains." />
         </section>
 
         <section className="academy-card-grid crew-card-grid">
@@ -91,10 +93,10 @@ function Crew({ gameState, dispatch }) {
               <p className="academy-card-copy">{crewMember.description}</p>
 
               <div className="academy-detail-grid crew-detail-grid">
-                <Detail label="Current Bonus" value={crewMember.currentBonus} />
-                <Detail label="Next Bonus" value={crewMember.nextBonus} />
-                <Detail label="Upgrade Cost" value={`${formatNumber(crewMember.cost.gold)} Gold`} />
-                <Detail label="Status" value={crewMember.maxed ? "Max Level" : crewMember.canAfford ? "Ready to Upgrade" : "Insufficient Resources"} />
+                <Detail label="Current Bonus" value={crewMember.currentBonus} tooltip="The bonus currently provided by this crew member." />
+                <Detail label="Next Bonus" value={crewMember.nextBonus} tooltip="The bonus you will gain after the next upgrade." />
+                <Detail label="Upgrade Cost" value={`${formatNumber(crewMember.cost.gold)} Gold`} tooltip="Crew upgrades cost gold plus matching materials." />
+                <Detail label="Status" value={crewMember.maxed ? "Max Level" : crewMember.canAfford ? "Ready to Upgrade" : "Insufficient Resources"} tooltip="Shows whether this crew member can be upgraded right now." />
               </div>
 
               <div className="crew-cost-list">
@@ -197,8 +199,8 @@ function formatLabel(value) {
   return value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function Metric({ icon, label, value }) {
-  return (
+function Metric({ icon, label, value, tooltip }) {
+  const content = (
     <div className="academy-metric">
       {icon ? <img alt={label} className="academy-metric-icon" src={icon} /> : null}
       <div className="academy-metric-copy">
@@ -207,10 +209,16 @@ function Metric({ icon, label, value }) {
       </div>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
-function CostRow({ icon, label, value }) {
-  return (
+function CostRow({ icon, label, value, tooltip }) {
+  const content = (
     <div className="crew-cost-row">
       <div className="crew-cost-left">
         {icon ? <img alt={label} className="crew-cost-icon" src={icon} /> : null}
@@ -219,15 +227,27 @@ function CostRow({ icon, label, value }) {
       <strong>{formatNumber(value)}</strong>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
-function Detail({ label, value }) {
-  return (
+function Detail({ label, value, tooltip }) {
+  const content = (
     <div className="academy-detail">
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
   );
+
+  return tooltip ? (
+    <Tooltip label={label} text={tooltip}>
+      {content}
+    </Tooltip>
+  ) : content;
 }
 
 export default Crew;
