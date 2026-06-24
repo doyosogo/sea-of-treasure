@@ -11,12 +11,32 @@ import {
   UI_ICONS
 } from "../data/assets.js";
 import {
+  ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
+  BEGINNER_DAMAGE_REDUCTION_MULTIPLIER,
+  BOSS_COMBAT_DOUBLOON_CHANCE,
+  DEFAULT_COMBAT_DOUBLOON_CHANCE,
+  MARKET_CYCLE_DURATION_MS,
+  OFFLINE_DOUBLOON_CAP,
+  REPAIR_COST_PER_MISSING_HULL,
+  QUEST_DAILY_RESET_MS,
+  QUEST_WEEKLY_RESET_MS,
+  TREASURE_DOUBLOON_CHANCE,
+  TREASURE_MAP_DROP_BASE_CHANCE,
+  WORLD_EVENT_GENERATION_CHANCE,
+  WORLD_EVENT_GENERATION_INTERVAL_MS
+} from "../data/balance.js";
+import {
+  calcOfflineProgress,
+  formatDuration,
   formatNumber,
   getCurrentCannon,
   getCurrentShip,
+  getEffectiveBallsPerBattle,
+  getIdleCombatEstimate,
   getMaxHull,
   getSelectedEnemyType,
-  getActiveWorldEvent
+  getActiveWorldEvent,
+  getRepairCostPerMissingHull
 } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
@@ -25,6 +45,7 @@ function Settings({ gameState, dispatch }) {
   const [exportedJson, setExportedJson] = useState("");
   const [importJson, setImportJson] = useState("");
   const [status, setStatus] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [resetArmed, setResetArmed] = useState(false);
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
@@ -135,6 +156,44 @@ function Settings({ gameState, dispatch }) {
     window.location.reload();
   }
 
+  function handlePreviewActiveBattles() {
+    const estimate = getIdleCombatEstimate(gameState);
+    const activeGold = Math.round(estimate.goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER);
+    const netGoldPerBattle = Math.max(0, activeGold - Math.round((getEffectiveBallsPerBattle(gameState) * getCurrentCannon(gameState).goldPer100Balls) / 100));
+
+    setPreview({
+      title: "10 Active Battles",
+      text: `Preview only: about ${formatNumber(netGoldPerBattle * 10)} net gold, ${formatNumber(estimate.xpPerEnemy * 10)} XP, and ${formatNumber(getEffectiveBallsPerBattle(gameState) * 10)} cannonballs spent.`,
+      type: "info"
+    });
+    setStatus({ type: "warning", message: "Preview only: active battle estimate generated." });
+  }
+
+  function handlePreviewIdleHour() {
+    const estimate = getIdleCombatEstimate(gameState);
+
+    setPreview({
+      title: "1 Hour Idle Combat",
+      text: `Preview only: about ${formatNumber(estimate.goldPerHour)} gold, ${formatNumber(estimate.xpPerHour)} XP, ${formatNumber(estimate.cannonballsPerHour)} cannonballs, and ${formatNumber(estimate.hullDamagePerHour)} hull damage.`,
+      type: "info"
+    });
+    setStatus({ type: "warning", message: "Preview only: idle combat estimate generated." });
+  }
+
+  function handlePreviewOfflineClaim() {
+    const previewAway = Date.now() - 24 * 60 * 60 * 1000;
+    const offlinePreview = calcOfflineProgress(previewAway, Date.now(), gameState);
+
+    setPreview({
+      title: "24 Hour Offline Claim",
+      text: offlinePreview
+        ? `Preview only: about ${formatNumber(offlinePreview.goldEarned)} gold, ${formatNumber(offlinePreview.xpEarned)} XP, ${formatNumber(offlinePreview.mapsFound)} maps, and ${formatNumber(offlinePreview.doubloonsEarned)} Doubloons.`
+        : "Preview only: no offline rewards would be generated yet.",
+      type: "info"
+    });
+    setStatus({ type: "warning", message: "Preview only: offline claim estimate generated." });
+  }
+
   return (
     <section className="settings-page">
       <div className="hero-panel pixel-panel">
@@ -207,6 +266,54 @@ function Settings({ gameState, dispatch }) {
         <p className="warning-box">
           Developer tools modify the save directly and are not normal gameplay.
         </p>
+
+        <article className="settings-subpanel">
+          <h3>Balance Overview</h3>
+          <div className="summary-stat-grid">
+            <Stat label="Active Combat Bonus" value={`${formatNumber((ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER - 1) * 100)}%`} />
+            <Stat label="Repair Cost / Hull" value={formatNumber(REPAIR_COST_PER_MISSING_HULL)} />
+            <Stat label="Beginner Damage Reduction" value={`${formatNumber((1 - BEGINNER_DAMAGE_REDUCTION_MULTIPLIER) * 100)}%`} />
+            <Stat label="Doubloon Drop Rate" value={`Combat ${formatNumber(DEFAULT_COMBAT_DOUBLOON_CHANCE * 100)}% / Boss ${formatNumber(BOSS_COMBAT_DOUBLOON_CHANCE * 100)}%`} />
+            <Stat label="Treasure Map Drop Rate" value={`${formatNumber(TREASURE_MAP_DROP_BASE_CHANCE * 100)}%`} />
+            <Stat label="Treasure Doubloons" value={`${formatNumber(TREASURE_DOUBLOON_CHANCE * 100)}%`} />
+            <Stat label="Offline Doubloon Cap" value={formatNumber(OFFLINE_DOUBLOON_CAP)} />
+            <Stat label="Quest Resets" value={`${formatDuration(QUEST_DAILY_RESET_MS)} / ${formatDuration(QUEST_WEEKLY_RESET_MS)}`} />
+            <Stat label="Market Cycle" value={formatDuration(MARKET_CYCLE_DURATION_MS)} />
+            <Stat label="World Event Check" value={`${formatDuration(WORLD_EVENT_GENERATION_INTERVAL_MS)} @ ${formatNumber(WORLD_EVENT_GENERATION_CHANCE * 100)}%`} />
+          </div>
+        </article>
+
+        <article className="settings-subpanel">
+          <h3>Economy Summary</h3>
+          <div className="summary-stat-grid">
+            <Stat label="Active Combat Net Gold" value={formatNumber(Math.max(0, Math.round(getIdleCombatEstimate(gameState).goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER - (getEffectiveBallsPerBattle(gameState) * getCurrentCannon(gameState).goldPer100Balls) / 100)))} />
+            <Stat label="Idle Gold / Hour" value={formatNumber(getIdleCombatEstimate(gameState).goldPerHour)} />
+            <Stat label="Repair Cost Estimate" value={`${formatNumber(getRepairCostPerMissingHull(gameState) * Math.max(0, getMaxHull(gameState) - gameState.hull.current))} Gold`} />
+            <Stat label="Cannonball Cost / Hour" value={formatNumber(getIdleCombatEstimate(gameState).cannonballsPerHour)} />
+          </div>
+        </article>
+
+        <article className="settings-subpanel">
+          <h3>Preview Only</h3>
+          <p className="shop-note">These buttons calculate estimates only. They do not change your save.</p>
+          <div className="button-row debug-button-row">
+            <button className="chunky-button" onClick={handlePreviewActiveBattles} type="button">
+              Simulate 10 Active Battles
+            </button>
+            <button className="chunky-button" onClick={handlePreviewIdleHour} type="button">
+              Simulate 1 Hour Idle Combat
+            </button>
+            <button className="chunky-button" onClick={handlePreviewOfflineClaim} type="button">
+              Simulate 24 Hour Offline Claim Preview
+            </button>
+          </div>
+          {preview ? (
+            <div className={`settings-status ${preview.type}`}>
+              <strong>{preview.title}</strong>
+              <span>{preview.text}</span>
+            </div>
+          ) : null}
+        </article>
 
         <div className="summary-stat-grid">
           <Stat label="Player Level" value={gameState.playerLevel} />

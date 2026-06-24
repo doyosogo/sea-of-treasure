@@ -10,6 +10,17 @@ import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
 import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
+import {
+  ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
+  BEGINNER_DAMAGE_REDUCTION_MULTIPLIER,
+  BOSS_COMBAT_DOUBLOON_CHANCE,
+  DEFAULT_COMBAT_DOUBLOON_CHANCE,
+  OFFLINE_DOUBLOON_CAP,
+  REPAIR_COST_PER_MISSING_HULL,
+  RARE_TREASURE_DOUBLOON_BONUS_CHANCE,
+  TREASURE_DOUBLOON_CHANCE,
+  TREASURE_MAP_DROP_BASE_CHANCE
+} from "../data/balance.js";
 
 const CANNON_ORDER = cannons.map((cannon) => cannon.id);
 const CANNON_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id, cannon]));
@@ -486,7 +497,7 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
     ? enemies.find((enemy) => enemy.id === enemyType)
     : enemyType;
   const selectedEnemy = enemyData ?? getSelectedEnemyType(gameState);
-  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
+  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? BEGINNER_DAMAGE_REDUCTION_MULTIPLIER : 1;
   const regionDifficultyMultiplier = regionModifiers.difficultyMultiplier;
 
   return {
@@ -523,7 +534,7 @@ export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[
   const baseDamage = 2 + gameState.playerLevel * 1.5;
   const regionModifiers = getRegionCombatModifiersById(bossData.regionId);
   const worldEventBonuses = getWorldEventBonuses(gameState);
-  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
+  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? BEGINNER_DAMAGE_REDUCTION_MULTIPLIER : 1;
   const bossDamageMultiplier = bossData.id && worldEventBonuses.activeEvent?.id === "cursedFog"
     ? worldEventBonuses.bossDamageMultiplier
     : 1;
@@ -584,7 +595,7 @@ export function getPlayerCombatStats(gameState) {
 export function getTreasureMapDropChance(gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const crewBonuses = getCrewBonuses(gameState);
-  return 0.15 * talentBonuses.treasureChanceMultiplier * crewBonuses.treasureChanceMultiplier * getWorldEventBonuses(gameState).treasureMapDropMultiplier;
+  return TREASURE_MAP_DROP_BASE_CHANCE * talentBonuses.treasureChanceMultiplier * crewBonuses.treasureChanceMultiplier * getWorldEventBonuses(gameState).treasureMapDropMultiplier;
 }
 
 export function rollTreasureMapDrops(gameState, shipsSunk) {
@@ -637,7 +648,7 @@ export function rollRareMapPieces(chance, attempts = 1) {
 }
 
 export function rollDoubloonsFromCombat(enemy, attempts = 1, cap = Infinity) {
-  const dropChance = enemy?.doubloonChance ?? (enemy?.difficulty === "Boss" ? 0.03 : 0.01);
+  const dropChance = enemy?.doubloonChance ?? (enemy?.difficulty === "Boss" ? BOSS_COMBAT_DOUBLOON_CHANCE : DEFAULT_COMBAT_DOUBLOON_CHANCE);
   const wholeAttempts = Math.floor(attempts);
   const fractionalAttempt = attempts - wholeAttempts;
   let doubloons = 0;
@@ -656,13 +667,13 @@ export function rollDoubloonsFromCombat(enemy, attempts = 1, cap = Infinity) {
 }
 
 export function rollDoubloonsFromTreasure(site) {
-  const baseRoll = Math.random() < 0.02 ? 1 : 0;
+  const baseRoll = Math.random() < TREASURE_DOUBLOON_CHANCE ? 1 : 0;
 
   if (baseRoll <= 0) {
     return 0;
   }
 
-  if ((site?.requiredSkillLevel ?? 0) >= 8 && Math.random() < 0.15) {
+  if ((site?.requiredSkillLevel ?? 0) >= 8 && Math.random() < RARE_TREASURE_DOUBLOON_BONUS_CHANCE) {
     return 2;
   }
 
@@ -820,7 +831,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   const cannonballsRecovered = rollCannonballRecovery(gameState, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
   const netCannonballsUsed = Math.max(0, cannonballsSpent - cannonballsRecovered);
   const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
-  const doubloonsEarned = rollDoubloonsFromCombat(estimate.enemy, enemiesSunk, 10);
+  const doubloonsEarned = rollDoubloonsFromCombat(estimate.enemy, enemiesSunk, OFFLINE_DOUBLOON_CAP);
   const effectiveTimeMs = Math.min(cappedTimeMs, enemiesSunk * estimate.secondsPerEnemy * 1000);
 
   return {

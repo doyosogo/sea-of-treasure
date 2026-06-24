@@ -1,6 +1,7 @@
 import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
 import { crewMembers } from "../data/crew.js";
+import { QUEST_DAILY_RESET_MS } from "../data/balance.js";
 import Tooltip from "../components/Tooltip.jsx";
 import {
   formatNumber,
@@ -27,7 +28,7 @@ function Dashboard({ gameState, onNavigate }) {
   const quests = gameState.quests ?? { daily: [], weekly: [], lastDailyReset: Date.now(), lastWeeklyReset: Date.now() };
   const dailyComplete = (quests.daily ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
   const weeklyComplete = (quests.weekly ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
-  const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + 24 * 60 * 60 * 1000 - Date.now());
+  const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + QUEST_DAILY_RESET_MS - Date.now());
   const crewEntries = Object.entries(gameState.crew ?? {});
   const crewAverageLevel = crewEntries.length > 0
     ? crewEntries.reduce((total, [, crewMember]) => total + (crewMember.level ?? 1), 0) / crewEntries.length

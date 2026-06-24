@@ -12,6 +12,15 @@ import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
 import {
+  ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
+  DEFAULT_COMBAT_DOUBLOON_CHANCE,
+  MARKET_CYCLE_DURATION_MS,
+  QUEST_DAILY_RESET_MS,
+  QUEST_WEEKLY_RESET_MS,
+  WORLD_EVENT_GENERATION_CHANCE,
+  WORLD_EVENT_GENERATION_INTERVAL_MS
+} from "../data/balance.js";
+import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
   canSpendTalentPoint,
@@ -62,9 +71,9 @@ import {
 const STORAGE_KEY = "sot_save";
 const MAX_PLAYER_LEVEL = 15;
 const BASE_SKILL_XP_REWARD = 100;
-const MARKET_REFRESH_COOLDOWN_MS = 10800000;
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
+const MARKET_REFRESH_COOLDOWN_MS = MARKET_CYCLE_DURATION_MS;
+const DAY_MS = QUEST_DAILY_RESET_MS;
+const WEEK_MS = QUEST_WEEKLY_RESET_MS;
 
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
@@ -432,13 +441,13 @@ function refreshWorldEventStateForTime(state, now = Date.now()) {
   }
 
   const postEndState = nextState.activeWorldEvent ? nextState : nextState;
-  const canAttemptGeneration = !postEndState.activeWorldEvent && now - (postEndState.lastWorldEventGeneratedAt ?? 0) >= 30 * 60 * 1000;
+  const canAttemptGeneration = !postEndState.activeWorldEvent && now - (postEndState.lastWorldEventGeneratedAt ?? 0) >= WORLD_EVENT_GENERATION_INTERVAL_MS;
 
   if (!canAttemptGeneration) {
     return updated ? nextState : state;
   }
 
-  if (Math.random() < 0.35) {
+  if (Math.random() < WORLD_EVENT_GENERATION_CHANCE) {
     const nextEvent = weightedRandomWorldEvent();
 
     if (!nextEvent) {
@@ -989,7 +998,7 @@ function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
   const talentBonuses = getTalentBonuses(state);
   const crewBonuses = getCrewBonuses(state);
   const worldEventBonuses = getWorldEventBonuses(state);
-  const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
+  const goldBonusMultiplier = options.activeCombatGoldBonus ? ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER : 1;
   const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier * goldBonusMultiplier * worldEventBonuses.combatGoldMultiplier;
   const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier;
   const xpState = applyXp(state, xpGained);
@@ -1009,7 +1018,7 @@ function applyVictoryRewards(state, battleEnemy, options = {}) {
   const talentBonuses = getTalentBonuses(state);
   const crewBonuses = getCrewBonuses(state);
   const worldEventBonuses = getWorldEventBonuses(state);
-  const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
+  const goldBonusMultiplier = options.activeCombatGoldBonus ? ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER : 1;
   const combatEventGoldMultiplier = battleEnemy?.isBoss ? worldEventBonuses.combatGoldMultiplier : 1;
   const bossRewardMultiplier = battleEnemy?.isBoss ? worldEventBonuses.bossRewardMultiplier : 1;
   const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier * goldBonusMultiplier * combatEventGoldMultiplier * bossRewardMultiplier;
@@ -1019,7 +1028,7 @@ function applyVictoryRewards(state, battleEnemy, options = {}) {
   const doubloonRollEnemy = battleEnemy?.isBoss
     ? {
         ...battleEnemy,
-        doubloonChance: (battleEnemy.doubloonChance ?? 0.03) * bossRewardMultiplier
+        doubloonChance: (battleEnemy.doubloonChance ?? DEFAULT_COMBAT_DOUBLOON_CHANCE) * bossRewardMultiplier
       }
     : battleEnemy;
   const doubloonsGained = rollDoubloonsFromCombat(doubloonRollEnemy, 1);

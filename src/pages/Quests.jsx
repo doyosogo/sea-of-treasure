@@ -1,13 +1,11 @@
 import { LOGO, RESOURCE_ICONS, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
+import { QUEST_DAILY_RESET_MS, QUEST_WEEKLY_RESET_MS } from "../data/balance.js";
 import { formatDuration, formatNumber } from "../utils/gameEngine.js";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
 
 function Quests({ gameState, dispatch, onNavigate }) {
   const quests = gameState.quests ?? { daily: [], weekly: [], lastDailyReset: Date.now(), lastWeeklyReset: Date.now() };
-  const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + DAY_MS - Date.now());
-  const weeklyResetRemaining = Math.max(0, (quests.lastWeeklyReset ?? Date.now()) + WEEK_MS - Date.now());
+  const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + QUEST_DAILY_RESET_MS - Date.now());
+  const weeklyResetRemaining = Math.max(0, (quests.lastWeeklyReset ?? Date.now()) + QUEST_WEEKLY_RESET_MS - Date.now());
 
   const dailyComplete = (quests.daily ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
   const weeklyComplete = (quests.weekly ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
