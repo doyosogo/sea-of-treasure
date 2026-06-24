@@ -37,6 +37,46 @@ export const achievements = [
     target: 10000
   },
   {
+    id: "defeat_first_boss",
+    category: "Combat",
+    name: "First Boss Defeat",
+    description: "Defeat your first regional boss.",
+    rewardGold: 5000,
+    rewardTalentPoints: 1,
+    rewardDoubloons: 1,
+    target: 1
+  },
+  {
+    id: "defeat_10_bosses",
+    category: "Combat",
+    name: "Boss Hunter",
+    description: "Defeat 10 regional bosses.",
+    rewardGold: 50000,
+    rewardTalentPoints: 2,
+    rewardDoubloons: 3,
+    target: 10
+  },
+  {
+    id: "defeat_100_bosses",
+    category: "Combat",
+    name: "Legend Breaker",
+    description: "Defeat 100 regional bosses.",
+    rewardGold: 1000000,
+    rewardTalentPoints: 5,
+    rewardDoubloons: 8,
+    target: 100
+  },
+  {
+    id: "defeat_the_leviathan",
+    category: "Combat",
+    name: "Leviathan Slain",
+    description: "Defeat The Leviathan.",
+    rewardGold: 500000,
+    rewardTalentPoints: 3,
+    rewardDoubloons: 5,
+    target: 1
+  },
+  {
     id: "reach_level_5",
     category: "Progression",
     name: "Seasoned Sailor",

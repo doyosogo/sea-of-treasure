@@ -1,4 +1,5 @@
 import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
+import { achievements } from "../data/achievements.js";
 import {
   formatNumber,
   formatDuration,
@@ -87,7 +88,8 @@ function Dashboard({ gameState, onNavigate }) {
               <Metric label="Doubloons" icon={UI_DOUBLOONS} value={formatNumber(gameState.doubloons)} />
               <Metric label="Talent Points" icon={UI_ICONS.talentPoints} value={formatNumber(gameState.talentPoints)} />
               <Metric label="Ships Sunk" icon={UI_ICONS.xp} value={formatNumber(gameState.totalShipsSunk)} />
-              <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / 31`} />
+              <Metric label="Bosses Defeated" icon={UI_ICONS.gold} value={formatNumber(gameState.lifetimeStats?.totalBossesDefeated ?? 0)} />
+              <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / ${formatNumber(achievements.length)}`} />
             </div>
           </article>
 

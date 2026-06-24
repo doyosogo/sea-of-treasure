@@ -7,6 +7,7 @@ import {
 import { regions } from "../data/regions.js";
 import {
   formatNumber,
+  generateBoss,
   generateEnemy,
   getCurrentCannon,
   getEffectiveBallsPerBattle,
@@ -14,6 +15,7 @@ import {
   getPlayerCombatStats
 } from "../utils/gameEngine.js";
 import { enemies } from "../data/enemies.js";
+import { bosses } from "../data/bosses.js";
 
 function Battle({ gameState, dispatch }) {
   const currentCannon = getCurrentCannon(gameState);
@@ -23,7 +25,9 @@ function Battle({ gameState, dispatch }) {
   const battleEnemy = currentBattle?.enemy ?? null;
   const selectedEnemyType = enemies.find((enemy) => enemy.id === gameState.selectedEnemyId) ?? enemies[1] ?? enemies[0];
   const lastBattleEnemy = gameState.lastBattleEnemyId
-    ? enemies.find((enemy) => enemy.id === gameState.lastBattleEnemyId) ?? null
+    ? enemies.find((enemy) => enemy.id === gameState.lastBattleEnemyId) ??
+      bosses.find((boss) => boss.id === gameState.lastBattleEnemyId) ??
+      null
     : null;
   const activeRegion = regions.find((region) => region.id === gameState.activeRegionId) ?? regions[0];
   const activeEnemy = battleEnemy ?? selectedEnemyType ?? lastBattleEnemy;
@@ -41,7 +45,11 @@ function Battle({ gameState, dispatch }) {
     }
 
     if (lastBattleEnemy) {
-      dispatch({ type: "START_BATTLE", enemyId: lastBattleEnemy.id });
+      dispatch(
+        lastBattleEnemy.regionId
+          ? { type: "START_BOSS_BATTLE", bossId: lastBattleEnemy.id }
+          : { type: "START_BATTLE", enemyId: lastBattleEnemy.id }
+      );
     }
   }
 
@@ -63,6 +71,26 @@ function Battle({ gameState, dispatch }) {
     }
 
     return "Battle";
+  }
+
+  function getBossBattleDisabled(locked) {
+    return locked || gameState.isIdling || Boolean(currentBattle) || combatStats.currentHull <= 0;
+  }
+
+  function getBossBattleLabel(boss, locked, region) {
+    if (locked) {
+      return region ? `Unlocks ${region.name} Lv. ${region.requiredLevel}` : "Locked";
+    }
+
+    if (gameState.isIdling) {
+      return "Stop idling first";
+    }
+
+    if (currentBattle) {
+      return "Finish current battle";
+    }
+
+    return "Battle Boss";
   }
 
   return (
@@ -95,13 +123,13 @@ function Battle({ gameState, dispatch }) {
 
           <div className="battle-active-layout">
             <div className="battle-portrait-column">
-              <div className="battle-portrait-frame">
-                <img
-                  alt={activeEnemy?.name ?? "Battle target"}
-                  className="battle-portrait-image"
-                  src={activeEnemy ? ENEMY_IMAGES[activeEnemy.id] : ENEMY_IMAGES.smugglerCutter}
-                />
-              </div>
+            <div className="battle-portrait-frame">
+              <img
+                alt={activeEnemy?.name ?? "Battle target"}
+                className="battle-portrait-image"
+                src={activeEnemy ? (ENEMY_IMAGES[activeEnemy.id] ?? ENEMY_IMAGES.cursedWarship ?? ENEMY_IMAGES.smugglerCutter) : ENEMY_IMAGES.smugglerCutter}
+              />
+            </div>
               <div className="battle-name-strip">
                 <strong>{battleEnemy ? battleEnemy.name : activeEnemy?.name ?? "Choose an enemy below"}</strong>
                 <span>{battleEnemy ? battleEnemy.difficulty : "Standby"}</span>
@@ -238,6 +266,51 @@ function Battle({ gameState, dispatch }) {
                     >
                       {getEnemyBattleLabel(enemy, locked)}
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+
+          <article className="battle-panel battle-boss-panel">
+            <div className="panel-heading-row">
+              <h2>Bosses</h2>
+              <span className="resource-counter">Regional Challenges</span>
+            </div>
+            <div className="enemy-card-grid battle-boss-grid">
+              {bosses.map((boss) => {
+                const region = regions.find((regionData) => regionData.id === boss.regionId);
+                const unlocked = gameState.playerLevel >= (region?.requiredLevel ?? 1);
+                const selected = currentBattle?.enemy?.id === boss.id || (!currentBattle && gameState.lastBattleEnemyId === boss.id && Boolean(lastBattleEnemy));
+                const estimate = generateBoss(gameState, boss);
+                const disabled = getBossBattleDisabled(!unlocked);
+
+                return (
+                  <div className={`battle-enemy-card battle-boss-card ${selected ? "selected" : ""} ${unlocked ? "" : "locked"}`} key={boss.id}>
+                    <div className="battle-enemy-card-copy">
+                      <div className="enemy-card-header battle-enemy-header">
+                        <div>
+                          <p className="region-kicker">{region?.name ?? "Unknown Region"}</p>
+                          <h3>{boss.name}</h3>
+                        </div>
+                        <span className="enemy-difficulty">Boss</span>
+                      </div>
+                      <p className="region-description">{boss.description}</p>
+                      <div className="battle-enemy-grid-stats">
+                        <Metric label="HP" value={formatNumber(estimate.maxHP)} icon={UI_ICONS.hull} />
+                        <Metric label="Damage" value={formatNumber(estimate.damage)} icon={UI_ICONS.hull} />
+                        <Metric label="Gold Reward" value={formatNumber(estimate.goldReward)} icon={UI_ICONS.gold} />
+                        <Metric label="XP Reward" value={formatNumber(estimate.xpReward)} icon={UI_ICONS.xp} />
+                      </div>
+                      <button
+                        className="chunky-button primary battle-card-button"
+                        disabled={disabled}
+                        onClick={() => dispatch({ type: "START_BOSS_BATTLE", bossId: boss.id })}
+                        type="button"
+                      >
+                        {getBossBattleLabel(boss, !unlocked, region)}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

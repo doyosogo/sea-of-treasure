@@ -1,0 +1,80 @@
+export const bosses = [
+  {
+    id: "blackFlagCaptain",
+    name: "Black Flag Captain",
+    regionId: "coastalWaters",
+    description: "A ruthless captain who claims the quiet waters for piracy.",
+    hpMultiplier: 5,
+    damageMultiplier: 2,
+    goldReward: 8,
+    xpReward: 8,
+    doubloonChance: 0.03,
+    rareMapPieceChance: 0.06,
+    mapDropChance: 0.35
+  },
+  {
+    id: "crimsonCorsair",
+    name: "Crimson Corsair",
+    regionId: "merchantRoutes",
+    description: "A brutal corsair that targets the richest merchant convoys.",
+    hpMultiplier: 8,
+    damageMultiplier: 2.6,
+    goldReward: 12,
+    xpReward: 12,
+    doubloonChance: 0.035,
+    rareMapPieceChance: 0.08,
+    mapDropChance: 0.4
+  },
+  {
+    id: "ironAdmiral",
+    name: "Iron Admiral",
+    regionId: "pirateFrontier",
+    description: "An ironclad commander who never yields ground.",
+    hpMultiplier: 12,
+    damageMultiplier: 3.2,
+    goldReward: 16,
+    xpReward: 16,
+    doubloonChance: 0.04,
+    rareMapPieceChance: 0.1,
+    mapDropChance: 0.45
+  },
+  {
+    id: "royalWarFleet",
+    name: "Royal War Fleet",
+    regionId: "royalSeas",
+    description: "A disciplined fleet sent to crush all trespassers.",
+    hpMultiplier: 16,
+    damageMultiplier: 4,
+    goldReward: 22,
+    xpReward: 22,
+    doubloonChance: 0.05,
+    rareMapPieceChance: 0.12,
+    mapDropChance: 0.5
+  },
+  {
+    id: "ghostArmada",
+    name: "Ghost Armada",
+    regionId: "cursedOcean",
+    description: "A spectral fleet that rises from the mist to take revenge.",
+    hpMultiplier: 20,
+    damageMultiplier: 5,
+    goldReward: 30,
+    xpReward: 30,
+    doubloonChance: 0.06,
+    rareMapPieceChance: 0.16,
+    mapDropChance: 0.6
+  },
+  {
+    id: "theLeviathan",
+    name: "The Leviathan",
+    regionId: "leviathanDepths",
+    description: "A colossal horror that guards the deepest waters and oldest relics.",
+    hpMultiplier: 25,
+    damageMultiplier: 6,
+    goldReward: 40,
+    xpReward: 40,
+    doubloonChance: 0.08,
+    rareMapPieceChance: 0.3,
+    mapDropChance: 0.75
+  }
+];

@@ -17,6 +17,7 @@ import {
   getCannonInventory,
   getCannonKeyByTier,
   getCannonCapacity,
+  generateBoss,
   generateEnemy,
   generateMarketPrices,
   getCargoCapacity,
@@ -36,6 +37,8 @@ import {
   getCurrentShip,
   getNextCannon,
   getMarketCooldownRemaining,
+  getBossById,
+  getRegionById,
   getTalentBonuses,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
@@ -127,6 +130,8 @@ function createInitialLifetimeStats() {
   return {
     totalGoldEarned: 0,
     totalShipsSunk: 0,
+    totalBossesDefeated: 0,
+    defeatedLeviathan: false,
     treasureDigsCompleted: 0,
     rareTreasuresFound: 0,
     upgradesCrafted: 0,
@@ -481,6 +486,8 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
   return {
     totalGoldEarned: Math.max(0, savedStats.totalGoldEarned ?? 0),
     totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
+    totalBossesDefeated: Math.max(0, savedStats.totalBossesDefeated ?? 0),
+    defeatedLeviathan: Boolean(savedStats.defeatedLeviathan ?? false),
     treasureDigsCompleted: Math.max(0, savedStats.treasureDigsCompleted ?? 0),
     rareTreasuresFound: Math.max(
       0,
@@ -831,6 +838,21 @@ function addLifetimeShipsSunk(state, shipsSunk) {
   };
 }
 
+function addLifetimeBossDefeat(state, bossId) {
+  if (!bossId) {
+    return state;
+  }
+
+  return {
+    ...state,
+    lifetimeStats: {
+      ...state.lifetimeStats,
+      totalBossesDefeated: (state.lifetimeStats?.totalBossesDefeated ?? 0) + 1,
+      defeatedLeviathan: (state.lifetimeStats?.defeatedLeviathan ?? false) || bossId === "theLeviathan"
+    }
+  };
+}
+
 function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
   const currentShip = getCurrentShip(state);
   const talentBonuses = getTalentBonuses(state);
@@ -856,7 +878,7 @@ function applyVictoryRewards(state, battleEnemy, options = {}) {
   const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * goldBonusMultiplier;
   const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
   const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
-  const rareMapPiecesFound = rollRareMapPieces(0.0005);
+  const rareMapPiecesFound = rollRareMapPieces(battleEnemy.rareMapPieceChance ?? 0.0005);
   const doubloonsGained = rollDoubloonsFromCombat(battleEnemy, 1);
   const xpState = applyXp(state, xpGained);
   const rewardState = addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
@@ -874,7 +896,9 @@ function applyVictoryRewards(state, battleEnemy, options = {}) {
     mapFound,
     rareMapPiecesFound,
     doubloonsGained,
-    activeCombatGoldBonusApplied: Boolean(options.activeCombatGoldBonus)
+    activeCombatGoldBonusApplied: Boolean(options.activeCombatGoldBonus),
+    bossDefeated: Boolean(battleEnemy?.isBoss),
+    defeatedBossId: battleEnemy?.isBoss ? battleEnemy.id : null
   };
 }
 
@@ -1123,6 +1147,44 @@ function gameStateReducer(state, action) {
         }
       }), `Battle started against ${enemy.name}.`);
     }
+    case "START_BOSS_BATTLE": {
+      if (state.isIdling) {
+        return addActivityLogEntry(state, "Stop idling before starting an active battle.", "warning");
+      }
+
+      if (state.currentBattle || ((state.hull?.current ?? 0) <= 0 && !state.lastBattleEnemyId)) {
+        return state;
+      }
+
+      if (!action.bossId) {
+        return state;
+      }
+
+      const boss = getBossById(action.bossId);
+
+      if (!boss) {
+        return addActivityLogEntry(state, "That boss is not available yet.", "warning");
+      }
+
+      const bossRegion = getRegionById(boss.regionId);
+
+      if ((state.playerLevel ?? 1) < bossRegion.requiredLevel) {
+        return addActivityLogEntry(state, "That boss is not available yet.", "warning");
+      }
+
+      const bossEnemy = generateBoss(state, boss);
+
+      return addActivityLogEntry(clampHull({
+        ...state,
+        selectedEnemyId: state.selectedEnemyId,
+        lastBattleEnemyId: bossEnemy.id,
+        currentBattle: {
+          enemy: bossEnemy,
+          shotsFired: 0,
+          startedAt: Date.now()
+        }
+      }), `Battle started against ${bossEnemy.name}.`);
+    }
     case "FIRE_VOLLEY": {
       if (!state.currentBattle) {
         return state;
@@ -1148,13 +1210,16 @@ function gameStateReducer(state, action) {
       };
 
       if (enemyCurrentHP <= 0) {
-        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, doubloonsGained, activeCombatGoldBonusApplied } = applyVictoryRewards(firedState, enemy, {
+        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, doubloonsGained, activeCombatGoldBonusApplied, bossDefeated, defeatedBossId } = applyVictoryRewards(firedState, enemy, {
           activeCombatGoldBonus: true
         });
         const doubloonText = doubloonsGained > 0
           ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.`
           : "";
-        const questProgressState = updateQuestProgressMany(rewardedState, {
+        const bossProgressState = bossDefeated
+          ? addLifetimeBossDefeat(rewardedState, defeatedBossId)
+          : rewardedState;
+        const questProgressState = updateQuestProgressMany(bossProgressState, {
           shipsSunk: 1,
           activeBattlesWon: 1,
           goldEarned: goldGained
@@ -1167,9 +1232,12 @@ function gameStateReducer(state, action) {
         const critState = isCrit
           ? addActivityLogEntry(victoryState, `Critical volley dealt ${Math.round(volleyDamage)} damage.`)
           : victoryState;
-        const recoveredState = cannonballsRecovered > 0
-          ? addActivityLogEntry(critState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+        const bossState = bossDefeated
+          ? addActivityLogEntry(critState, `Defeated ${enemy.name}.`)
           : critState;
+        const recoveredState = cannonballsRecovered > 0
+          ? addActivityLogEntry(bossState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+          : bossState;
         const rareMapPieceState = rareMapPiecesFound > 0
           ? addActivityLogEntry(recoveredState, "You discovered a Rare Map Piece.")
           : recoveredState;

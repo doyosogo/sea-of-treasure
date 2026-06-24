@@ -1,5 +1,6 @@
 import { BASE_CANNON_DAMAGE, cannons } from "../data/cannons.js";
 import { achievements } from "../data/achievements.js";
+import { bosses } from "../data/bosses.js";
 import { craftableUpgrades } from "../data/crafting.js";
 import { enemies } from "../data/enemies.js";
 import { levels } from "../data/levels.js";
@@ -42,6 +43,18 @@ export function getRecommendedRegion(gameState) {
 
 export function getRegionCombatModifiers(gameState) {
   const region = getActiveRegion(gameState);
+  const difficultyMultiplier = 1 + region.backgroundDifficultyModifier;
+
+  return {
+    region,
+    difficultyMultiplier,
+    goldMultiplier: region.goldMultiplier,
+    xpMultiplier: region.xpMultiplier
+  };
+}
+
+export function getRegionCombatModifiersById(regionId) {
+  const region = getRegionById(regionId);
   const difficultyMultiplier = 1 + region.backgroundDifficultyModifier;
 
   return {
@@ -347,6 +360,45 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
   };
 }
 
+export function getBossById(bossId) {
+  return bosses.find((boss) => boss.id === bossId) ?? bosses[0];
+}
+
+export function getUnlockedBosses(gameState) {
+  return bosses.filter((boss) => {
+    const region = getRegionById(boss.regionId);
+    return (gameState.playerLevel ?? 1) >= region.requiredLevel;
+  });
+}
+
+export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[0]) {
+  const bossData = typeof bossType === "string"
+    ? getBossById(bossType)
+    : bossType ?? getUnlockedBosses(gameState)[0] ?? bosses[0];
+  const currentShip = getCurrentShip(gameState);
+  const baseHP = 40 + gameState.playerLevel * 25;
+  const baseDamage = 2 + gameState.playerLevel * 1.5;
+  const regionModifiers = getRegionCombatModifiersById(bossData.regionId);
+  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
+
+  return {
+    id: bossData.id,
+    name: bossData.name,
+    difficulty: "Boss",
+    regionId: bossData.regionId,
+    description: bossData.description,
+    isBoss: true,
+    maxHP: Math.round(baseHP * bossData.hpMultiplier * regionModifiers.difficultyMultiplier),
+    currentHP: Math.round(baseHP * bossData.hpMultiplier * regionModifiers.difficultyMultiplier),
+    damage: Math.max(1, Math.round(baseDamage * bossData.damageMultiplier * regionModifiers.difficultyMultiplier * beginnerDamageMultiplier)),
+    goldReward: currentShip.goldPerShip * bossData.goldReward * regionModifiers.goldMultiplier,
+    xpReward: currentShip.xpPerShip * bossData.xpReward * regionModifiers.xpMultiplier,
+    mapDropChance: Math.min(1, bossData.mapDropChance ?? getTreasureMapDropChance(gameState)),
+    rareMapPieceChance: bossData.rareMapPieceChance,
+    doubloonChance: bossData.doubloonChance
+  };
+}
+
 export function getPlayerCombatStats(gameState) {
   const equippedCannons = getEquippedCannons(gameState);
   const talentBonuses = getTalentBonuses(gameState);
@@ -433,7 +485,7 @@ export function rollRareMapPieces(chance, attempts = 1) {
 }
 
 export function rollDoubloonsFromCombat(enemy, attempts = 1, cap = Infinity) {
-  const dropChance = enemy?.difficulty === "Boss" ? 0.03 : 0.01;
+  const dropChance = enemy?.doubloonChance ?? (enemy?.difficulty === "Boss" ? 0.03 : 0.01);
   const wholeAttempts = Math.floor(attempts);
   const fractionalAttempt = attempts - wholeAttempts;
   let doubloons = 0;
@@ -726,6 +778,14 @@ export function getAchievementProgress(achievement, gameState) {
       break;
     case "craft_5_upgrades":
       current = lifetimeStats.upgradesCrafted ?? 0;
+      break;
+    case "defeat_first_boss":
+    case "defeat_10_bosses":
+    case "defeat_100_bosses":
+      current = lifetimeStats.totalBossesDefeated ?? 0;
+      break;
+    case "defeat_the_leviathan":
+      current = lifetimeStats.defeatedLeviathan ? 1 : 0;
       break;
     case "max_one_crafted_upgrade":
       current = craftedLevels.length > 0 ? Math.max(...craftedLevels) : 0;
