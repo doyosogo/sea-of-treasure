@@ -1,4 +1,7 @@
 {
+  "name": "sea-of-treasure",
+  "version": "1.40.0",
+  "description": "A browser-based pirate idle RPG with combat, crafting, trading, quests, achievements, and offline progression.",
   "type": "module",
   "scripts": {
     "dev": "vite",

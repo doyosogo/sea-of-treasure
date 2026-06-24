@@ -1,57 +1,88 @@
 # Sea of Treasure
 
-Sea of Treasure is a browser-based pirate idle RPG inspired by games such as Seafight, PirateStorm, Son Korsan and Melvor Idle.
+Sea of Treasure is a browser-based pirate idle RPG inspired by naval battle games and idle progression systems.
 
-The project focuses on long-term progression, naval combat, ship upgrades, resource gathering, crafting systems and offline progression.
+It is built as a React and Vite frontend with localStorage persistence, offline progression, combat, skills, crafting, trading, quests, achievements, regions, bosses, world events, and a full save-management workflow.
 
-## Features
+## Feature Overview
 
-- Ship progression system
-- Turn-based naval combat
-- Active and idle gameplay
-- Offline progression
-- Talent trees
-- Skills and professions
-- Trading economy
-- Treasure hunting
-- Ship upgrades
-- Achievement system
-- Save import/export system
+- Naval combat with active, idle, and offline progression
+- Ship progression, cannons, hull, and loadout management
+- Skills and talent trees
+- Trading, cargo, materials, and crafting systems
+- Treasure hunting and rare rewards
+- Quests, achievements, regions, bosses, and world events
+- Save export, import, reset, and developer balance tools
 
 ## Technology Stack
 
 - React
 - Vite
 - JavaScript
-- Local Storage Persistence
+- Plain CSS
+- localStorage persistence
 
-## Project Status
+## Current Status
 
-Currently in active development.
+This repository currently contains a frontend-only, local-save vertical slice.
 
-Implemented systems include:
+The game is playable end to end in the browser without a backend. Progress is stored locally in the browser via `localStorage`.
 
-- Combat
-- Ships
-- Skills
-- Talents
-- Trading
-- Treasure Hunting
-- Materials
-- Shipwright
-- Achievements
-- Save Management
+### Planned backend work
 
-Planned systems include:
-
-- Full visual identity overhaul
-- Pixel-art asset integration
-- Expanded enemy roster
-- Additional maps and regions
-- Legendary equipment systems
+- Account registration
+- Authentication
+- Cloud saves
+- Leaderboards
+- Guilds and clans
 
 ## Installation
 
 ```bash
 npm install
+```
+
+## Development
+
+```bash
 npm run dev
+```
+
+## Production Build
+
+```bash
+npm run build
+```
+
+## Gameplay Systems
+
+- Dashboard overview
+- Battle system
+- Shipyard and ship inspection
+- Crew academy, skills, and talents
+- Harbour trading and cargo management
+- Shop and ship improvements
+- Treasure vault and rare finds
+- Achievements and milestones
+- Quests
+- Regions and bosses
+- World events
+- Save management and developer tools
+
+## Screenshots
+
+Placeholder section for future screenshots and gameplay captures.
+
+## Roadmap
+
+- Backend account system
+- Cloud save support
+- Leaderboards
+- Guild and clan features
+- Expanded regions and enemies
+- Additional ship and cannon progression
+- More world events and endgame content
+
+## Author
+
+Godoy Signature
