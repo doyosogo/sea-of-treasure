@@ -30,11 +30,10 @@ The game is playable end to end in the browser without a backend. Progress is st
 
 ### Planned backend work
 
-- Account registration
-- Authentication
-- Cloud saves
-- Leaderboards
-- Guilds and clans
+- Authentication and account registration
+- Cloud save sync
+- User profiles
+- Deployment and backend hardening
 
 ## Installation
 
@@ -75,10 +74,10 @@ Placeholder section for future screenshots and gameplay captures.
 
 ## Roadmap
 
-- Backend account system
+- Backend authentication
 - Cloud save support
-- Leaderboards
-- Guild and clan features
+- Profile system
+- Backend deployment
 - Expanded regions and enemies
 - Additional ship and cannon progression
 - More world events and endgame content
