@@ -247,6 +247,7 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
     ? enemies.find((enemy) => enemy.id === enemyType)
     : enemyType;
   const selectedEnemy = enemyData ?? getSelectedEnemyType(gameState);
+  const beginnerDamageMultiplier = gameState.playerLevel <= 3 ? 0.65 : 1;
 
   return {
     id: selectedEnemy.id,
@@ -255,7 +256,7 @@ export function generateEnemy(gameState, enemyType = getSelectedEnemyType(gameSt
     description: selectedEnemy.description,
     maxHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
     currentHP: Math.round(baseHP * selectedEnemy.hpMultiplier),
-    damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier)),
+    damage: Math.max(1, Math.round(baseDamage * selectedEnemy.damageMultiplier * beginnerDamageMultiplier)),
     goldReward: currentShip.goldPerShip * selectedEnemy.goldMultiplier,
     xpReward: currentShip.xpPerShip * selectedEnemy.xpMultiplier,
     mapDropChance: Math.min(1, getTreasureMapDropChance(gameState) * selectedEnemy.mapDropMultiplier)

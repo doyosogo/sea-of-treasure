@@ -420,23 +420,29 @@ function addLifetimeShipsSunk(state, shipsSunk) {
   };
 }
 
-function applyBattleRewards(state, battles, xpPerBattle) {
+function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
   const currentShip = getCurrentShip(state);
   const talentBonuses = getTalentBonuses(state);
-  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier;
+  const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
+  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * goldBonusMultiplier;
   const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier;
   const xpState = applyXp(state, xpGained);
 
-  return addLifetimeShipsSunk(addLifetimeGold({
+  return {
+    state: addLifetimeShipsSunk(addLifetimeGold({
     ...xpState,
     gold: xpState.gold + goldGained,
     totalShipsSunk: xpState.totalShipsSunk + battles
-  }, goldGained), battles);
+    }, goldGained), battles),
+    goldGained,
+    xpGained
+  };
 }
 
-function applyVictoryRewards(state, battleEnemy) {
+function applyVictoryRewards(state, battleEnemy, options = {}) {
   const talentBonuses = getTalentBonuses(state);
-  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier;
+  const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
+  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * goldBonusMultiplier;
   const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
   const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
   const rareMapPiecesFound = rollRareMapPieces(0.0005);
@@ -453,7 +459,8 @@ function applyVictoryRewards(state, battleEnemy) {
     goldGained,
     xpGained,
     mapFound,
-    rareMapPiecesFound
+    rareMapPiecesFound,
+    activeCombatGoldBonusApplied: Boolean(options.activeCombatGoldBonus)
   };
 }
 
@@ -700,12 +707,14 @@ function gameStateReducer(state, action) {
       };
 
       if (enemyCurrentHP <= 0) {
-        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound } = applyVictoryRewards(firedState, enemy);
+        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, activeCombatGoldBonusApplied } = applyVictoryRewards(firedState, enemy, {
+          activeCombatGoldBonus: true
+        });
         const victoryState = addActivityLogEntry({
           ...rewardedState,
           currentBattle: null,
           lastSeen: Date.now()
-        }, `Victory over ${enemy.name}: +${Math.round(goldGained)} gold, +${Math.round(xpGained)} XP.`);
+        }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${activeCombatGoldBonusApplied ? " Active combat bonus applied." : ""}`);
         const critState = isCrit
           ? addActivityLogEntry(victoryState, `Critical volley dealt ${Math.round(volleyDamage)} damage.`)
           : victoryState;
@@ -765,7 +774,7 @@ function gameStateReducer(state, action) {
         return clampedState;
       }
 
-      const repairAmount = Math.min(missingHull, Math.floor(clampedState.gold / 10));
+      const repairAmount = Math.min(missingHull, Math.floor(clampedState.gold / 5));
 
       if (repairAmount <= 0) {
         return addActivityLogEntry(clampedState, "Not enough gold to repair hull.", "warning");
@@ -773,7 +782,7 @@ function gameStateReducer(state, action) {
 
       return addActivityLogEntry({
         ...clampedState,
-        gold: clampedState.gold - repairAmount * 10,
+        gold: clampedState.gold - repairAmount * 5,
         hull: {
           current: clampedState.hull.current + repairAmount,
           max: clampedState.hull.max
@@ -1245,14 +1254,16 @@ function gameStateReducer(state, action) {
 
       const mapsFound = rollTreasureMapDrops(state, 1);
       const cannonballsRecovered = rollCannonballRecovery(state, 1, ballsPerBattle);
-      const rewardedState = applyBattleRewards({
+      const { state: rewardedState, goldGained, xpGained } = applyBattleRewards({
           ...state,
           cannonballs: state.cannonballs - ballsPerBattle + cannonballsRecovered
-        }, 1, action.xpAmount ?? 5);
+        }, 1, action.xpAmount ?? 5, {
+          activeCombatGoldBonus: true
+        });
       const loggedState = addActivityLogEntry({
         ...rewardedState,
         treasureMaps: rewardedState.treasureMaps + mapsFound
-      }, `Sank an enemy ship: +${action.xpAmount ?? 5} XP, +${getCurrentShip(state).goldPerShip} gold.`);
+      }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP. Active combat bonus applied.`);
       const recoveredState = cannonballsRecovered > 0
         ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
         : loggedState;

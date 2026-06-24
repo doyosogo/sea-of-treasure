@@ -83,7 +83,7 @@ function MyShip({ gameState, dispatch }) {
               <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} />
               <Metric icon={UI_GOLD} label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} />
               <Metric icon={UI_HULL} label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} />
-              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(missingHull * 10)} Gold`} />
+              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(missingHull * 5)} Gold`} />
             </div>
             <button
               className="chunky-button"
