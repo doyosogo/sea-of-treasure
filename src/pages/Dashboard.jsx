@@ -1,6 +1,7 @@
 import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
 import {
   formatNumber,
+  formatDuration,
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
@@ -15,6 +16,10 @@ function Dashboard({ gameState, onNavigate }) {
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
   const recentLogs = (gameState.activityLog ?? []).slice(0, 5);
+  const quests = gameState.quests ?? { daily: [], weekly: [], lastDailyReset: Date.now(), lastWeeklyReset: Date.now() };
+  const dailyComplete = (quests.daily ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
+  const weeklyComplete = (quests.weekly ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
+  const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + 24 * 60 * 60 * 1000 - Date.now());
   const resourceRows = [
     { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold },
     { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS },
@@ -77,6 +82,7 @@ function Dashboard({ gameState, onNavigate }) {
             </div>
             <div className="dashboard-stat-stack">
               <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.gold)} />
+              <Metric label="Doubloons" icon={UI_DOUBLOONS} value={formatNumber(gameState.doubloons)} />
               <Metric label="Talent Points" icon={UI_ICONS.talentPoints} value={formatNumber(gameState.talentPoints)} />
               <Metric label="Ships Sunk" icon={UI_ICONS.xp} value={formatNumber(gameState.totalShipsSunk)} />
               <Metric label="Achievements" icon={UI_ICONS.xp} value={`${formatNumber((gameState.claimedAchievements ?? []).length)} / 31`} />
@@ -173,6 +179,18 @@ function Dashboard({ gameState, onNavigate }) {
             ) : (
               <p className="empty-log">No voyage notes yet.</p>
             )}
+          </article>
+
+          <article className="dashboard-panel dashboard-quests-panel">
+            <h2>Quest Summary</h2>
+            <div className="dashboard-stat-stack">
+              <Metric label="Daily Quests" icon={UI_ICONS.xp} value={`${formatNumber(dailyComplete)} / ${formatNumber((quests.daily ?? []).length)}`} />
+              <Metric label="Weekly Quests" icon={UI_ICONS.xp} value={`${formatNumber(weeklyComplete)} / ${formatNumber((quests.weekly ?? []).length)}`} />
+              <Metric label="Daily Reset" icon={UI_ICONS.xp} value={formatDuration(dailyResetRemaining)} />
+            </div>
+            <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("quests")} type="button">
+              Open Quests
+            </button>
           </article>
         </section>
       </div>

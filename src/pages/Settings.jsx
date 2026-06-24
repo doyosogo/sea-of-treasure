@@ -209,6 +209,7 @@ function Settings({ gameState, dispatch }) {
         <div className="summary-stat-grid">
           <Stat label="Player Level" value={gameState.playerLevel} />
           <Stat label="Gold" value={formatNumber(gameState.gold)} />
+          <Stat label="Doubloons" value={formatNumber(gameState.doubloons)} />
           <Stat label="XP" value={formatNumber(gameState.playerXP)} />
           <Stat label="Hull" value={`${formatNumber(gameState.hull.current)} / ${formatNumber(getMaxHull(gameState))}`} />
           <Stat label="Cannonballs" value={formatNumber(gameState.cannonballs)} />

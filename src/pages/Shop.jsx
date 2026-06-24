@@ -6,6 +6,7 @@ import {
   SCENES,
   SHIP_IMAGES,
   UI_CANNONBALLS,
+  UI_DOUBLOONS,
   UI_GOLD,
   UI_HULL,
   UI_XP
@@ -64,6 +65,11 @@ function Shop({ gameState, dispatch }) {
             <h1>Shop</h1>
             <p>Buy ships, upgrade cannons, restock cannonballs, and craft ship improvements.</p>
             <p className="shop-note">Doubloon purchases will unlock in a future update.</p>
+          </div>
+          <div className="shop-top-stats">
+            <ShopChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
+            <ShopChip icon={UI_DOUBLOONS} label="Doubloons" value={formatNumber(gameState.doubloons)} />
+            <ShopChip icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
           </div>
         </header>
 

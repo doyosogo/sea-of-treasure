@@ -4,6 +4,7 @@ import { enemies } from "../data/enemies.js";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
 import { craftableUpgrades } from "../data/crafting.js";
+import { dailyQuestPool, weeklyQuestPool } from "../data/quests.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ships } from "../data/ships.js";
@@ -52,6 +53,8 @@ const STORAGE_KEY = "sot_save";
 const MAX_PLAYER_LEVEL = 15;
 const BASE_SKILL_XP_REWARD = 100;
 const MARKET_REFRESH_COOLDOWN_MS = 10800000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
@@ -130,6 +133,220 @@ function createInitialLifetimeStats() {
   };
 }
 
+function createQuestInstance(template, cycleSeed, index) {
+  return {
+    ...template,
+    id: `${template.id}-${cycleSeed}-${index}`,
+    rewardMaterials: template.rewardMaterials ? { ...template.rewardMaterials } : undefined,
+    rewardTalentPoints: template.rewardTalentPoints ?? 0,
+    rewardDoubloons: template.rewardDoubloons ?? 0,
+    progress: 0,
+    claimed: false
+  };
+}
+
+function mulberry32(seed) {
+  let t = seed >>> 0;
+
+  return function random() {
+    t += 0x6D2B79F5;
+    let result = Math.imul(t ^ (t >>> 15), t | 1);
+    result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+    return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed(items, seed) {
+  const shuffled = [...items];
+  const random = mulberry32(seed);
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function generateQuestSet(type, now) {
+  const pool = type === "weekly" ? weeklyQuestPool : dailyQuestPool;
+  const cycleSeed = Math.floor(now / (type === "weekly" ? WEEK_MS : DAY_MS));
+  const shuffledPool = shuffleWithSeed(pool, cycleSeed);
+
+  return shuffledPool.slice(0, 3).map((quest, index) => createQuestInstance(quest, cycleSeed, index));
+}
+
+function normalizeQuestInstance(quest) {
+  if (!quest || typeof quest !== "object") {
+    return null;
+  }
+
+  return {
+    ...quest,
+    rewardMaterials: quest.rewardMaterials ? { ...quest.rewardMaterials } : undefined,
+    rewardTalentPoints: Math.max(0, quest.rewardTalentPoints ?? 0),
+    rewardDoubloons: Math.max(0, quest.rewardDoubloons ?? 0),
+    progress: Math.max(0, quest.progress ?? 0),
+    claimed: Boolean(quest.claimed)
+  };
+}
+
+function normalizeQuestSet(savedSet, type, now) {
+  if (!savedSet || typeof savedSet !== "object") {
+    return null;
+  }
+
+  const sourceList = Array.isArray(savedSet[type]) ? savedSet[type].map(normalizeQuestInstance).filter(Boolean) : [];
+  const resetKey = type === "daily" ? "lastDailyReset" : "lastWeeklyReset";
+  const resetMs = type === "weekly" ? WEEK_MS : DAY_MS;
+  const lastReset = savedSet[resetKey] ?? null;
+  const needsReset = !lastReset || now - lastReset >= resetMs;
+
+  return {
+    quests: sourceList.length > 0 && !needsReset ? sourceList : generateQuestSet(type, now),
+    lastReset: needsReset ? now : lastReset
+  };
+}
+
+function createInitialQuestState(now = Date.now()) {
+  return {
+    daily: generateQuestSet("daily", now),
+    weekly: generateQuestSet("weekly", now),
+    lastDailyReset: now,
+    lastWeeklyReset: now
+  };
+}
+
+function normalizeQuestState(savedQuests, now = Date.now()) {
+  const dailyState = normalizeQuestSet(savedQuests, "daily", now);
+  const weeklyState = normalizeQuestSet(savedQuests, "weekly", now);
+
+  if (!dailyState && !weeklyState) {
+    return createInitialQuestState(now);
+  }
+
+  return {
+    daily: dailyState?.quests ?? generateQuestSet("daily", now),
+    weekly: weeklyState?.quests ?? generateQuestSet("weekly", now),
+    lastDailyReset: dailyState?.lastReset ?? now,
+    lastWeeklyReset: weeklyState?.lastReset ?? now
+  };
+}
+
+function refreshQuestStateForTime(state, now = Date.now()) {
+  const quests = state.quests ?? createInitialQuestState(now);
+  const nextState = { ...state };
+  let updated = false;
+  let nextQuests = quests;
+  const dailyValid = Array.isArray(quests.daily) && quests.daily.length > 0;
+  const weeklyValid = Array.isArray(quests.weekly) && quests.weekly.length > 0;
+
+  if (!dailyValid || !quests.lastDailyReset || now - quests.lastDailyReset >= DAY_MS) {
+    nextQuests = {
+      ...nextQuests,
+      daily: generateQuestSet("daily", now),
+      lastDailyReset: now
+    };
+    updated = true;
+  }
+
+  if (!weeklyValid || !quests.lastWeeklyReset || now - quests.lastWeeklyReset >= WEEK_MS) {
+    nextQuests = {
+      ...nextQuests,
+      weekly: generateQuestSet("weekly", now),
+      lastWeeklyReset: now
+    };
+    updated = true;
+  }
+
+  if (!updated) {
+    return state;
+  }
+
+  return {
+    ...nextState,
+    quests: nextQuests
+  };
+}
+
+function updateQuestProgress(state, metric, amount = 0) {
+  const progressAmount = Math.max(0, amount ?? 0);
+
+  if (progressAmount <= 0 || !state.quests) {
+    return state;
+  }
+
+  const updateList = (list) => list.map((quest) => {
+    if (quest.claimed || quest.metric !== metric) {
+      return quest;
+    }
+
+    return {
+      ...quest,
+      progress: Math.min(quest.target, (quest.progress ?? 0) + progressAmount)
+    };
+  });
+
+  return {
+    ...state,
+    quests: {
+      ...state.quests,
+      daily: updateList(state.quests.daily ?? []),
+      weekly: updateList(state.quests.weekly ?? [])
+    }
+  };
+}
+
+function updateQuestProgressMany(state, progressMap = {}) {
+  return Object.entries(progressMap).reduce((updatedState, [metric, amount]) => (
+    updateQuestProgress(updatedState, metric, amount)
+  ), state);
+}
+
+function findQuestById(questsState, questId) {
+  if (!questsState || !questId) {
+    return null;
+  }
+
+  return [...(questsState.daily ?? []), ...(questsState.weekly ?? [])].find((quest) => quest.id === questId) ?? null;
+}
+
+function claimQuestById(state, questId) {
+  if (!state.quests) {
+    return null;
+  }
+
+  const dailyIndex = (state.quests.daily ?? []).findIndex((quest) => quest.id === questId);
+  const weeklyIndex = (state.quests.weekly ?? []).findIndex((quest) => quest.id === questId);
+
+  if (dailyIndex < 0 && weeklyIndex < 0) {
+    return null;
+  }
+
+  const listKey = dailyIndex >= 0 ? "daily" : "weekly";
+  const questIndex = dailyIndex >= 0 ? dailyIndex : weeklyIndex;
+  const quest = state.quests[listKey][questIndex];
+
+  if (!quest || quest.claimed || (quest.progress ?? 0) < quest.target) {
+    return null;
+  }
+
+  const updatedQuest = {
+    ...quest,
+    claimed: true
+  };
+
+  return {
+    ...state,
+    quests: {
+      ...state.quests,
+      [listKey]: state.quests[listKey].map((questEntry, index) => (
+        index === questIndex ? updatedQuest : questEntry
+      ))
+    }
+  };
+}
+
 const initialState = {
   playerLevel: 1,
   playerXP: 0,
@@ -157,6 +374,7 @@ const initialState = {
   materials: createInitialMaterials(),
   rareMapPieces: 0,
   craftedUpgrades: createInitialCraftedUpgrades(),
+  quests: createInitialQuestState(),
   lifetimeStats: createInitialLifetimeStats(),
   claimedAchievements: [],
   marketPrices: generateMarketPrices(),
@@ -421,6 +639,7 @@ function loadSavedState() {
       rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
       doubloons: Math.max(0, parsedState.doubloons ?? 0),
       craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
+      quests: normalizeQuestState(parsedState.quests, now),
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
       marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
@@ -820,6 +1039,8 @@ function applySkillXp(skillDefinition, skillState, xpAmount) {
 }
 
 function gameStateReducer(state, action) {
+  state = refreshQuestStateForTime(state, action.now ?? Date.now());
+
   switch (action.type) {
     case "SELECT_ENEMY": {
       const enemy = enemies.find((enemyData) => enemyData.id === action.enemyId);
@@ -893,8 +1114,13 @@ function gameStateReducer(state, action) {
         const doubloonText = doubloonsGained > 0
           ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.`
           : "";
+        const questProgressState = updateQuestProgressMany(rewardedState, {
+          shipsSunk: 1,
+          activeBattlesWon: 1,
+          goldEarned: goldGained
+        });
         const victoryState = addActivityLogEntry({
-          ...rewardedState,
+          ...questProgressState,
           currentBattle: null,
           lastSeen: Date.now()
         }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText}${activeCombatGoldBonusApplied ? " Active combat bonus applied." : ""}`);
@@ -1195,7 +1421,7 @@ function gameStateReducer(state, action) {
       const goldEarned = getTradeGoodSellPrice(state, good) * quantity;
       const levelText = levelsGained > 0 ? ` Trading gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
 
-      return addActivityLogEntry(addLifetimeGold({
+      const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
         talentPoints: state.talentPoints + levelsGained,
@@ -1207,7 +1433,12 @@ function gameStateReducer(state, action) {
           ...state.cargo,
           [good.id]: state.cargo[good.id] - quantity
         }
-      }, goldEarned), `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
+      }, goldEarned), {
+        goodsSold: quantity,
+        goldEarned
+      });
+
+      return addActivityLogEntry(questProgressState, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
     }
     case "SELL_FISH": {
       const quantity = action.quantity === "all"
@@ -1220,14 +1451,18 @@ function gameStateReducer(state, action) {
 
       const goldEarned = getFishSellValue(state) * quantity;
 
-      return addActivityLogEntry(addLifetimeGold({
+      const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
         resources: {
           ...state.resources,
           fish: state.resources.fish - quantity
         }
-      }, goldEarned), `Sold ${quantity} Fish.`);
+      }, goldEarned), {
+        goldEarned
+      });
+
+      return addActivityLogEntry(questProgressState, `Sold ${quantity} Fish.`);
     }
     case "SELL_WHALE_OIL": {
       const quantity = action.quantity === "all"
@@ -1240,14 +1475,18 @@ function gameStateReducer(state, action) {
 
       const goldEarned = getWhaleOilSellValue(state) * quantity;
 
-      return addActivityLogEntry(addLifetimeGold({
+      const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
         resources: {
           ...state.resources,
           whaleOil: state.resources.whaleOil - quantity
         }
-      }, goldEarned), `Sold ${quantity} Whale Oil.`);
+      }, goldEarned), {
+        goldEarned
+      });
+
+      return addActivityLogEntry(questProgressState, `Sold ${quantity} Whale Oil.`);
     }
     case "CRAFT_UPGRADE": {
       const upgrade = craftableUpgrades.find((craftableUpgrade) => craftableUpgrade.id === action.upgradeId);
@@ -1283,7 +1522,7 @@ function gameStateReducer(state, action) {
       const nextLevel = currentLevel + 1;
       const levelText = levelsGained > 0 ? ` Shipwright gained ${levelsGained} level${levelsGained === 1 ? "" : "s"}.` : "";
 
-      return addActivityLogEntry(clampHull({
+      const questProgressState = updateQuestProgressMany(clampHull({
         ...state,
         gold: state.gold - cost.gold,
         talentPoints: state.talentPoints + levelsGained,
@@ -1304,7 +1543,11 @@ function gameStateReducer(state, action) {
           ...state.skills,
           shipwright: updatedShipwright
         }
-      }), `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
+      }), {
+        upgradesCrafted: 1
+      });
+
+      return addActivityLogEntry(questProgressState, `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
     }
     case "BUY_CANNONBALLS": {
       const currentCannon = getCurrentCannon(state);
@@ -1313,11 +1556,15 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Not enough gold to buy cannonballs.", "warning");
       }
 
-      return addActivityLogEntry({
+      const questProgressState = updateQuestProgressMany({
         ...state,
         gold: state.gold - currentCannon.goldPer100Balls,
         cannonballs: state.cannonballs + 100
-      }, `Bought 100 ${currentCannon.name} cannonballs.`);
+      }, {
+        cannonballsBought: 100
+      });
+
+      return addActivityLogEntry(questProgressState, `Bought 100 ${currentCannon.name} cannonballs.`);
     }
     case "START_TREASURE_DIG": {
       const site = treasureSites.find((treasureSite) => treasureSite.id === action.siteId);
@@ -1374,7 +1621,7 @@ function gameStateReducer(state, action) {
       const relicText = ` Recovered ${materialReward.ancientRelics} Ancient Relic${materialReward.ancientRelics === 1 ? "" : "s"}.`;
       const rareMapPieceText = rareMapPiecesFound > 0 ? " You discovered a Rare Map Piece." : "";
 
-      return addActivityLogEntry(addDoubloons(addLifetimeGold({
+      const questProgressState = updateQuestProgressMany(addDoubloons(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
@@ -1391,7 +1638,12 @@ function gameStateReducer(state, action) {
           ...state.skills,
           treasureHunting: updatedTreasureSkill
         }
-      }, goldReward), doubloonsGained), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${doubloonsGained > 0 ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.` : ""}${relicText}${rareText}${rareMapPieceText}${levelText}`);
+      }, goldReward), doubloonsGained), {
+        treasureDigsCompleted: 1,
+        goldEarned: goldReward
+      });
+
+      return addActivityLogEntry(questProgressState, `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${doubloonsGained > 0 ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.` : ""}${relicText}${rareText}${rareMapPieceText}${levelText}`);
     }
     case "CANCEL_TREASURE_DIG":
       if (!state.activeTreasureDig) {
@@ -1459,7 +1711,7 @@ function gameStateReducer(state, action) {
       const whaleOilText = fishingReward?.whaleOil > 0 ? ` Found ${fishingReward.whaleOil} Whale Oil.` : "";
       const materialText = getSkillMaterialLogText(skillDefinition.id, materialReward);
 
-      return addActivityLogEntry(addLifetimeGold({
+      const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
@@ -1473,7 +1725,14 @@ function gameStateReducer(state, action) {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
         }
-      }, goldReward), `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${materialText}${levelText}`);
+      }, goldReward), {
+        skillActionsCompleted: 1,
+        skillLevelsGained: levelsGained,
+        goldEarned: goldReward,
+        fishGained: fishingReward?.fish ?? 0
+      });
+
+      return addActivityLogEntry(questProgressState, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${materialText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);
@@ -1591,10 +1850,14 @@ function gameStateReducer(state, action) {
       const doubloonText = doubloonsGained > 0
         ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.`
         : "";
-      const loggedState = addActivityLogEntry({
+      const loggedState = addActivityLogEntry(updateQuestProgressMany({
         ...doubloonRewardState,
         treasureMaps: rewardedState.treasureMaps + mapsFound
-      }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText} Active combat bonus applied.`);
+      }, {
+        shipsSunk: 1,
+        activeBattlesWon: 1,
+        goldEarned: goldGained
+      }), `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText} Active combat bonus applied.`);
       const recoveredState = cannonballsRecovered > 0
         ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
         : loggedState;
@@ -1774,6 +2037,29 @@ function gameStateReducer(state, action) {
         gold: state.gold + (action.goldGained ?? 0),
         lastSeen: action.now ?? Date.now()
       }, action.goldGained ?? 0), action.xpGained ?? 0);
+    case "CLAIM_QUEST_REWARD": {
+      const quest = findQuestById(state.quests, action.questId);
+
+      if (!quest || quest.claimed || (quest.progress ?? 0) < quest.target) {
+        return state;
+      }
+
+      const claimedState = claimQuestById(state, quest.id);
+
+      if (!claimedState) {
+        return state;
+      }
+
+      const questRewardState = addDoubloons(addLifetimeGold({
+        ...claimedState,
+        gold: claimedState.gold + (quest.rewardGold ?? 0),
+        talentPoints: claimedState.talentPoints + (quest.rewardTalentPoints ?? 0),
+        materials: quest.rewardMaterials ? mergeMaterials(claimedState.materials, quest.rewardMaterials) : claimedState.materials,
+        lastSeen: Date.now()
+      }, quest.rewardGold ?? 0), quest.rewardDoubloons ?? 0);
+
+      return addActivityLogEntry(questRewardState, `Quest completed: ${quest.title}`);
+    }
     case "CLAIM_ACHIEVEMENT": {
       const achievement = achievements.find((achievementData) => achievementData.id === action.achievementId);
 
@@ -1786,13 +2072,16 @@ function gameStateReducer(state, action) {
       }
 
       const doubloonsRewarded = achievement.rewardDoubloons ?? 0;
-      const rewardedState = addDoubloons(addLifetimeGold({
+      const rewardedState = updateQuestProgressMany(addDoubloons(addLifetimeGold({
         ...state,
         gold: state.gold + achievement.rewardGold,
         talentPoints: state.talentPoints + achievement.rewardTalentPoints,
         claimedAchievements: [...(state.claimedAchievements ?? []), achievement.id],
         lastSeen: Date.now()
-      }, achievement.rewardGold), doubloonsRewarded);
+      }, achievement.rewardGold), doubloonsRewarded), {
+        achievementsClaimed: 1,
+        goldEarned: achievement.rewardGold
+      });
       const doubloonText = doubloonsRewarded > 0
         ? ` Found ${doubloonsRewarded} Doubloon${doubloonsRewarded === 1 ? "" : "s"}.`
         : "";
@@ -1813,7 +2102,7 @@ function gameStateReducer(state, action) {
       const enemiesSunk = rewards.enemiesSunk ?? rewards.shipsSunk ?? 0;
       const hullDamageTaken = rewards.hullDamageTaken ?? 0;
       const doubloonsEarned = rewards.doubloonsEarned ?? 0;
-      const baseRewardState = addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
+      const baseRewardState = updateQuestProgressMany(addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
         ...state,
         gold: state.gold + rewards.goldEarned,
         cannonballs: Math.max(0, state.cannonballs - netCannonballsUsed),
@@ -1827,7 +2116,10 @@ function gameStateReducer(state, action) {
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
-      }, rewards.goldEarned), enemiesSunk), doubloonsEarned);
+      }, rewards.goldEarned), enemiesSunk), doubloonsEarned), {
+        shipsSunk: enemiesSunk,
+        goldEarned: rewards.goldEarned
+      });
       const xpState = applyXp(baseRewardState, rewards.xpEarned);
       const doubloonText = doubloonsEarned > 0
         ? ` Recovered ${doubloonsEarned} Doubloon${doubloonsEarned === 1 ? "" : "s"}.`
@@ -1928,6 +2220,14 @@ export function useGameState() {
 
     return () => window.clearInterval(timerId);
   }, [gameState.isIdling]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      dispatch({ type: "QUEST_CLOCK_TICK", now: Date.now() });
+    }, 60 * 1000);
+
+    return () => window.clearInterval(timerId);
+  }, []);
 
   return { gameState, dispatch };
 }

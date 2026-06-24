@@ -252,6 +252,7 @@ button:disabled {
 .port-page,
 .skills-page,
 .talents-page,
+.quests-page,
 .treasure-page,
 .shipwright-page,
 .achievements-page,
@@ -282,6 +283,362 @@ button:disabled {
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: calc(100vh - 92px);
+}
+
+.quests-page {
+  position: relative;
+  min-height: calc(100vh - 92px);
+  background-color: #050914;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
+  overflow: hidden;
+}
+
+.quest-orders {
+  display: block;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+}
+
+.quest-reset > .page-content {
+  position: relative;
+  z-index: 1;
+}
+
+.quest-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.40), rgba(5, 8, 14, 0.55) 40%, rgba(5, 8, 14, 0.52)),
+    linear-gradient(90deg, rgba(5, 8, 14, 0.14), rgba(5, 8, 14, 0.04), rgba(5, 8, 14, 0.14));
+  pointer-events: none;
+}
+
+.quest-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+  display: grid;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.quest-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 8px 4px;
+}
+
+.quest-logo {
+  width: min(180px, 30vw);
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+.quest-title-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.quest-title-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.quest-title-copy p {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.quest-top-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.quest-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.quest-chip img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.quest-chip div {
+  display: grid;
+  gap: 2px;
+}
+
+.quest-chip span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-chip strong {
+  color: var(--cream);
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.quest-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.quest-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.quest-panel h2 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.quest-note {
+  margin: 0;
+  color: var(--cream);
+  line-height: 1.45;
+}
+
+.quest-timer-grid,
+.quest-summary-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.quest-timer-row,
+.quest-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 12px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.quest-stat-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.quest-stat-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.quest-stat-left span,
+.quest-timer-row span {
+  color: #d8c99c;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-section {
+  display: grid;
+  gap: 16px;
+}
+
+.quest-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quest-section-header h2 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.quest-section-badge {
+  padding: 8px 12px;
+  color: var(--navy-950);
+  background: var(--gold-500);
+  border: 2px solid var(--gold-300);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.quest-card {
+  display: grid;
+  gap: 14px;
+  min-width: 300px;
+  padding: 20px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.quest-card.complete {
+  border-color: rgba(255, 211, 106, 0.95);
+}
+
+.quest-card.claimed {
+  opacity: 0.9;
+  border-color: rgba(109, 85, 32, 0.72);
+}
+
+.quest-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quest-kicker {
+  margin: 0 0 4px;
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-card-header h3 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.quest-status {
+  padding: 6px 10px;
+  border: 1px solid rgba(211, 165, 58, 0.72);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-status.in-progress {
+  color: #d8c99c;
+  background: rgba(4, 17, 31, 0.72);
+}
+
+.quest-status.complete {
+  color: #04111f;
+  background: var(--gold-500);
+  border-color: var(--gold-300);
+}
+
+.quest-status.claimed {
+  color: #f6e5b5;
+  background: rgba(71, 52, 18, 0.9);
+  border-color: rgba(255, 211, 106, 0.55);
+}
+
+.quest-description {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.quest-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quest-progress-track {
+  height: 16px;
+}
+
+.quest-reward-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.quest-reward-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 12px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.quest-reward-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.quest-reward-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.quest-reward-left span {
+  color: #d8c99c;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.quest-back-button {
+  justify-self: start;
 }
 
 .dashboard-cabin::before {
