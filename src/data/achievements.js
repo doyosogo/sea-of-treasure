@@ -24,6 +24,7 @@ export const achievements = [
     description: "Sink 1,000 ships.",
     rewardGold: 50000,
     rewardTalentPoints: 2,
+    rewardDoubloons: 2,
     target: 1000
   },
   {
@@ -42,6 +43,7 @@ export const achievements = [
     description: "Reach player level 5.",
     rewardGold: 5000,
     rewardTalentPoints: 1,
+    rewardDoubloons: 1,
     target: 5
   },
   {
@@ -51,6 +53,7 @@ export const achievements = [
     description: "Reach player level 10.",
     rewardGold: 100000,
     rewardTalentPoints: 2,
+    rewardDoubloons: 2,
     target: 10
   },
   {
@@ -60,6 +63,7 @@ export const achievements = [
     description: "Reach player level 15.",
     rewardGold: 1000000,
     rewardTalentPoints: 5,
+    rewardDoubloons: 3,
     target: 15
   },
   {
@@ -87,6 +91,7 @@ export const achievements = [
     description: "Own all 15 ships.",
     rewardGold: 5000000,
     rewardTalentPoints: 5,
+    rewardDoubloons: 5,
     target: 15
   },
   {
@@ -168,6 +173,7 @@ export const achievements = [
     description: "Find 10 rare treasures.",
     rewardGold: 500000,
     rewardTalentPoints: 4,
+    rewardDoubloons: 3,
     target: 10
   },
   {

@@ -1,4 +1,4 @@
-import { LOGO, SCENES, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
+import { LOGO, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
 import {
   formatNumber,
@@ -158,6 +158,9 @@ function AchievementCard({ achievement, gameState, status, dispatch }) {
       <div className="legend-reward-grid">
         <RewardRow icon={UI_GOLD} label="Gold" value={achievement.rewardGold} />
         <RewardRow icon={UI_TALENT_POINTS} label="Talent Points" value={achievement.rewardTalentPoints} />
+        {(achievement.rewardDoubloons ?? 0) > 0 && (
+          <RewardRow icon={UI_DOUBLOONS} label="Doubloons" value={achievement.rewardDoubloons} />
+        )}
       </div>
 
       <button

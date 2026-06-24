@@ -1,4 +1,4 @@
-import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_ICONS } from "../data/assets.js";
+import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
 import {
   formatNumber,
   getCurrentCannon,
@@ -17,6 +17,7 @@ function Dashboard({ gameState, onNavigate }) {
   const recentLogs = (gameState.activityLog ?? []).slice(0, 5);
   const resourceRows = [
     { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold },
+    { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS },
     { label: "Cannonballs", value: gameState.cannonballs, icon: UI_ICONS.cannonballs },
     { label: "Treasure Maps", value: gameState.treasureMaps, icon: UI_ICONS.treasureMaps },
     { label: "Rare Map Pieces", value: gameState.rareMapPieces, icon: RESOURCE_ICONS.rareMapPiece },

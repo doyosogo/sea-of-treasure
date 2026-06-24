@@ -63,6 +63,7 @@ function Shop({ gameState, dispatch }) {
             <p className="eyebrow">Shop</p>
             <h1>Shop</h1>
             <p>Buy ships, upgrade cannons, restock cannonballs, and craft ship improvements.</p>
+            <p className="shop-note">Doubloon purchases will unlock in a future update.</p>
           </div>
         </header>
 

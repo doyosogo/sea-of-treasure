@@ -398,6 +398,39 @@ export function rollRareMapPieces(chance, attempts = 1) {
   return pieces;
 }
 
+export function rollDoubloonsFromCombat(enemy, attempts = 1, cap = Infinity) {
+  const dropChance = enemy?.difficulty === "Boss" ? 0.03 : 0.01;
+  const wholeAttempts = Math.floor(attempts);
+  const fractionalAttempt = attempts - wholeAttempts;
+  let doubloons = 0;
+
+  for (let index = 0; index < wholeAttempts; index += 1) {
+    if (Math.random() < dropChance) {
+      doubloons += 1;
+    }
+  }
+
+  if (fractionalAttempt > 0 && Math.random() < dropChance * fractionalAttempt) {
+    doubloons += 1;
+  }
+
+  return Math.min(cap, doubloons);
+}
+
+export function rollDoubloonsFromTreasure(site) {
+  const baseRoll = Math.random() < 0.02 ? 1 : 0;
+
+  if (baseRoll <= 0) {
+    return 0;
+  }
+
+  if ((site?.requiredSkillLevel ?? 0) >= 8 && Math.random() < 0.15) {
+    return 2;
+  }
+
+  return 1;
+}
+
 export function generateMarketPrices() {
   return Object.fromEntries(tradeGoods.map((good) => [
     good.id,
@@ -545,6 +578,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   const cannonballsRecovered = rollCannonballRecovery(gameState, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
   const netCannonballsUsed = Math.max(0, cannonballsSpent - cannonballsRecovered);
   const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
+  const doubloonsEarned = rollDoubloonsFromCombat(estimate.enemy, enemiesSunk, 10);
   const effectiveTimeMs = Math.min(cappedTimeMs, enemiesSunk * estimate.secondsPerEnemy * 1000);
 
   return {
@@ -561,6 +595,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
     netCannonballsUsed,
     cannonballsUsed: netCannonballsUsed,
     hullDamageTaken,
+    doubloonsEarned,
     mapsFound: rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk),
     rareMapPiecesFound: rollRareMapPieces(0.0005, enemiesSunk),
     stoppedReason

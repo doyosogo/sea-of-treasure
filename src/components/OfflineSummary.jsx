@@ -44,6 +44,12 @@ function OfflineSummary({ gameState, dispatch }) {
             <span>Gold Earned</span>
             <strong>{formatNumber(rewards.goldEarned)}</strong>
           </div>
+          {(rewards.doubloonsEarned ?? 0) > 0 && (
+            <div className="resource-row">
+              <span>Doubloons Recovered</span>
+              <strong>{formatNumber(rewards.doubloonsEarned)}</strong>
+            </div>
+          )}
           <div className="resource-row">
             <span>XP Earned</span>
             <strong>{formatNumber(rewards.xpEarned)}</strong>

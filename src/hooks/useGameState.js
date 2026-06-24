@@ -42,6 +42,8 @@ import {
   getTotalEquippedCannons,
   getXpRequired,
   rollCannonballRecovery,
+  rollDoubloonsFromCombat,
+  rollDoubloonsFromTreasure,
   rollEnemyMapDrops,
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
@@ -123,7 +125,8 @@ function createInitialLifetimeStats() {
     totalShipsSunk: 0,
     treasureDigsCompleted: 0,
     rareTreasuresFound: 0,
-    upgradesCrafted: 0
+    upgradesCrafted: 0,
+    totalDoubloonsEarned: 0
   };
 }
 
@@ -145,6 +148,7 @@ const initialState = {
   equippedCannons: createInitialEquippedCannons(),
   cannonballs: 100,
   totalShipsSunk: 0,
+  doubloons: 0,
   talentPoints: 0,
   talents: createInitialTalents(),
   skills: createInitialSkills(),
@@ -246,11 +250,12 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
     totalGoldEarned: Math.max(0, savedStats.totalGoldEarned ?? 0),
     totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
     treasureDigsCompleted: Math.max(0, savedStats.treasureDigsCompleted ?? 0),
-      rareTreasuresFound: Math.max(
-        0,
-        savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
-      ),
-      upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades))
+    rareTreasuresFound: Math.max(
+      0,
+      savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
+    ),
+    upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades)),
+    totalDoubloonsEarned: Math.max(0, savedStats.totalDoubloonsEarned ?? 0)
   };
 }
 
@@ -414,6 +419,7 @@ function loadSavedState() {
       resources: normalizeResources(parsedState.resources),
       materials: normalizeMaterials(parsedState.materials),
       rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
+      doubloons: Math.max(0, parsedState.doubloons ?? 0),
       craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
       marketPrices: normalizeMarketPrices(parsedState.marketPrices),
       marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
@@ -546,6 +552,35 @@ function addLifetimeGold(state, amount) {
   };
 }
 
+function addLifetimeDoubloons(state, amount) {
+  const doubloonsEarned = Math.max(0, amount ?? 0);
+
+  if (doubloonsEarned <= 0) {
+    return state;
+  }
+
+  return {
+    ...state,
+    lifetimeStats: {
+      ...state.lifetimeStats,
+      totalDoubloonsEarned: (state.lifetimeStats?.totalDoubloonsEarned ?? 0) + doubloonsEarned
+    }
+  };
+}
+
+function addDoubloons(state, amount) {
+  const doubloonsEarned = Math.max(0, amount ?? 0);
+
+  if (doubloonsEarned <= 0) {
+    return state;
+  }
+
+  return addLifetimeDoubloons({
+    ...state,
+    doubloons: (state.doubloons ?? 0) + doubloonsEarned
+  }, doubloonsEarned);
+}
+
 function addLifetimeShipsSunk(state, shipsSunk) {
   const sunk = Math.max(0, shipsSunk ?? 0);
 
@@ -588,20 +623,23 @@ function applyVictoryRewards(state, battleEnemy, options = {}) {
   const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier;
   const mapFound = Math.random() < battleEnemy.mapDropChance ? 1 : 0;
   const rareMapPiecesFound = rollRareMapPieces(0.0005);
+  const doubloonsGained = rollDoubloonsFromCombat(battleEnemy, 1);
   const xpState = applyXp(state, xpGained);
+  const rewardState = addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
+    ...xpState,
+    gold: xpState.gold + goldGained,
+    totalShipsSunk: xpState.totalShipsSunk + 1,
+    treasureMaps: xpState.treasureMaps + mapFound,
+    rareMapPieces: xpState.rareMapPieces + rareMapPiecesFound
+  }, goldGained), 1), doubloonsGained);
 
   return {
-    state: addLifetimeShipsSunk(addLifetimeGold({
-      ...xpState,
-      gold: xpState.gold + goldGained,
-      totalShipsSunk: xpState.totalShipsSunk + 1,
-      treasureMaps: xpState.treasureMaps + mapFound,
-      rareMapPieces: xpState.rareMapPieces + rareMapPiecesFound
-    }, goldGained), 1),
+    state: rewardState,
     goldGained,
     xpGained,
     mapFound,
     rareMapPiecesFound,
+    doubloonsGained,
     activeCombatGoldBonusApplied: Boolean(options.activeCombatGoldBonus)
   };
 }
@@ -849,14 +887,17 @@ function gameStateReducer(state, action) {
       };
 
       if (enemyCurrentHP <= 0) {
-        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, activeCombatGoldBonusApplied } = applyVictoryRewards(firedState, enemy, {
+        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, doubloonsGained, activeCombatGoldBonusApplied } = applyVictoryRewards(firedState, enemy, {
           activeCombatGoldBonus: true
         });
+        const doubloonText = doubloonsGained > 0
+          ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.`
+          : "";
         const victoryState = addActivityLogEntry({
           ...rewardedState,
           currentBattle: null,
           lastSeen: Date.now()
-        }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${activeCombatGoldBonusApplied ? " Active combat bonus applied." : ""}`);
+        }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText}${activeCombatGoldBonusApplied ? " Active combat bonus applied." : ""}`);
         const critState = isCrit
           ? addActivityLogEntry(victoryState, `Critical volley dealt ${Math.round(volleyDamage)} damage.`)
           : victoryState;
@@ -1322,6 +1363,7 @@ function gameStateReducer(state, action) {
       const rareFound = Math.random() < rareChance ? getRareTreasure(now) : null;
       const materialReward = getTreasureMaterialReward(site);
       const rareMapPiecesFound = rollRareMapPieces(0.005);
+      const doubloonsGained = rollDoubloonsFromTreasure(site);
       const { skillState: updatedTreasureSkill, levelsGained } = applySkillXp(
         treasureSkillDefinition,
         state.skills.treasureHunting,
@@ -1332,7 +1374,7 @@ function gameStateReducer(state, action) {
       const relicText = ` Recovered ${materialReward.ancientRelics} Ancient Relic${materialReward.ancientRelics === 1 ? "" : "s"}.`;
       const rareMapPieceText = rareMapPiecesFound > 0 ? " You discovered a Rare Map Piece." : "";
 
-      return addActivityLogEntry(addLifetimeGold({
+      return addActivityLogEntry(addDoubloons(addLifetimeGold({
         ...state,
         gold: state.gold + goldReward,
         talentPoints: state.talentPoints + levelsGained,
@@ -1349,7 +1391,7 @@ function gameStateReducer(state, action) {
           ...state.skills,
           treasureHunting: updatedTreasureSkill
         }
-      }, goldReward), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${relicText}${rareText}${rareMapPieceText}${levelText}`);
+      }, goldReward), doubloonsGained), `${site.name} dig complete: +${Math.round(goldReward)} gold, +${Math.round(xpReward)} Treasure Hunting XP.${doubloonsGained > 0 ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.` : ""}${relicText}${rareText}${rareMapPieceText}${levelText}`);
     }
     case "CANCEL_TREASURE_DIG":
       if (!state.activeTreasureDig) {
@@ -1537,16 +1579,22 @@ function gameStateReducer(state, action) {
 
       const mapsFound = rollTreasureMapDrops(state, 1);
       const cannonballsRecovered = rollCannonballRecovery(state, 1, ballsPerBattle);
+      const battleEnemy = generateEnemy(state);
+      const doubloonsGained = rollDoubloonsFromCombat(battleEnemy, 1);
       const { state: rewardedState, goldGained, xpGained } = applyBattleRewards({
           ...state,
           cannonballs: state.cannonballs - ballsPerBattle + cannonballsRecovered
         }, 1, action.xpAmount ?? 5, {
           activeCombatGoldBonus: true
         });
+      const doubloonRewardState = addDoubloons(rewardedState, doubloonsGained);
+      const doubloonText = doubloonsGained > 0
+        ? ` Found ${doubloonsGained} Doubloon${doubloonsGained === 1 ? "" : "s"}.`
+        : "";
       const loggedState = addActivityLogEntry({
-        ...rewardedState,
+        ...doubloonRewardState,
         treasureMaps: rewardedState.treasureMaps + mapsFound
-      }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP. Active combat bonus applied.`);
+      }, `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText} Active combat bonus applied.`);
       const recoveredState = cannonballsRecovered > 0
         ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
         : loggedState;
@@ -1737,13 +1785,19 @@ function gameStateReducer(state, action) {
         return state;
       }
 
-      return addActivityLogEntry(addLifetimeGold({
+      const doubloonsRewarded = achievement.rewardDoubloons ?? 0;
+      const rewardedState = addDoubloons(addLifetimeGold({
         ...state,
         gold: state.gold + achievement.rewardGold,
         talentPoints: state.talentPoints + achievement.rewardTalentPoints,
         claimedAchievements: [...(state.claimedAchievements ?? []), achievement.id],
         lastSeen: Date.now()
-      }, achievement.rewardGold), `Achievement claimed: ${achievement.name}`);
+      }, achievement.rewardGold), doubloonsRewarded);
+      const doubloonText = doubloonsRewarded > 0
+        ? ` Found ${doubloonsRewarded} Doubloon${doubloonsRewarded === 1 ? "" : "s"}.`
+        : "";
+
+      return addActivityLogEntry(rewardedState, `Achievement claimed: ${achievement.name}.${doubloonText}`);
     }
     case "CLAIM_OFFLINE_REWARDS": {
       if (!state.pendingOfflineRewards) {
@@ -1758,7 +1812,8 @@ function gameStateReducer(state, action) {
       const netCannonballsUsed = rewards.netCannonballsUsed ?? rewards.cannonballsUsed ?? 0;
       const enemiesSunk = rewards.enemiesSunk ?? rewards.shipsSunk ?? 0;
       const hullDamageTaken = rewards.hullDamageTaken ?? 0;
-      const baseRewardState = addLifetimeShipsSunk(addLifetimeGold({
+      const doubloonsEarned = rewards.doubloonsEarned ?? 0;
+      const baseRewardState = addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
         ...state,
         gold: state.gold + rewards.goldEarned,
         cannonballs: Math.max(0, state.cannonballs - netCannonballsUsed),
@@ -1772,10 +1827,13 @@ function gameStateReducer(state, action) {
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
-      }, rewards.goldEarned), enemiesSunk);
+      }, rewards.goldEarned), enemiesSunk), doubloonsEarned);
       const xpState = applyXp(baseRewardState, rewards.xpEarned);
+      const doubloonText = doubloonsEarned > 0
+        ? ` Recovered ${doubloonsEarned} Doubloon${doubloonsEarned === 1 ? "" : "s"}.`
+        : "";
 
-      return addActivityLogEntry(xpState, "Claimed offline rewards.");
+      return addActivityLogEntry(xpState, `Claimed offline rewards.${doubloonText}`);
     }
     case "DISMISS_OFFLINE_REWARDS":
       return {
