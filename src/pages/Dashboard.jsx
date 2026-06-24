@@ -1,10 +1,12 @@
 import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, UI_DOUBLOONS, UI_ICONS } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
+import { crewMembers } from "../data/crew.js";
 import {
   formatNumber,
   formatDuration,
   getCurrentCannon,
   getCurrentShip,
+  getCrewBonuses,
   getIdleCombatEstimate,
   getActiveRegion,
   getActiveWorldEvent,
@@ -25,6 +27,21 @@ function Dashboard({ gameState, onNavigate }) {
   const dailyComplete = (quests.daily ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
   const weeklyComplete = (quests.weekly ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
   const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + 24 * 60 * 60 * 1000 - Date.now());
+  const crewEntries = Object.entries(gameState.crew ?? {});
+  const crewAverageLevel = crewEntries.length > 0
+    ? crewEntries.reduce((total, [, crewMember]) => total + (crewMember.level ?? 1), 0) / crewEntries.length
+    : 1;
+  const highestCrewEntry = crewEntries.reduce((best, entry) => {
+    if (!best || (entry[1]?.level ?? 1) > (best[1]?.level ?? 1)) {
+      return entry;
+    }
+
+    return best;
+  }, null);
+  const crewBonuses = getCrewBonuses(gameState);
+  const highestCrewMember = highestCrewEntry
+    ? crewMembers.find((member) => member.id === highestCrewEntry[0]) ?? null
+    : null;
   const resourceRows = [
     { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold },
     { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS },
@@ -218,6 +235,18 @@ function Dashboard({ gameState, onNavigate }) {
             </div>
             <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("quests")} type="button">
               Open Quests
+            </button>
+          </article>
+
+          <article className="dashboard-panel dashboard-crew-panel">
+            <h2>Crew Summary</h2>
+            <div className="dashboard-stat-stack">
+              <Metric label="Average Crew Level" icon={UI_ICONS.xp} value={crewAverageLevel.toFixed(1)} />
+              <Metric label="Highest Crew Member" icon={UI_ICONS.xp} value={highestCrewEntry ? `${highestCrewMember?.name ?? highestCrewEntry[0]} Lv. ${highestCrewEntry[1].level}` : "None"} />
+              <Metric label="Combat Gold Bonus" icon={UI_ICONS.gold} value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} />
+            </div>
+            <button className="chunky-button primary dashboard-action-button" onClick={() => onNavigate?.("crew")} type="button">
+              Open Crew
             </button>
           </article>
         </section>

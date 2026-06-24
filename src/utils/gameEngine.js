@@ -5,6 +5,7 @@ import { craftableUpgrades } from "../data/crafting.js";
 import { enemies } from "../data/enemies.js";
 import { levels } from "../data/levels.js";
 import { regions } from "../data/regions.js";
+import { crewMembers } from "../data/crew.js";
 import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
 import { worldEvents } from "../data/worldEvents.js";
@@ -14,6 +15,7 @@ const CANNON_ORDER = cannons.map((cannon) => cannon.id);
 const CANNON_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id, cannon]));
 const CANNON_ID_BY_TIER = Object.fromEntries(cannons.map((cannon) => [cannon.tier, cannon.id]));
 const CANNON_TIER_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id, cannon.tier]));
+const CREW_BY_ID = Object.fromEntries(crewMembers.map((crewMember) => [crewMember.id, crewMember]));
 
 export function getXpRequired(level) {
   return levels.find((levelData) => levelData.level === level)?.xpRequired ?? Infinity;
@@ -195,6 +197,10 @@ export function getTalentPointsSpentInTree(gameState, treeId) {
     .reduce((total, talent) => total + (gameState.talents?.[talent.id] ?? 0), 0);
 }
 
+export function getCrewMemberById(crewId) {
+  return CREW_BY_ID[crewId] ?? crewMembers[0] ?? null;
+}
+
 export function canSpendTalentPoint(gameState, talent) {
   const currentPoints = gameState.talents?.[talent.id] ?? 0;
 
@@ -287,6 +293,104 @@ export function getTalentBonuses(gameState) {
   }
 
   return bonuses;
+}
+
+export function getCrewBonuses(gameState) {
+  const bonuses = {
+    combatXpMultiplier: 1,
+    volleyDamageMultiplier: 1,
+    repairCostMultiplier: 1,
+    combatGoldMultiplier: 1,
+    tradeSellMultiplier: 1,
+    treasureChanceMultiplier: 1
+  };
+
+  for (const crewMember of crewMembers) {
+    const level = Math.max(0, gameState.crew?.[crewMember.id]?.level ?? 1);
+
+    if (level <= 0) {
+      continue;
+    }
+
+    const value = level * crewMember.bonusPerLevel;
+
+    switch (crewMember.bonusType) {
+      case "combatXpMultiplier":
+        bonuses.combatXpMultiplier += value;
+        break;
+      case "volleyDamageMultiplier":
+        bonuses.volleyDamageMultiplier += value;
+        break;
+      case "repairCostMultiplier":
+        bonuses.repairCostMultiplier = Math.max(0.5, bonuses.repairCostMultiplier + value);
+        break;
+      case "combatGoldMultiplier":
+        bonuses.combatGoldMultiplier += value;
+        break;
+      case "tradeSellMultiplier":
+        bonuses.tradeSellMultiplier += value;
+        break;
+      case "treasureChanceMultiplier":
+        bonuses.treasureChanceMultiplier += value;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return bonuses;
+}
+
+export function getCrewUpgradeCost(crewMember, currentLevel) {
+  const nextLevel = currentLevel + 1;
+  const scale = Math.max(1, nextLevel);
+
+  switch (crewMember?.id) {
+    case "navigator":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        navigationCharts: 8 * scale,
+        compassFragments: 2 * scale
+      };
+    case "gunner":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        gunpowder: 16 * scale,
+        cannonParts: 4 * scale
+      };
+    case "carpenter":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        fish: 24 * scale,
+        whaleOil: 3 * scale
+      };
+    case "quartermaster":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        tradeContracts: 8 * scale,
+        tradeSeals: 2 * scale
+      };
+    case "merchant":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        tradeContracts: 12 * scale,
+        tradeSeals: 1 * scale
+      };
+    case "treasureHunter":
+      return {
+        gold: crewMember.upgradeCostBase * scale,
+        ancientRelics: 6 * scale,
+        rareMapPieces: 1 * scale
+      };
+    default:
+      return {
+        gold: 0
+      };
+  }
+}
+
+export function getRepairCostPerMissingHull(gameState) {
+  return 5 * getCrewBonuses(gameState).repairCostMultiplier;
 }
 
 export function getEffectiveBallsPerBattle(gameState) {
@@ -445,6 +549,7 @@ export function generateBoss(gameState, bossType = getUnlockedBosses(gameState)[
 export function getPlayerCombatStats(gameState) {
   const equippedCannons = getEquippedCannons(gameState);
   const talentBonuses = getTalentBonuses(gameState);
+  const crewBonuses = getCrewBonuses(gameState);
   const worldEventBonuses = getWorldEventBonuses(gameState);
   const maxHull = getMaxHull(gameState);
   const totalEquippedCannons = Object.values(equippedCannons).reduce((total, value) => total + value, 0);
@@ -463,7 +568,7 @@ export function getPlayerCombatStats(gameState) {
     cannonDamage,
     baseCannonDamage: BASE_CANNON_DAMAGE,
     cannonDamageMultiplier: averageCannonDamageMultiplier,
-    volleyDamage: effectiveCannons * cannonDamage,
+    volleyDamage: effectiveCannons * cannonDamage * crewBonuses.volleyDamageMultiplier,
     critChance: talentBonuses.critChance,
     critMultiplier: talentBonuses.critMultiplier,
     maxHull,
@@ -477,7 +582,9 @@ export function getPlayerCombatStats(gameState) {
 }
 
 export function getTreasureMapDropChance(gameState) {
-  return 0.15 * getTalentBonuses(gameState).treasureChanceMultiplier * getWorldEventBonuses(gameState).treasureMapDropMultiplier;
+  const talentBonuses = getTalentBonuses(gameState);
+  const crewBonuses = getCrewBonuses(gameState);
+  return 0.15 * talentBonuses.treasureChanceMultiplier * crewBonuses.treasureChanceMultiplier * getWorldEventBonuses(gameState).treasureMapDropMultiplier;
 }
 
 export function rollTreasureMapDrops(gameState, shipsSunk) {
@@ -621,7 +728,8 @@ export function getTradeGoodBuyPrice(gameState, good) {
 
 export function getTradeGoodSellPrice(gameState, good) {
   const marketPrice = gameState.marketPrices?.[good.id] ?? { sellModifier: 1 };
-  return Math.floor(good.baseSellPrice * marketPrice.sellModifier * getTradingSellMultiplier(gameState));
+  const crewBonuses = getCrewBonuses(gameState);
+  return Math.floor(good.baseSellPrice * marketPrice.sellModifier * getTradingSellMultiplier(gameState) * crewBonuses.tradeSellMultiplier);
 }
 
 export function getEstimatedCargoValue(gameState) {
@@ -654,6 +762,7 @@ export function getIdleCombatEstimate(gameState) {
   const combatStats = getPlayerCombatStats(gameState);
   const craftingBonuses = getCraftingBonuses(gameState);
   const talentBonuses = getTalentBonuses(gameState);
+  const crewBonuses = getCrewBonuses(gameState);
   const ballsPerVolley = getEffectiveBallsPerBattle(gameState);
   const averageCritMultiplier = 1 + combatStats.critChance * (combatStats.critMultiplier - 1);
   const averageVolleyDamage = Math.max(1, combatStats.volleyDamage * averageCritMultiplier);
@@ -671,14 +780,14 @@ export function getIdleCombatEstimate(gameState) {
     volleyIntervalSeconds,
     secondsPerEnemy,
     enemiesPerHour,
-    goldPerHour: enemiesPerHour * enemy.goldReward * talentBonuses.goldMultiplier + talentBonuses.passiveGoldPerHour,
-    xpPerHour: enemiesPerHour * enemy.xpReward * talentBonuses.xpMultiplier,
+    goldPerHour: enemiesPerHour * enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier + talentBonuses.passiveGoldPerHour,
+    xpPerHour: enemiesPerHour * enemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier,
     cannonballsPerHour: enemiesPerHour * cannonballsPerEnemy,
     hullDamagePerHour: enemiesPerHour * hullDamagePerEnemy,
     ballsPerVolley,
     hullDamagePerEnemy,
-    goldPerEnemy: enemy.goldReward * talentBonuses.goldMultiplier,
-    xpPerEnemy: enemy.xpReward * talentBonuses.xpMultiplier
+    goldPerEnemy: enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier,
+    xpPerEnemy: enemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier
   };
 }
 
@@ -693,6 +802,7 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   const cappedTimeMs = Math.min(timeAwayMs, offlineCapMs);
   const estimate = getIdleCombatEstimate(gameState);
   const talentBonuses = getTalentBonuses(gameState);
+  const crewBonuses = getCrewBonuses(gameState);
   let stoppedReason = timeAwayMs > offlineCapMs ? "offline_cap_reached" : null;
   const maxEnemiesByTime = Math.floor((cappedTimeMs / 1000) / estimate.secondsPerEnemy);
   const maxEnemiesByCannonballs = Math.floor(gameState.cannonballs / (estimate.volleysNeeded * estimate.ballsPerVolley));
@@ -719,9 +829,9 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
     enemiesSunk,
     shipsSunk: enemiesSunk,
     volleysFired,
-    goldEarned: (enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier) +
+    goldEarned: (enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier) +
       ((talentBonuses.passiveGoldPerHour * effectiveTimeMs) / (60 * 60 * 1000)),
-    xpEarned: enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier,
+    xpEarned: enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier,
     cannonballsSpent,
     cannonballsRecovered,
     netCannonballsUsed,

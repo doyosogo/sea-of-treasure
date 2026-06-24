@@ -6193,3 +6193,55 @@ h2 {
   height: 18px;
   object-fit: contain;
 }
+
+.crew-role-badge {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  color: var(--gold-300);
+  background: rgba(4, 17, 31, 0.82);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  font-size: 2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.crew-cost-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crew-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  color: var(--cream);
+  background: rgba(4, 17, 31, 0.72);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.crew-cost-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.crew-cost-left span {
+  color: #d8c99c;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.crew-cost-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  background: transparent;
+}

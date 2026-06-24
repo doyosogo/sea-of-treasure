@@ -12,6 +12,7 @@ import {
   getCurrentCannon,
   getEffectiveBallsPerBattle,
   getIdleCombatEstimate,
+  getRepairCostPerMissingHull,
   getPlayerCombatStats,
   getActiveWorldEvent
 } from "../utils/gameEngine.js";
@@ -36,7 +37,7 @@ function Battle({ gameState, dispatch }) {
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const enemyHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
-  const repairCost = missingHull * 5;
+  const repairCost = Math.floor(missingHull * getRepairCostPerMissingHull(gameState));
   const mainActionDisabled = battleEnemy ? gameState.cannonballs < getEffectiveBallsPerBattle(gameState) : !lastBattleEnemy;
   const mainActionLabel = battleEnemy ? "Fire Volley" : lastBattleEnemy ? "Battle Again" : "Choose an enemy below";
 

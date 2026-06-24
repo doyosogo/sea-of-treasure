@@ -4,6 +4,7 @@ import { enemies } from "../data/enemies.js";
 import { skills as skillDefinitions } from "../data/skills.js";
 import { talents as talentDefinitions } from "../data/talents.js";
 import { craftableUpgrades } from "../data/crafting.js";
+import { crewMembers } from "../data/crew.js";
 import { dailyQuestPool, weeklyQuestPool } from "../data/quests.js";
 import { regions } from "../data/regions.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
@@ -18,6 +19,8 @@ import {
   getCannonInventory,
   getCannonKeyByTier,
   getCannonCapacity,
+  getCrewBonuses,
+  getCrewUpgradeCost,
   generateBoss,
   generateEnemy,
   generateMarketPrices,
@@ -41,6 +44,7 @@ import {
   getBossById,
   getRegionById,
   getWorldEventBonuses,
+  getRepairCostPerMissingHull,
   getTalentBonuses,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
@@ -108,6 +112,15 @@ function createInitialCraftedUpgrades() {
     speedSails: 0,
     cannonBraces: 0
   };
+}
+
+function createInitialCrew() {
+  return Object.fromEntries(crewMembers.map((crewMember) => [
+    crewMember.id,
+    {
+      level: 1
+    }
+  ]));
 }
 
 function createInitialCannonInventory(defaultTierId = "iron", capacity = getShipCannonCapacity(1)) {
@@ -484,6 +497,7 @@ const initialState = {
   materials: createInitialMaterials(),
   rareMapPieces: 0,
   craftedUpgrades: createInitialCraftedUpgrades(),
+  crew: createInitialCrew(),
   quests: createInitialQuestState(),
   lifetimeStats: createInitialLifetimeStats(),
   claimedAchievements: [],
@@ -670,6 +684,19 @@ function normalizeMaterials(savedMaterials = {}) {
   ]));
 }
 
+function normalizeCrew(savedCrew = {}) {
+  const defaultCrew = createInitialCrew();
+
+  return Object.fromEntries(crewMembers.map((crewMember) => [
+    crewMember.id,
+    {
+      ...defaultCrew[crewMember.id],
+      ...savedCrew[crewMember.id],
+      level: Math.min(crewMember.maxLevel, Math.max(1, savedCrew[crewMember.id]?.level ?? 1))
+    }
+  ]));
+}
+
 function normalizeCargo(savedCargo = {}) {
   return Object.fromEntries(tradeGoods.map((good) => [
     good.id,
@@ -753,6 +780,7 @@ function loadSavedState() {
       cargo: normalizeCargo(parsedState.cargo),
       resources: normalizeResources(parsedState.resources),
       materials: normalizeMaterials(parsedState.materials),
+      crew: normalizeCrew(parsedState.crew),
       rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
       doubloons: Math.max(0, parsedState.doubloons ?? 0),
       craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
@@ -959,10 +987,11 @@ function addLifetimeBossDefeat(state, bossId) {
 function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
   const currentShip = getCurrentShip(state);
   const talentBonuses = getTalentBonuses(state);
+  const crewBonuses = getCrewBonuses(state);
   const worldEventBonuses = getWorldEventBonuses(state);
   const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
-  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * goldBonusMultiplier * worldEventBonuses.combatGoldMultiplier;
-  const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier;
+  const goldGained = battles * currentShip.goldPerShip * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier * goldBonusMultiplier * worldEventBonuses.combatGoldMultiplier;
+  const xpGained = battles * xpPerBattle * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier;
   const xpState = applyXp(state, xpGained);
 
   return {
@@ -978,12 +1007,13 @@ function applyBattleRewards(state, battles, xpPerBattle, options = {}) {
 
 function applyVictoryRewards(state, battleEnemy, options = {}) {
   const talentBonuses = getTalentBonuses(state);
+  const crewBonuses = getCrewBonuses(state);
   const worldEventBonuses = getWorldEventBonuses(state);
   const goldBonusMultiplier = options.activeCombatGoldBonus ? 1.35 : 1;
   const combatEventGoldMultiplier = battleEnemy?.isBoss ? worldEventBonuses.combatGoldMultiplier : 1;
   const bossRewardMultiplier = battleEnemy?.isBoss ? worldEventBonuses.bossRewardMultiplier : 1;
-  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * goldBonusMultiplier * combatEventGoldMultiplier * bossRewardMultiplier;
-  const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier * bossRewardMultiplier;
+  const goldGained = battleEnemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier * goldBonusMultiplier * combatEventGoldMultiplier * bossRewardMultiplier;
+  const xpGained = battleEnemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier * bossRewardMultiplier;
   const mapFound = Math.random() < Math.min(1, battleEnemy.mapDropChance * bossRewardMultiplier) ? 1 : 0;
   const rareMapPiecesFound = rollRareMapPieces((battleEnemy.rareMapPieceChance ?? 0.0005) * bossRewardMultiplier);
   const doubloonRollEnemy = battleEnemy?.isBoss
@@ -1407,7 +1437,8 @@ function gameStateReducer(state, action) {
         return clampedState;
       }
 
-      const repairAmount = Math.min(missingHull, Math.floor(clampedState.gold / 5));
+      const repairCostPerHull = getRepairCostPerMissingHull(clampedState);
+      const repairAmount = Math.min(missingHull, Math.floor(clampedState.gold / repairCostPerHull));
 
       if (repairAmount <= 0) {
         return addActivityLogEntry(clampedState, "Not enough gold to repair hull.", "warning");
@@ -1415,7 +1446,7 @@ function gameStateReducer(state, action) {
 
       return addActivityLogEntry({
         ...clampedState,
-        gold: clampedState.gold - repairAmount * 5,
+        gold: clampedState.gold - Math.floor(repairAmount * repairCostPerHull),
         hull: {
           current: clampedState.hull.current + repairAmount,
           max: clampedState.hull.max
@@ -1828,9 +1859,10 @@ function gameStateReducer(state, action) {
 
       const treasureSkillDefinition = skillDefinitions.find((skill) => skill.id === "treasureHunting");
       const talentBonuses = getTalentBonuses(state);
+      const crewBonuses = getCrewBonuses(state);
       const goldReward = randomInt(site.goldMin, site.goldMax) * talentBonuses.goldMultiplier;
       const xpReward = site.xpReward * talentBonuses.xpMultiplier;
-      const rareChance = site.rareChance * talentBonuses.treasureChanceMultiplier;
+      const rareChance = site.rareChance * talentBonuses.treasureChanceMultiplier * crewBonuses.treasureChanceMultiplier;
       const rareFound = Math.random() < rareChance ? getRareTreasure(now) : null;
       const materialReward = getTreasureMaterialReward(site);
       const rareMapPiecesFound = rollRareMapPieces(0.005);
@@ -2106,6 +2138,64 @@ function gameStateReducer(state, action) {
         }
       }), `${talent.name} increased to ${(state.talents[talent.id] ?? 0) + 1}/${talent.maxPoints}.`);
     }
+    case "UPGRADE_CREW_MEMBER": {
+      const crewMember = crewMembers.find((member) => member.id === action.crewId);
+
+      if (!crewMember) {
+        return state;
+      }
+
+      const currentLevel = state.crew?.[crewMember.id]?.level ?? 1;
+
+      if (currentLevel >= crewMember.maxLevel) {
+        return state;
+      }
+
+      const cost = getCrewUpgradeCost(crewMember, currentLevel);
+      const hasMaterials =
+        (state.materials?.navigationCharts ?? 0) >= (cost.navigationCharts ?? 0) &&
+        (state.materials?.compassFragments ?? 0) >= (cost.compassFragments ?? 0) &&
+        (state.materials?.gunpowder ?? 0) >= (cost.gunpowder ?? 0) &&
+        (state.materials?.cannonParts ?? 0) >= (cost.cannonParts ?? 0) &&
+        (state.materials?.ancientRelics ?? 0) >= (cost.ancientRelics ?? 0) &&
+        (state.materials?.tradeContracts ?? 0) >= (cost.tradeContracts ?? 0) &&
+        (state.materials?.tradeSeals ?? 0) >= (cost.tradeSeals ?? 0) &&
+        (state.resources?.fish ?? 0) >= (cost.fish ?? 0) &&
+        (state.resources?.whaleOil ?? 0) >= (cost.whaleOil ?? 0) &&
+        (state.rareMapPieces ?? 0) >= (cost.rareMapPieces ?? 0);
+
+      if (state.gold < (cost.gold ?? 0) || !hasMaterials) {
+        return addActivityLogEntry(state, `Not enough resources to upgrade ${crewMember.name}.`, "warning");
+      }
+
+      return addActivityLogEntry({
+        ...state,
+        gold: state.gold - (cost.gold ?? 0),
+        materials: {
+          ...state.materials,
+          navigationCharts: state.materials.navigationCharts - (cost.navigationCharts ?? 0),
+          compassFragments: state.materials.compassFragments - (cost.compassFragments ?? 0),
+          gunpowder: state.materials.gunpowder - (cost.gunpowder ?? 0),
+          cannonParts: state.materials.cannonParts - (cost.cannonParts ?? 0),
+          ancientRelics: state.materials.ancientRelics - (cost.ancientRelics ?? 0),
+          tradeContracts: state.materials.tradeContracts - (cost.tradeContracts ?? 0),
+          tradeSeals: state.materials.tradeSeals - (cost.tradeSeals ?? 0)
+        },
+        resources: {
+          ...state.resources,
+          fish: state.resources.fish - (cost.fish ?? 0),
+          whaleOil: state.resources.whaleOil - (cost.whaleOil ?? 0)
+        },
+        rareMapPieces: state.rareMapPieces - (cost.rareMapPieces ?? 0),
+        crew: {
+          ...state.crew,
+          [crewMember.id]: {
+            level: currentLevel + 1
+          }
+        },
+        lastSeen: Date.now()
+      }, `${crewMember.role} promoted to Lv. ${currentLevel + 1}.`);
+    }
     case "LEVEL_UP":
       if (state.playerLevel >= MAX_PLAYER_LEVEL) {
         return state;
@@ -2150,6 +2240,7 @@ function gameStateReducer(state, action) {
       }
 
       const talentBonuses = getTalentBonuses(state);
+      const crewBonuses = getCrewBonuses(state);
       const seconds = action.seconds ?? 1;
       const estimate = getIdleCombatEstimate(state);
       const passiveGold = (talentBonuses.passiveGoldPerHour / 3600) * seconds;
@@ -2220,8 +2311,8 @@ function gameStateReducer(state, action) {
       const cannonballsRecovered = rollCannonballRecovery(state, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
       const mapsFound = rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk);
       const rareMapPiecesFound = rollRareMapPieces(0.0005, enemiesSunk);
-      const goldEarned = enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier;
-      const xpEarned = enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier;
+      const goldEarned = enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier;
+      const xpEarned = enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier;
       const xpState = applyXp({
         ...state,
         gold: state.gold + goldEarned + passiveGold,

@@ -13,12 +13,14 @@ import {
   getCargoCapacity,
   getCraftingBonuses,
   getCraftingEffect,
+  getCrewBonuses,
   getActiveRegion,
   getRecommendedRegion,
   getCurrentCannon,
   getCurrentShip,
   getIdleCombatEstimate,
   getPlayerCombatStats,
+  getRepairCostPerMissingHull,
   getCannonInventory,
   getEquippedCannons,
   getTotalEquippedCannons
@@ -29,10 +31,12 @@ function MyShip({ gameState, dispatch }) {
   const currentCannon = getCurrentCannon(gameState);
   const combatStats = getPlayerCombatStats(gameState);
   const craftingBonuses = getCraftingBonuses(gameState);
+  const crewBonuses = getCrewBonuses(gameState);
   const idleEstimate = getIdleCombatEstimate(gameState);
   const baseHull = 100 + currentShip.level * 40;
   const hullPercent = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
+  const repairCost = Math.floor(missingHull * getRepairCostPerMissingHull(gameState));
   const talents = gameState.talents ?? {};
   const cannonImage = CANNON_IMAGES[currentCannon.tier];
   const cannonInventory = getCannonInventory(gameState);
@@ -98,7 +102,7 @@ function MyShip({ gameState, dispatch }) {
               <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} />
               <Metric icon={UI_GOLD} label="Reinforced Hull Bonus" value={`${formatNumber((craftingBonuses.hullMultiplier - 1) * 100)}%`} />
               <Metric icon={UI_HULL} label="Iron Hull Talent Bonus" value={`${formatNumber((talents.ironHull ?? 0) * 5)}%`} />
-              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(missingHull * 5)} Gold`} />
+              <Metric icon={UI_GOLD} label="Repair Cost to Full" value={`${formatNumber(repairCost)} Gold`} />
             </div>
             <button
               className="chunky-button"
@@ -222,6 +226,15 @@ function MyShip({ gameState, dispatch }) {
               <Metric label="Chest Seeker" value={`${formatNumber((talents.chestSeeker ?? 0) * 2)}% treasure chance`} icon={UI_GOLD} />
               <Metric label="Merchant's Touch" value={`${formatNumber((talents.merchantsTouch ?? 0) * 2)}% sell value`} icon={UI_GOLD} />
               <Metric label="Trade Wind" value={`+${formatNumber((talents.tradeWind ?? 0) * 50)} gold/hour`} icon={UI_GOLD} />
+            </div>
+          </article>
+
+          <article className="shipyard-panel">
+            <h2>Crew Bonuses</h2>
+            <div className="shipyard-card-stats">
+              <Metric icon={UI_GOLD} label="Gunner Volley Bonus" value={`${formatNumber((crewBonuses.volleyDamageMultiplier - 1) * 100)}%`} />
+              <Metric icon={UI_GOLD} label="Carpenter Repair Discount" value={`${formatNumber((1 - crewBonuses.repairCostMultiplier) * 100)}%`} />
+              <Metric icon={UI_GOLD} label="Quartermaster Gold Bonus" value={`${formatNumber((crewBonuses.combatGoldMultiplier - 1) * 100)}%`} />
             </div>
           </article>
 

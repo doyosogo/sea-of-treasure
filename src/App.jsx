@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
 import Fleet from "./pages/Fleet.jsx";
 import MyShip from "./pages/MyShip.jsx";
+import Crew from "./pages/Crew.jsx";
 import Quests from "./pages/Quests.jsx";
 import Skills from "./pages/Skills.jsx";
 import Talents from "./pages/Talents.jsx";
@@ -19,6 +20,7 @@ import { useGameState } from "./hooks/useGameState.js";
 const pageRegistry = {
   dashboard: { label: "Dashboard", component: Dashboard },
   myShip: { label: "My Ship", component: MyShip },
+  crew: { label: "Crew", component: Crew },
   battle: { label: "Battle", component: Battle },
   quests: { label: "Quests", component: Quests },
   skills: { label: "Skills", component: Skills },
@@ -33,7 +35,7 @@ const pageRegistry = {
   treasure: { label: "Treasure", component: Treasure }
 };
 
-const navOrder = ["dashboard", "myShip", "battle", "quests", "skills", "talents", "shop", "port", "achievements", "settings"];
+const navOrder = ["dashboard", "myShip", "crew", "battle", "quests", "skills", "talents", "shop", "port", "achievements", "settings"];
 
 function App() {
   const [activePage, setActivePage] = useState("dashboard");
