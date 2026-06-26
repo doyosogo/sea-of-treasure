@@ -26,6 +26,9 @@ function Dashboard({ gameState, onNavigate }) {
   const idleEstimate = getIdleCombatEstimate(gameState);
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpProgress = xpRequired === Infinity ? 100 : (gameState.playerXP / xpRequired) * 100;
+  const xpLabel = xpRequired === Infinity
+    ? "Max Level"
+    : `${formatNumber(gameState.playerXP)} / ${formatNumber(xpRequired)} XP`;
   const recentLogs = (gameState.activityLog ?? []).slice(0, 5);
   const quests = gameState.quests ?? { daily: [], weekly: [], lastDailyReset: Date.now(), lastWeeklyReset: Date.now() };
   const dailyComplete = (quests.daily ?? []).filter((quest) => (quest.progress ?? 0) >= quest.target).length;
@@ -122,9 +125,7 @@ function Dashboard({ gameState, onNavigate }) {
             <div className="dashboard-progress">
               <div className="level-row">
                 <span>Level {gameState.playerLevel}</span>
-                <span>
-                  {formatNumber(gameState.playerXP)} / {formatNumber(xpRequired)} XP
-                </span>
+                <span>{xpLabel}</span>
               </div>
               <div className="progress-track" aria-label="XP progress">
                 <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />

@@ -107,16 +107,6 @@ export const achievements = [
     target: 1
   },
   {
-    id: "reach_level_5",
-    category: "Progression",
-    name: "Seasoned Sailor",
-    description: "Reach player level 5.",
-    rewardGold: 5000,
-    rewardTalentPoints: 1,
-    rewardDoubloons: 1,
-    target: 5
-  },
-  {
     id: "reach_level_10",
     category: "Progression",
     name: "Veteran Captain",
@@ -127,14 +117,24 @@ export const achievements = [
     target: 10
   },
   {
-    id: "reach_level_15",
+    id: "reach_level_25",
+    category: "Progression",
+    name: "Ocean Pathfinder",
+    description: "Reach player level 25.",
+    rewardGold: 500000,
+    rewardTalentPoints: 4,
+    rewardDoubloons: 3,
+    target: 25
+  },
+  {
+    id: "reach_level_50",
     category: "Progression",
     name: "Legend of the Sea",
-    description: "Reach player level 15.",
-    rewardGold: 1000000,
-    rewardTalentPoints: 5,
-    rewardDoubloons: 3,
-    target: 15
+    description: "Reach player level 50.",
+    rewardGold: 5000000,
+    rewardTalentPoints: 8,
+    rewardDoubloons: 8,
+    target: 50
   },
   {
     id: "own_3_ships",

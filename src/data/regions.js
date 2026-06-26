@@ -24,7 +24,7 @@ export const regions = [
     name: "Pirate Frontier",
     description: "Lawless waters where raiders test every hull.",
     requiredLevel: 10,
-    recommendedShipLevel: 10,
+    recommendedShipLevel: 8,
     backgroundDifficultyModifier: 0.25,
     goldMultiplier: 1.25,
     xpMultiplier: 1.25
@@ -34,7 +34,7 @@ export const regions = [
     name: "Royal Seas",
     description: "Patrolled channels beneath the crown's banners.",
     requiredLevel: 20,
-    recommendedShipLevel: 20,
+    recommendedShipLevel: 19,
     backgroundDifficultyModifier: 0.5,
     goldMultiplier: 1.5,
     xpMultiplier: 1.5

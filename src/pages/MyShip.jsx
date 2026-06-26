@@ -36,7 +36,7 @@ function MyShip({ gameState, dispatch }) {
   const craftingBonuses = getCraftingBonuses(gameState);
   const crewBonuses = getCrewBonuses(gameState);
   const idleEstimate = getIdleCombatEstimate(gameState);
-  const baseHull = 100 + currentShip.level * 40;
+  const baseHull = currentShip.hull ?? 100 + currentShip.level * 40;
   const hullPercent = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
   const repairCost = Math.floor(missingHull * getRepairCostPerMissingHull(gameState));

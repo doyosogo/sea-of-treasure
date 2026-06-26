@@ -518,7 +518,7 @@ export function getMaxHull(gameState) {
   const currentShip = getCurrentShip(gameState);
   const talentBonuses = getTalentBonuses(gameState);
   const craftingBonuses = getCraftingBonuses(gameState);
-  const baseHull = 100 + currentShip.level * 40;
+  const baseHull = currentShip.hull ?? 100 + currentShip.level * 40;
 
   return Math.round(baseHull * talentBonuses.maxHullMultiplier * craftingBonuses.hullMultiplier);
 }
@@ -740,7 +740,8 @@ function randomModifier() {
 }
 
 export function getCargoCapacity(gameState) {
-  return 100 + getCurrentShip(gameState).cannons * 2;
+  const currentShip = getCurrentShip(gameState);
+  return currentShip.cargoCapacity ?? 100 + currentShip.cannons * 2;
 }
 
 export function getCannonCapacity(gameState) {
@@ -964,9 +965,9 @@ export function getAchievementProgress(achievement, gameState) {
     case "sink_10000_ships":
       current = lifetimeStats.totalShipsSunk ?? gameState.totalShipsSunk ?? 0;
       break;
-    case "reach_level_5":
     case "reach_level_10":
-    case "reach_level_15":
+    case "reach_level_25":
+    case "reach_level_50":
       current = gameState.playerLevel ?? 1;
       break;
     case "own_3_ships":

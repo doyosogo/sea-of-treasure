@@ -12,6 +12,7 @@ import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
 import { ammunition } from "../data/ammunition.js";
 import { ships } from "../data/ships.js";
+import { MAX_PLAYER_LEVEL } from "../data/levels.js";
 import {
   ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
   DEFAULT_COMBAT_DOUBLOON_CHANCE,
@@ -75,7 +76,6 @@ import {
 } from "../utils/gameEngine.js";
 
 const STORAGE_KEY = "sot_save";
-const MAX_PLAYER_LEVEL = 15;
 const BASE_SKILL_XP_REWARD = 100;
 const MARKET_REFRESH_COOLDOWN_MS = MARKET_CYCLE_DURATION_MS;
 const DAY_MS = QUEST_DAILY_RESET_MS;
