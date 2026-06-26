@@ -10,6 +10,7 @@ import {
   TALENT_ICONS,
   UI_ICONS
 } from "../data/assets.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import {
   ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
   BEGINNER_DAMAGE_REDUCTION_MULTIPLIER,
@@ -45,6 +46,7 @@ import {
 const STORAGE_KEY = "sot_save";
 
 function Settings({ gameState, dispatch }) {
+  const { user, logout } = useAuth();
   const [exportedJson, setExportedJson] = useState("");
   const [importJson, setImportJson] = useState("");
   const [status, setStatus] = useState(null);
@@ -219,6 +221,24 @@ function Settings({ gameState, dispatch }) {
           {status.message}
         </div>
       )}
+
+      <article className="pixel-panel settings-panel">
+        <h2>Account</h2>
+        {user ? (
+          <>
+            <div className="summary-stat-grid">
+              <Stat label="Username" value={user.username} />
+              <Stat label="Email" value={user.email} />
+            </div>
+            <p className="shop-note">Cloud save sync is not enabled yet. Your current game still uses local browser storage.</p>
+            <button className="chunky-button danger" onClick={logout} type="button">
+              Logout
+            </button>
+          </>
+        ) : (
+          <p className="shop-note">Playing offline. Login to enable cloud saves later.</p>
+        )}
+      </article>
 
       <article className="pixel-panel settings-panel">
         <h2>Export Save</h2>

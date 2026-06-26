@@ -18,8 +18,26 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email().transform((value) => value.toLowerCase()),
+  email: z.string().trim().optional(),
+  username: z.string().trim().optional(),
   password: z.string().min(1).max(128)
+}).transform((value, context) => {
+  const identifier = value.email || value.username;
+
+  if (!identifier) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Email or username is required.",
+      path: ["email"]
+    });
+    return z.NEVER;
+  }
+
+  return {
+    identifier,
+    emailIdentifier: identifier.toLowerCase(),
+    password: value.password
+  };
 });
 
 const tokenSchema = z.object({
@@ -62,8 +80,13 @@ export async function register(request, response, next) {
 export async function login(request, response, next) {
   try {
     const input = loginSchema.parse(request.body);
-    const userWithPassword = await prisma.user.findUnique({
-      where: { email: input.email }
+    const userWithPassword = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: input.emailIdentifier },
+          { username: input.identifier }
+        ]
+      }
     });
 
     if (!userWithPassword) {

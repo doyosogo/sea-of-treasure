@@ -1,6 +1,6 @@
 # Backend Local Testing
 
-These examples assume the API is running at `http://localhost:4000`.
+These examples assume the API is running at `http://localhost:3001`.
 
 ## Setup
 
@@ -24,7 +24,7 @@ npx prisma migrate dev --name add_save_game
 ## Health Check
 
 ```bash
-curl http://localhost:4000/api/health
+curl http://localhost:3001/api/health
 ```
 
 Expected response:
@@ -36,7 +36,7 @@ Expected response:
 ## Register
 
 ```bash
-curl -X POST http://localhost:4000/api/auth/register \
+curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"captain@example.com","username":"captain","password":"password123"}'
 ```
@@ -46,7 +46,7 @@ The response includes `user`, `accessToken`, and `refreshToken`. The `user` obje
 ## Login
 
 ```bash
-curl -X POST http://localhost:4000/api/auth/login \
+curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"captain@example.com","password":"password123"}'
 ```
@@ -61,7 +61,7 @@ REFRESH_TOKEN="paste-refresh-token"
 ## Current User
 
 ```bash
-curl http://localhost:4000/api/auth/me \
+curl http://localhost:3001/api/auth/me \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -70,7 +70,7 @@ curl http://localhost:4000/api/auth/me \
 The cloud save endpoints require a valid access token. This does not change or remove browser `localStorage` saves.
 
 ```bash
-curl -X PUT http://localhost:4000/api/save \
+curl -X PUT http://localhost:3001/api/save \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"version":"1.0","data":{"playerLevel":1,"gold":0,"ownedShips":[1]}}'
@@ -81,7 +81,7 @@ The response returns the saved data, version, and `updatedAt`.
 ## Load Cloud Progress
 
 ```bash
-curl http://localhost:4000/api/save \
+curl http://localhost:3001/api/save \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -96,7 +96,7 @@ If no cloud save exists yet, the response is:
 Refresh rotates the refresh token. Replace your local token variables with the returned values.
 
 ```bash
-curl -X POST http://localhost:4000/api/auth/refresh \
+curl -X POST http://localhost:3001/api/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\":\"$REFRESH_TOKEN\"}"
 ```
@@ -104,7 +104,7 @@ curl -X POST http://localhost:4000/api/auth/refresh \
 ## Logout
 
 ```bash
-curl -X POST http://localhost:4000/api/auth/logout \
+curl -X POST http://localhost:3001/api/auth/logout \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\":\"$REFRESH_TOKEN\"}"
 ```

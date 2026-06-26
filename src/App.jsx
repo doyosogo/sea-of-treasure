@@ -1,7 +1,9 @@
 import { useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
+import Landing from "./pages/Landing.jsx";
 import MyShip from "./pages/MyShip.jsx";
 import Crew from "./pages/Crew.jsx";
 import Quests from "./pages/Quests.jsx";
@@ -32,6 +34,33 @@ const pageRegistry = {
 const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "talents", "shop", "port", "achievements", "settings"];
 
 function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [offlineMode, setOfflineMode] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="app-loading-screen">
+        <span>Loading Sea of Treasure...</span>
+      </div>
+    );
+  }
+
+  if (!user && !offlineMode) {
+    return <Landing onPlayOffline={() => setOfflineMode(true)} />;
+  }
+
+  return <GameApp />;
+}
+
+function GameApp() {
   const [activePage, setActivePage] = useState("dashboard");
   const { gameState, dispatch } = useGameState();
   const ActivePage = pageRegistry[activePage].component;
