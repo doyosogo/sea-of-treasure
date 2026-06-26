@@ -55,15 +55,15 @@ function OfflineSummary({ gameState, dispatch }) {
             <strong>{formatNumber(rewards.xpEarned)}</strong>
           </div>
           <div className="resource-row">
-            <span>Cannonballs Spent</span>
+            <span>{rewards.ammoName ? `${rewards.ammoName} Spent` : "Ammo Spent"}</span>
             <strong>{formatNumber(rewards.cannonballsSpent ?? rewards.cannonballsUsed ?? 0)}</strong>
           </div>
           <div className="resource-row">
-            <span>Cannonballs Recovered</span>
+            <span>{rewards.ammoName ? `${rewards.ammoName} Recovered` : "Ammo Recovered"}</span>
             <strong>{formatNumber(rewards.cannonballsRecovered ?? 0)}</strong>
           </div>
           <div className="resource-row">
-            <span>Net Cannonballs Used</span>
+            <span>{rewards.ammoName ? `Net ${rewards.ammoName} Used` : "Net Ammo Used"}</span>
             <strong>{formatNumber(rewards.netCannonballsUsed ?? rewards.cannonballsUsed ?? 0)}</strong>
           </div>
           <div className="resource-row">

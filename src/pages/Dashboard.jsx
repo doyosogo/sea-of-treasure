@@ -12,6 +12,8 @@ import {
   getIdleCombatEstimate,
   getActiveRegion,
   getActiveWorldEvent,
+  getTotalAmmoCount,
+  getSelectedAmmo,
   getXpRequired
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
@@ -41,13 +43,16 @@ function Dashboard({ gameState, onNavigate }) {
     return best;
   }, null);
   const crewBonuses = getCrewBonuses(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
+  const totalAmmo = getTotalAmmoCount(gameState);
   const highestCrewMember = highestCrewEntry
     ? crewMembers.find((member) => member.id === highestCrewEntry[0]) ?? null
     : null;
   const resourceRows = [
     { label: "Gold", value: gameState.gold, icon: UI_ICONS.gold, tooltip: "Gold is earned from combat, trading, quests, and events. Spend it on ships, cannons, repairs, and upgrades." },
     { label: "Doubloons", value: gameState.doubloons, icon: UI_DOUBLOONS, tooltip: "Doubloons are rare account currency earned from bosses, treasure, quests, and achievements." },
-    { label: "Cannonballs", value: gameState.cannonballs, icon: UI_ICONS.cannonballs, tooltip: "Cannonballs are spent when firing volleys in combat. Buy or restock them in the Shop." },
+    { label: "Selected Ammo", value: selectedAmmo.name, icon: UI_ICONS.cannonballs, tooltip: "This ammo type is used when you fire a volley." },
+    { label: "Ammo Stock", value: totalAmmo, icon: UI_ICONS.cannonballs, tooltip: "All ammo types combined in storage." },
     { label: "Treasure Maps", value: gameState.treasureMaps, icon: UI_ICONS.treasureMaps, tooltip: "Treasure maps are recovered from defeated ships and used to start treasure digs." },
     { label: "Rare Map Pieces", value: gameState.rareMapPieces, icon: RESOURCE_ICONS.rareMapPiece, tooltip: "Rare Map Pieces are very uncommon loot used for later upgrades and progression." },
     { label: "Gunpowder", value: gameState.materials.gunpowder, icon: RESOURCE_ICONS.gunpowder, tooltip: "Gunpowder is produced by Gunnery and used for cannon upgrades, crew, and future crafting." },
@@ -147,7 +152,8 @@ function Dashboard({ gameState, onNavigate }) {
             <div className="voyage-grid">
               <Metric label="Current Region" icon={UI_ICONS.gold} value={activeRegion.name} tooltip="Your active region changes enemy difficulty and rewards." />
               <Metric label="Hull" icon={UI_ICONS.hull} value={`${formatNumber(gameState.hull.current)} / ${formatNumber(gameState.hull.max)}`} tooltip="Hull is your ship health. If it reaches zero, combat ends." />
-              <Metric label="Cannonballs" icon={UI_ICONS.cannonballs} value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are consumed when firing volleys in combat." />
+              <Metric label="Selected Ammo" icon={UI_ICONS.cannonballs} value={selectedAmmo.name} tooltip="This ammo type is used when you fire a volley." />
+              <Metric label="Ammo Stock" icon={UI_ICONS.cannonballs} value={formatNumber(totalAmmo)} tooltip="All ammo types combined in storage." />
               <Metric label="Cannon Tier" icon={UI_ICONS.gold} value={`Tier ${currentCannon.tier}`} tooltip="Cannon tier controls your cannon quality and damage multiplier." />
               <Metric label="Cannon Name" icon={UI_ICONS.gold} value={currentCannon.name} tooltip="This is the currently equipped cannon quality." />
             </div>
@@ -204,7 +210,7 @@ function Dashboard({ gameState, onNavigate }) {
                       <span>{resource.label}</span>
                     </Tooltip>
                   </div>
-                  <strong>{formatNumber(resource.value)}</strong>
+                  <strong>{typeof resource.value === "number" ? formatNumber(resource.value) : resource.value}</strong>
                 </div>
               ))}
             </div>

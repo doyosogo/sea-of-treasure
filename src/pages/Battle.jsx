@@ -5,11 +5,13 @@ import {
   UI_ICONS
 } from "../data/assets.js";
 import Tooltip from "../components/Tooltip.jsx";
+import { ammunition } from "../data/ammunition.js";
 import { regions } from "../data/regions.js";
 import {
   formatNumber,
   generateBoss,
   generateEnemy,
+  getAmmoQuantity,
   getCurrentCannon,
   getEffectiveBallsPerBattle,
   getIdleCombatEstimate,
@@ -34,12 +36,15 @@ function Battle({ gameState, dispatch }) {
     : null;
   const activeRegion = regions.find((region) => region.id === gameState.activeRegionId) ?? regions[0];
   const activeWorldEvent = getActiveWorldEvent(gameState);
+  const ammoInventory = gameState.ammoInventory ?? {};
+  const selectedAmmo = ammunition.find((ammo) => ammo.id === gameState.selectedAmmoId) ?? ammunition[0];
+  const totalAmmo = Object.values(ammoInventory).reduce((total, value) => total + (value ?? 0), 0);
   const activeEnemy = battleEnemy ?? selectedEnemyType ?? lastBattleEnemy;
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const enemyHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
   const missingHull = Math.max(0, combatStats.maxHull - combatStats.currentHull);
   const repairCost = Math.floor(missingHull * getRepairCostPerMissingHull(gameState));
-  const mainActionDisabled = battleEnemy ? gameState.cannonballs < getEffectiveBallsPerBattle(gameState) : !lastBattleEnemy;
+  const mainActionDisabled = battleEnemy ? getAmmoQuantity(gameState, selectedAmmo.id) < getEffectiveBallsPerBattle(gameState) : !lastBattleEnemy;
   const mainActionLabel = battleEnemy ? "Fire Volley" : lastBattleEnemy ? "Battle Again" : "Choose an enemy below";
 
   function handleMainCombatAction() {
@@ -177,10 +182,26 @@ function Battle({ gameState, dispatch }) {
               </div>
 
               <div className="battle-stat-strip">
-                <Metric icon={UI_ICONS.cannonballs} label="Cannonballs" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent every volley. Keep a reserve for longer fights." />
+                <Metric icon={UI_ICONS.cannonballs} label="Selected Ammo" value={selectedAmmo.name} tooltip="This ammo type is used when you fire a volley." />
+                <Metric icon={UI_ICONS.cannonballs} label="Ammo Stock" value={formatNumber(totalAmmo)} tooltip="Total ammo across all types." />
                 <Metric icon={UI_ICONS.gold} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} tooltip="Volley damage is the total damage of one firing cycle before crits." />
                 <Metric icon={UI_ICONS.xp} label="Shots Fired" value={battleEnemy ? formatNumber(currentBattle.shotsFired) : "0"} tooltip="Shots fired counts the number of volleys launched in the current battle." />
                 <Metric icon={UI_ICONS.hull} label="Repair Cost" value={formatNumber(repairCost)} tooltip="Repair cost is based on missing hull. Carpenter crew members can reduce it." />
+              </div>
+
+              <div className="battle-ammo-selector">
+                {ammunition.map((ammo) => (
+                  <button
+                    className={ammo.id === gameState.selectedAmmoId ? "ammo-select-card selected" : "ammo-select-card"}
+                    key={ammo.id}
+                    onClick={() => dispatch({ type: "SELECT_AMMO", ammoId: ammo.id })}
+                    type="button"
+                  >
+                    <span>{ammo.name}</span>
+                    <strong>{formatNumber(ammoInventory[ammo.id] ?? 0)}</strong>
+                    <small>{formatNumber(ammo.damageMultiplier)}x damage</small>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -366,7 +387,7 @@ function Battle({ gameState, dispatch }) {
               <Metric icon={UI_ICONS.xp} label="Kills / Hour" value={formatNumber(idleEstimate.enemiesPerHour)} tooltip="Estimated enemy defeats per hour while idling." />
               <Metric icon={UI_ICONS.gold} label="Gold / Hour" value={formatNumber(idleEstimate.goldPerHour)} tooltip="Estimated gold earned per hour while idling." />
               <Metric icon={UI_ICONS.xp} label="XP / Hour" value={formatNumber(idleEstimate.xpPerHour)} tooltip="Estimated XP earned per hour while idling." />
-              <Metric icon={UI_ICONS.cannonballs} label="Cannonballs / Hour" value={formatNumber(idleEstimate.cannonballsPerHour)} tooltip="Estimated cannonballs spent per hour while idling." />
+              <Metric icon={UI_ICONS.cannonballs} label="Ammo / Hour" value={formatNumber(idleEstimate.cannonballsPerHour)} tooltip="Estimated ammo spent per hour while idling." />
               <Metric icon={UI_ICONS.hull} label="Hull Damage / Hour" value={formatNumber(idleEstimate.hullDamagePerHour)} tooltip="Estimated hull damage taken per hour while idling." />
             </div>
           </article>

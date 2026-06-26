@@ -16,6 +16,7 @@ import {
   getCraftingEffect,
   getCrewBonuses,
   getActiveRegion,
+  getSelectedAmmo,
   getRecommendedRegion,
   getCurrentCannon,
   getCurrentShip,
@@ -24,6 +25,7 @@ import {
   getRepairCostPerMissingHull,
   getCannonInventory,
   getEquippedCannons,
+  getTotalAmmoCount,
   getTotalEquippedCannons
 } from "../utils/gameEngine.js";
 
@@ -44,6 +46,8 @@ function MyShip({ gameState, dispatch }) {
   const equippedCannons = getEquippedCannons(gameState);
   const totalEquippedCannons = getTotalEquippedCannons(gameState);
   const cannonCapacity = getCannonCapacity(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
+  const totalAmmo = getTotalAmmoCount(gameState);
   const activeRegion = getActiveRegion(gameState);
   const recommendedRegion = getRecommendedRegion(gameState);
 
@@ -135,6 +139,8 @@ function MyShip({ gameState, dispatch }) {
             <div className="shipyard-card-stats">
               <Metric icon={UI_CANNONBALLS} label="Cannon Capacity" value={formatNumber(cannonCapacity)} tooltip="The maximum number of cannons that can be equipped on this ship." />
               <Metric icon={UI_CANNONBALLS} label="Cannons Equipped" value={formatNumber(totalEquippedCannons)} tooltip="The total number of cannons currently equipped across all tiers." />
+              <Metric icon={UI_CANNONBALLS} label="Selected Ammo" value={selectedAmmo.name} tooltip="This ammo type is currently selected for combat." />
+              <Metric icon={UI_CANNONBALLS} label="Ammo Stock" value={formatNumber(totalAmmo)} tooltip="All ammo types combined in storage." />
             </div>
             <div className="shipyard-loadout-grid">
               {cannons.map((cannon) => {
@@ -246,7 +252,7 @@ function MyShip({ gameState, dispatch }) {
               <Metric label="Estimated Enemy HP" value={formatNumber(idleEstimate.enemy.maxHP)} icon={UI_HULL} tooltip="Estimated enemy hull in the selected region." />
               <Metric label="Estimated Enemy Damage" value={formatNumber(idleEstimate.enemy.damage)} icon={UI_HULL} tooltip="Estimated damage dealt back to your ship per enemy hit." />
               <Metric label="Volleys to Defeat" value={formatNumber(idleEstimate.volleysNeeded)} icon={UI_CANNONBALLS} tooltip="How many volleys are expected to sink the selected enemy." />
-              <Metric label="Cannonballs Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} icon={UI_CANNONBALLS} tooltip="Estimated cannonballs needed to defeat one enemy." />
+              <Metric label="Ammo Needed" value={formatNumber(idleEstimate.volleysNeeded * idleEstimate.ballsPerVolley)} icon={UI_CANNONBALLS} tooltip="Estimated ammo needed to defeat one enemy." />
               <Metric label="Hull Damage Taken" value={formatNumber(idleEstimate.hullDamagePerEnemy)} icon={UI_HULL} tooltip="Estimated hull damage taken when that enemy wins a hit." />
               <Metric label="Reward Gold" value={formatNumber(idleEstimate.goldPerEnemy)} icon={UI_GOLD} tooltip="Estimated gold rewarded for defeating the selected enemy." />
               <Metric label="Reward XP" value={formatNumber(idleEstimate.xpPerEnemy)} icon={UI_GOLD} tooltip="Estimated XP rewarded for defeating the selected enemy." />

@@ -10,6 +10,7 @@ import { ships } from "../data/ships.js";
 import { talents } from "../data/talents.js";
 import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
+import { ammunition } from "../data/ammunition.js";
 import {
   ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
   BEGINNER_DAMAGE_REDUCTION_MULTIPLIER,
@@ -26,6 +27,8 @@ const CANNON_ORDER = cannons.map((cannon) => cannon.id);
 const CANNON_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id, cannon]));
 const CANNON_ID_BY_TIER = Object.fromEntries(cannons.map((cannon) => [cannon.tier, cannon.id]));
 const CANNON_TIER_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id, cannon.tier]));
+const AMMO_ORDER = ammunition.map((ammo) => ammo.id);
+const AMMO_BY_ID = Object.fromEntries(ammunition.map((ammo) => [ammo.id, ammo]));
 const CREW_BY_ID = Object.fromEntries(crewMembers.map((crewMember) => [crewMember.id, crewMember]));
 
 export function getXpRequired(level) {
@@ -34,6 +37,43 @@ export function getXpRequired(level) {
 
 export function getCurrentShip(gameState) {
   return ships.find((ship) => ship.id === gameState.currentShipId) ?? ships[0];
+}
+
+export function getAmmoInventory(gameState) {
+  const inventory = gameState.ammoInventory ?? {};
+
+  return AMMO_ORDER.reduce((accumulator, ammoId) => {
+    accumulator[ammoId] = Math.max(0, inventory[ammoId] ?? 0);
+    return accumulator;
+  }, {});
+}
+
+export function getTotalAmmoCount(gameState) {
+  return Object.values(getAmmoInventory(gameState)).reduce((total, value) => total + value, 0);
+}
+
+export function getSelectedAmmoId(gameState) {
+  return AMMO_BY_ID[gameState.selectedAmmoId]?.id ?? "iron";
+}
+
+export function getSelectedAmmo(gameState) {
+  return AMMO_BY_ID[getSelectedAmmoId(gameState)] ?? ammunition[0];
+}
+
+export function getAmmoById(ammoId) {
+  return AMMO_BY_ID[ammoId] ?? ammunition[0];
+}
+
+export function getAmmoQuantity(gameState, ammoId = getSelectedAmmoId(gameState)) {
+  return Math.max(0, getAmmoInventory(gameState)[ammoId] ?? 0);
+}
+
+export function getAmmoDamageMultiplier(gameState, ammoId = getSelectedAmmoId(gameState)) {
+  return AMMO_BY_ID[ammoId]?.damageMultiplier ?? 1;
+}
+
+export function getAmmoCostPer100(ammoId = "iron") {
+  return AMMO_BY_ID[ammoId]?.costPer100 ?? 0;
 }
 
 export function getRegionById(regionId) {
@@ -562,6 +602,7 @@ export function getPlayerCombatStats(gameState) {
   const talentBonuses = getTalentBonuses(gameState);
   const crewBonuses = getCrewBonuses(gameState);
   const worldEventBonuses = getWorldEventBonuses(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
   const maxHull = getMaxHull(gameState);
   const totalEquippedCannons = Object.values(equippedCannons).reduce((total, value) => total + value, 0);
   const baseLoadoutDamage = Object.entries(equippedCannons).reduce((total, [cannonId, quantity]) => {
@@ -573,13 +614,17 @@ export function getPlayerCombatStats(gameState) {
     : 1;
   const effectiveCannons = totalEquippedCannons + talentBonuses.effectiveCannons;
   const cannonDamage = BASE_CANNON_DAMAGE * averageCannonDamageMultiplier * talentBonuses.cannonDamageMultiplier;
+  const ammoDamageMultiplier = selectedAmmo.damageMultiplier ?? 1;
 
   return {
     effectiveCannons,
     cannonDamage,
     baseCannonDamage: BASE_CANNON_DAMAGE,
     cannonDamageMultiplier: averageCannonDamageMultiplier,
-    volleyDamage: effectiveCannons * cannonDamage * crewBonuses.volleyDamageMultiplier,
+    ammoDamageMultiplier,
+    selectedAmmoId: selectedAmmo.id,
+    selectedAmmo,
+    volleyDamage: effectiveCannons * cannonDamage * crewBonuses.volleyDamageMultiplier * ammoDamageMultiplier,
     critChance: talentBonuses.critChance,
     critMultiplier: talentBonuses.critMultiplier,
     maxHull,
@@ -814,9 +859,12 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   const estimate = getIdleCombatEstimate(gameState);
   const talentBonuses = getTalentBonuses(gameState);
   const crewBonuses = getCrewBonuses(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
+  const ammoId = selectedAmmo.id;
+  const ammoQuantity = getAmmoQuantity(gameState, ammoId);
   let stoppedReason = timeAwayMs > offlineCapMs ? "offline_cap_reached" : null;
   const maxEnemiesByTime = Math.floor((cappedTimeMs / 1000) / estimate.secondsPerEnemy);
-  const maxEnemiesByCannonballs = Math.floor(gameState.cannonballs / (estimate.volleysNeeded * estimate.ballsPerVolley));
+  const maxEnemiesByCannonballs = Math.floor(ammoQuantity / (estimate.volleysNeeded * estimate.ballsPerVolley));
   const maxEnemiesByHull = Math.floor((gameState.hull?.current ?? estimate.hullDamagePerEnemy) / estimate.hullDamagePerEnemy);
   let enemiesSunk = Math.max(0, Math.min(maxEnemiesByTime, maxEnemiesByCannonballs, maxEnemiesByHull));
 
@@ -839,6 +887,8 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
     effectiveTimeMs,
     enemiesSunk,
     shipsSunk: enemiesSunk,
+    ammoId,
+    ammoName: selectedAmmo.name,
     volleysFired,
     goldEarned: (enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier) +
       ((talentBonuses.passiveGoldPerHour * effectiveTimeMs) / (60 * 60 * 1000)),
@@ -855,9 +905,9 @@ export function calcOfflineProgress(lastSeen, now, gameState) {
   };
 }
 
-export function calcDamagePerShot(cannonTier, talentBonuses) {
+export function calcDamagePerShot(cannonTier, talentBonuses, ammoDamageMultiplier = 1) {
   const cannon = cannons.find((cannonData) => cannonData.tier === cannonTier) ?? cannons[0];
-  return BASE_CANNON_DAMAGE * cannon.damageMultiplier * (talentBonuses?.cannonDamageMultiplier ?? 1);
+  return BASE_CANNON_DAMAGE * cannon.damageMultiplier * (talentBonuses?.cannonDamageMultiplier ?? 1) * ammoDamageMultiplier;
 }
 
 export function calcReloadTime(baseCooldown, talentBonuses) {

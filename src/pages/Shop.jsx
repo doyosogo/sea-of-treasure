@@ -12,6 +12,7 @@ import {
   UI_XP
 } from "../data/assets.js";
 import Tooltip from "../components/Tooltip.jsx";
+import { ammunition } from "../data/ammunition.js";
 import { cannons } from "../data/cannons.js";
 import { ships } from "../data/ships.js";
 import { craftableUpgrades } from "../data/crafting.js";
@@ -36,6 +37,9 @@ function Shop({ gameState, dispatch }) {
   const nextCannon = getNextCannon(gameState);
   const cannonInventory = getCannonInventory(gameState);
   const equippedCannons = getEquippedCannons(gameState);
+  const ammoInventory = gameState.ammoInventory ?? {};
+  const selectedAmmo = ammunition.find((ammo) => ammo.id === gameState.selectedAmmoId) ?? ammunition[0];
+  const totalAmmo = Object.values(ammoInventory).reduce((total, value) => total + (value ?? 0), 0);
   const totalEquippedCannons = getTotalEquippedCannons(gameState);
   const cannonCapacity = getCannonCapacity(gameState);
   const goldUpgradeCost = calcCannonUpgradeCost(gameState);
@@ -70,7 +74,7 @@ function Shop({ gameState, dispatch }) {
           <div className="shop-top-stats">
             <ShopChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} tooltip="Gold is the main currency used for ships, repairs, and most upgrades." />
             <ShopChip icon={UI_DOUBLOONS} label="Doubloons" value={formatNumber(gameState.doubloons)} tooltip="Doubloons are rare premium currency earned from milestones and special rewards." />
-            <ShopChip icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent in combat. Restock them here when supplies run low." />
+            <ShopChip icon={UI_CANNONBALLS} label="Ammo" value={`${selectedAmmo.name} / ${formatNumber(totalAmmo)}`} tooltip="Selected ammo is used in combat. Total ammo shows everything in storage." />
           </div>
         </header>
 
@@ -257,12 +261,47 @@ function Shop({ gameState, dispatch }) {
             <article className="shop-panel">
               <h2><Tooltip label="Supply Store" text="Restock cannonballs here to keep combat going." position="right">Supply Store</Tooltip></h2>
               <div className="shop-supply-grid">
-                <Metric icon={UI_CANNONBALLS} label="Cannonballs Owned" value={formatNumber(gameState.cannonballs)} tooltip="Cannonballs are spent in combat. Restock them here." />
-                <Metric icon={UI_GOLD} label="Cost per 100" value={formatNumber(currentCannon.goldPer100Balls)} tooltip="Gold cost for each bundle of 100 cannonballs." />
+                <Metric icon={UI_CANNONBALLS} label="Selected Ammo" value={selectedAmmo.name} tooltip="This is the ammo type currently used in combat." />
+                <Metric icon={UI_CANNONBALLS} label="Total Ammo" value={formatNumber(totalAmmo)} tooltip="All ammo types combined in your inventory." />
               </div>
-              <button className="chunky-button primary" onClick={() => dispatch({ type: "BUY_CANNONBALLS", quantity: 100 })} type="button">
-                Buy 100 Cannonballs
-              </button>
+              <div className="shop-ammo-grid">
+                {ammunition.map((ammo) => {
+                  const owned = ammoInventory[ammo.id] ?? 0;
+                  const purchasable = ammo.purchasable;
+                  const canBuy = purchasable && gameState.gold >= ammo.costPer100;
+                  return (
+                    <article className={ammo.id === gameState.selectedAmmoId ? "shop-ammo-card selected" : "shop-ammo-card"} key={ammo.id}>
+                      <div className="shop-card-header">
+                        <div>
+                          <p className="shop-kicker">{ammo.id === "iron" ? "Standard" : ammo.id === "leviathan" ? "Future" : "Advanced"}</p>
+                          <h3>{ammo.name}</h3>
+                        </div>
+                        <span className="ship-status">{formatNumber(ammo.damageMultiplier)}x damage</span>
+                      </div>
+                      <div className="shop-card-stats">
+                        <Metric icon={UI_CANNONBALLS} label="Owned" value={formatNumber(owned)} tooltip="How much of this ammo type is currently in storage." />
+                        <Metric icon={UI_GOLD} label="Cost per 100" value={ammo.purchasable ? formatNumber(ammo.costPer100) : "Locked"} tooltip="Gold cost for 100 units of this ammo type." />
+                        <Metric icon={UI_GOLD} label="Multiplier" value={`${formatNumber(ammo.damageMultiplier)}x`} tooltip="Damage multiplier applied when this ammo type is selected." />
+                        <Metric icon={UI_XP} label="Source" value={ammo.purchasable ? "Shop" : ammo.source} tooltip="Where this ammo type comes from." />
+                      </div>
+                      <div className="shop-button-row">
+                        {purchasable ? (
+                          <button
+                            className="chunky-button primary"
+                            disabled={!canBuy}
+                            onClick={() => dispatch({ type: "BUY_AMMO", ammoId: ammo.id, quantity: 100 })}
+                            type="button"
+                          >
+                            Buy 100
+                          </button>
+                        ) : (
+                          <span className="active-ship-label">Locked</span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </article>
           </section>
         )}

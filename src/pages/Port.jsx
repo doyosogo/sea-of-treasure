@@ -9,6 +9,8 @@ import {
   getCargoCapacity,
   getFishSellValue,
   getMarketCooldownRemaining,
+  getSelectedAmmo,
+  getTotalAmmoCount,
   getTradeGoodBuyPrice,
   getTradeGoodSellPrice,
   getUsedCargo,
@@ -20,6 +22,8 @@ function Port({ gameState, dispatch }) {
   const activeWorldEvent = getActiveWorldEvent(gameState);
   const usedCargo = getUsedCargo(gameState);
   const cargoCapacity = getCargoCapacity(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
+  const totalAmmo = getTotalAmmoCount(gameState);
   const cooldownRemaining = getMarketCooldownRemaining(gameState, now);
   const tradingLevel = gameState.skills.trading?.level ?? 1;
   const tradeAllowanceRemaining = Math.max(0, gameState.marketTradeLimit - gameState.marketTradeUsed);
@@ -48,7 +52,7 @@ function Port({ gameState, dispatch }) {
           </div>
           <div className="harbour-top-stats">
             <HarbourChip icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} tooltip="Gold is your main currency for trade, ships, repairs, and upgrades." />
-            <HarbourChip icon={UI_CANNONBALLS} label="Cargo" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} tooltip="Cargo space limits how many trade goods your ship can carry." />
+            <HarbourChip icon={UI_CANNONBALLS} label="Ammo" value={`${selectedAmmo.name} / ${formatNumber(totalAmmo)}`} tooltip="Selected ammo is used in combat. Total ammo shows all ammo in storage." />
           </div>
         </header>
 
@@ -68,7 +72,8 @@ function Port({ gameState, dispatch }) {
             <h2>Harbour Overview</h2>
             <div className="harbour-stat-grid">
               <Metric icon={UI_GOLD} label="Gold" value={formatNumber(gameState.gold)} />
-              <Metric icon={UI_CANNONBALLS} label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
+              <Metric icon={UI_CANNONBALLS} label="Selected Ammo" value={selectedAmmo.name} />
+              <Metric icon={UI_CANNONBALLS} label="Ammo Stock" value={formatNumber(totalAmmo)} />
               <Metric icon={UI_CANNONBALLS} label="Cargo Used / Capacity" value={`${formatNumber(usedCargo)} / ${formatNumber(cargoCapacity)}`} />
               <Metric icon={UI_GOLD} label="Trading Level" value={formatNumber(tradingLevel)} />
             </div>

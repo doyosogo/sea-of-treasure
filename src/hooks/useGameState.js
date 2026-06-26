@@ -10,6 +10,7 @@ import { regions } from "../data/regions.js";
 import { rareTreasures, treasureSites } from "../data/treasures.js";
 import { worldEvents } from "../data/worldEvents.js";
 import { tradeGoods } from "../data/tradeGoods.js";
+import { ammunition } from "../data/ammunition.js";
 import { ships } from "../data/ships.js";
 import {
   ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER,
@@ -24,6 +25,9 @@ import {
   calcCannonUpgradeCost,
   calcOfflineProgress,
   canSpendTalentPoint,
+  getAmmoById,
+  getAmmoInventory,
+  getAmmoQuantity,
   getCannonById,
   getCannonInventory,
   getCannonKeyByTier,
@@ -48,6 +52,8 @@ import {
   isAchievementUnlocked,
   getCurrentCannon,
   getCurrentShip,
+  getSelectedAmmo,
+  getSelectedAmmoId,
   getNextCannon,
   getMarketCooldownRemaining,
   getBossById,
@@ -101,6 +107,13 @@ function createInitialResources() {
     fish: 0,
     whaleOil: 0
   };
+}
+
+function createInitialAmmoInventory(defaultAmmoId = "iron", amount = 100) {
+  return Object.fromEntries(ammunition.map((ammo) => [
+    ammo.id,
+    ammo.id === defaultAmmoId ? amount : 0
+  ]));
 }
 
 function createInitialMaterials() {
@@ -495,6 +508,8 @@ const initialState = {
   cannonTier: 1,
   cannonInventory: createInitialCannonInventory(),
   equippedCannons: createInitialEquippedCannons(),
+  ammoInventory: createInitialAmmoInventory("iron", 100),
+  selectedAmmoId: "iron",
   cannonballs: 100,
   totalShipsSunk: 0,
   doubloons: 0,
@@ -684,6 +699,55 @@ function normalizeResources(savedResources = {}) {
   };
 }
 
+function normalizeAmmoInventory(savedAmmoInventory, legacyAmmoCount = 0) {
+  if (!savedAmmoInventory || typeof savedAmmoInventory !== "object") {
+    return createInitialAmmoInventory("iron", Math.max(0, legacyAmmoCount ?? 0));
+  }
+
+  return Object.fromEntries(ammunition.map((ammo) => [
+    ammo.id,
+    Math.max(0, savedAmmoInventory[ammo.id] ?? 0)
+  ]));
+}
+
+function getAmmoTotal(ammoInventory = {}) {
+  return Object.values(ammoInventory).reduce((total, value) => total + Math.max(0, value ?? 0), 0);
+}
+
+function syncAmmoMirror(state) {
+  const ammoInventory = state.ammoInventory ?? createInitialAmmoInventory("iron", 0);
+
+  return {
+    ...state,
+    ammoInventory,
+    cannonballs: getAmmoTotal(ammoInventory)
+  };
+}
+
+function addAmmo(state, ammoId, amount) {
+  const ammoInventory = {
+    ...(state.ammoInventory ?? createInitialAmmoInventory("iron", 0)),
+    [ammoId]: Math.max(0, (state.ammoInventory?.[ammoId] ?? 0) + Math.max(0, amount ?? 0))
+  };
+
+  return syncAmmoMirror({
+    ...state,
+    ammoInventory
+  });
+}
+
+function spendAmmo(state, ammoId, amount) {
+  const ammoInventory = {
+    ...(state.ammoInventory ?? createInitialAmmoInventory("iron", 0)),
+    [ammoId]: Math.max(0, (state.ammoInventory?.[ammoId] ?? 0) - Math.max(0, amount ?? 0))
+  };
+
+  return syncAmmoMirror({
+    ...state,
+    ammoInventory
+  });
+}
+
 function normalizeMaterials(savedMaterials = {}) {
   const defaultMaterials = createInitialMaterials();
 
@@ -790,6 +854,8 @@ function loadSavedState() {
       resources: normalizeResources(parsedState.resources),
       materials: normalizeMaterials(parsedState.materials),
       crew: normalizeCrew(parsedState.crew),
+      ammoInventory: normalizeAmmoInventory(parsedState.ammoInventory, parsedState.cannonballs ?? 0),
+      selectedAmmoId: ammunition.some((ammo) => ammo.id === parsedState.selectedAmmoId) ? parsedState.selectedAmmoId : "iron",
       rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
       doubloons: Math.max(0, parsedState.doubloons ?? 0),
       craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
@@ -813,6 +879,7 @@ function loadSavedState() {
       pendingOfflineRewards: null,
       offlineSummaryVisible: false
     };
+    restoredState.cannonballs = getAmmoTotal(restoredState.ammoInventory);
     const currentShip = getCurrentShip(restoredState);
     const shipCapacity = currentShip.cannonCapacity ?? getShipCannonCapacity(currentShip.level);
     const fallbackTierId = getCannonKeyByTier(parsedState.cannonTier ?? 1);
@@ -1346,9 +1413,12 @@ function gameStateReducer(state, action) {
       }
 
       const ballsPerBattle = getEffectiveBallsPerBattle(state);
+      const selectedAmmo = getSelectedAmmo(state);
+      const ammoId = selectedAmmo.id;
+      const ammoQuantity = getAmmoQuantity(state, ammoId);
 
-      if (state.cannonballs < ballsPerBattle) {
-        return addActivityLogEntry(state, "Not enough cannonballs to fire a volley.", "warning");
+      if (ammoQuantity < ballsPerBattle) {
+        return addActivityLogEntry(state, `Not enough ${selectedAmmo.name} to fire a volley.`, "warning");
       }
 
       const combatStats = getPlayerCombatStats(state);
@@ -1359,13 +1429,11 @@ function gameStateReducer(state, action) {
       const cannonballsRecovered = enemyCurrentHP <= 0
         ? rollCannonballRecovery(state, 1, ballsPerBattle)
         : 0;
-      const firedState = {
-        ...state,
-        cannonballs: Math.max(0, state.cannonballs - ballsPerBattle + cannonballsRecovered)
-      };
+      const firedState = spendAmmo(state, ammoId, ballsPerBattle);
+      const recoveredFireState = cannonballsRecovered > 0 ? addAmmo(firedState, ammoId, cannonballsRecovered) : firedState;
 
       if (enemyCurrentHP <= 0) {
-        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, doubloonsGained, activeCombatGoldBonusApplied, bossDefeated, defeatedBossId } = applyVictoryRewards(firedState, enemy, {
+        const { state: rewardedState, goldGained, xpGained, mapFound, rareMapPiecesFound, doubloonsGained, activeCombatGoldBonusApplied, bossDefeated, defeatedBossId } = applyVictoryRewards(recoveredFireState, enemy, {
           activeCombatGoldBonus: true
         });
         const doubloonText = doubloonsGained > 0
@@ -1391,7 +1459,7 @@ function gameStateReducer(state, action) {
           ? addActivityLogEntry(critState, `Defeated ${enemy.name}.`)
           : critState;
         const recoveredState = cannonballsRecovered > 0
-          ? addActivityLogEntry(bossState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+          ? addActivityLogEntry(bossState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} ${selectedAmmo.name}.`)
           : bossState;
         const rareMapPieceState = rareMapPiecesFound > 0
           ? addActivityLogEntry(recoveredState, "You discovered a Rare Map Piece.")
@@ -1407,7 +1475,7 @@ function gameStateReducer(state, action) {
 
       if (nextHull <= 0) {
         return addActivityLogEntry({
-          ...firedState,
+          ...recoveredFireState,
           hull: {
             current: 0,
             max: combatStats.maxHull
@@ -1418,7 +1486,7 @@ function gameStateReducer(state, action) {
       }
 
       const updatedState = addActivityLogEntry({
-        ...firedState,
+        ...recoveredFireState,
         hull: {
           current: nextHull,
           max: combatStats.maxHull
@@ -1813,22 +1881,31 @@ function gameStateReducer(state, action) {
 
       return addActivityLogEntry(questProgressState, `Crafted ${upgrade.name} Lv. ${nextLevel}.${levelText}`);
     }
-    case "BUY_CANNONBALLS": {
-      const currentCannon = getCurrentCannon(state);
+    case "BUY_CANNONBALLS":
+    case "BUY_AMMO": {
+      const ammoId = action.ammoId ?? "iron";
+      const quantity = Math.max(1, action.quantity ?? 100);
+      const ammo = getAmmoById(ammoId);
 
-      if (state.gold < currentCannon.goldPer100Balls) {
-        return addActivityLogEntry(state, "Not enough gold to buy cannonballs.", "warning");
+      if (!ammo.purchasable) {
+        return addActivityLogEntry(state, `${ammo.name} are not purchasable yet.`, "warning");
       }
 
-      const questProgressState = updateQuestProgressMany({
+      const totalCost = Math.ceil((ammo.costPer100 * quantity) / 100);
+
+      if (state.gold < totalCost) {
+        return addActivityLogEntry(state, `Not enough gold to buy ${ammo.name.toLowerCase()}.`, "warning");
+      }
+
+      const purchasedState = addAmmo({
         ...state,
-        gold: state.gold - currentCannon.goldPer100Balls,
-        cannonballs: state.cannonballs + 100
-      }, {
-        cannonballsBought: 100
+        gold: state.gold - totalCost
+      }, ammoId, quantity);
+      const questProgressState = updateQuestProgressMany(purchasedState, {
+        cannonballsBought: quantity
       });
 
-      return addActivityLogEntry(questProgressState, `Bought 100 ${currentCannon.name} cannonballs.`);
+      return addActivityLogEntry(questProgressState, `Bought ${formatNumber(quantity)} ${ammo.name}.`);
     }
     case "START_TREASURE_DIG": {
       const site = treasureSites.find((treasureSite) => treasureSite.id === action.siteId);
@@ -2096,18 +2173,21 @@ function gameStateReducer(state, action) {
     }
     case "SINK_ENEMY_SHIP": {
       const ballsPerBattle = getEffectiveBallsPerBattle(state);
+      const selectedAmmo = getSelectedAmmo(state);
+      const ammoId = selectedAmmo.id;
 
-      if (state.cannonballs < ballsPerBattle) {
-        return addActivityLogEntry(state, "Not enough cannonballs to sink an enemy ship.", "warning");
+      if (getAmmoQuantity(state, ammoId) < ballsPerBattle) {
+        return addActivityLogEntry(state, `Not enough ${selectedAmmo.name} to sink an enemy ship.`, "warning");
       }
 
       const mapsFound = rollTreasureMapDrops(state, 1);
       const cannonballsRecovered = rollCannonballRecovery(state, 1, ballsPerBattle);
       const battleEnemy = generateEnemy(state);
       const doubloonsGained = rollDoubloonsFromCombat(battleEnemy, 1);
+      const ammoSpentState = spendAmmo(state, ammoId, ballsPerBattle);
+      const recoveredAmmoState = cannonballsRecovered > 0 ? addAmmo(ammoSpentState, ammoId, cannonballsRecovered) : ammoSpentState;
       const { state: rewardedState, goldGained, xpGained } = applyBattleRewards({
-          ...state,
-          cannonballs: state.cannonballs - ballsPerBattle + cannonballsRecovered
+          ...recoveredAmmoState
         }, 1, action.xpAmount ?? 5, {
           activeCombatGoldBonus: true
         });
@@ -2124,7 +2204,7 @@ function gameStateReducer(state, action) {
         goldEarned: goldGained
       }), `Victory: earned ${Math.round(goldGained)} gold and ${Math.round(xpGained)} XP.${doubloonText} Active combat bonus applied.`);
       const recoveredState = cannonballsRecovered > 0
-        ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs.`)
+        ? addActivityLogEntry(loggedState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} ${selectedAmmo.name}.`)
         : loggedState;
 
       return mapsFound > 0
@@ -2222,8 +2302,8 @@ function gameStateReducer(state, action) {
         return addActivityLogEntry(state, "Finish your current battle before idling.", "warning");
       }
 
-      if (state.cannonballs <= 0) {
-        return addActivityLogEntry(state, "Cannot start idling without cannonballs.", "warning");
+      if (getAmmoQuantity(state) <= 0) {
+        return addActivityLogEntry(state, `Cannot start idling without ${getSelectedAmmo(state).name}.`, "warning");
       }
 
       if ((state.hull?.current ?? 0) <= 0) {
@@ -2252,10 +2332,12 @@ function gameStateReducer(state, action) {
       const crewBonuses = getCrewBonuses(state);
       const seconds = action.seconds ?? 1;
       const estimate = getIdleCombatEstimate(state);
+      const selectedAmmo = getSelectedAmmo(state);
+      const ammoId = selectedAmmo.id;
       const passiveGold = (talentBonuses.passiveGoldPerHour / 3600) * seconds;
       const accumulatedSeconds = (state.idleProgressSeconds ?? 0) + seconds;
       const enemiesByTime = Math.floor(accumulatedSeconds / estimate.secondsPerEnemy);
-      const enemiesByCannonballs = Math.floor(state.cannonballs / (estimate.volleysNeeded * estimate.ballsPerVolley));
+      const enemiesByCannonballs = Math.floor(getAmmoQuantity(state, ammoId) / (estimate.volleysNeeded * estimate.ballsPerVolley));
       const enemiesByHull = Math.floor((state.hull?.current ?? 0) / estimate.hullDamagePerEnemy);
       const enemiesSunk = Math.max(0, Math.min(enemiesByTime, enemiesByCannonballs, enemiesByHull));
       const limitedByCannonballs = enemiesByTime > 0 && enemiesByTime > enemiesByCannonballs && enemiesByCannonballs <= enemiesByHull;
@@ -2264,14 +2346,14 @@ function gameStateReducer(state, action) {
         ? 0
         : accumulatedSeconds - enemiesSunk * estimate.secondsPerEnemy;
 
-      if (state.cannonballs <= 0) {
+      if (getAmmoQuantity(state, ammoId) <= 0) {
         return addActivityLogEntry({
           ...state,
           isIdling: false,
           idleProgressSeconds: 0,
-          cannonballs: 0,
+          ...syncAmmoMirror(state),
           lastSeen: action.now ?? Date.now()
-        }, "Idle combat stopped: not enough cannonballs.", "warning");
+        }, `Idle combat stopped: not enough ${selectedAmmo.name}.`, "warning");
       }
 
       if ((state.hull?.current ?? 0) <= 0) {
@@ -2298,7 +2380,7 @@ function gameStateReducer(state, action) {
           isIdling: false,
           idleProgressSeconds: 0,
           lastSeen: action.now ?? Date.now()
-        }, "Idle combat stopped: not enough cannonballs.", "warning");
+        }, `Idle combat stopped: not enough ${selectedAmmo.name}.`, "warning");
       }
 
       if (enemiesSunk <= 0 && limitedByHull) {
@@ -2318,14 +2400,15 @@ function gameStateReducer(state, action) {
       const cannonballsSpent = volleysFired * estimate.ballsPerVolley;
       const hullDamageTaken = enemiesSunk * estimate.hullDamagePerEnemy;
       const cannonballsRecovered = rollCannonballRecovery(state, enemiesSunk, estimate.volleysNeeded * estimate.ballsPerVolley);
+      const ammoSpentState = spendAmmo(state, ammoId, cannonballsSpent);
+      const recoveredAmmoState = cannonballsRecovered > 0 ? addAmmo(ammoSpentState, ammoId, cannonballsRecovered) : ammoSpentState;
       const mapsFound = rollEnemyMapDrops(estimate.enemy.mapDropChance, enemiesSunk);
       const rareMapPiecesFound = rollRareMapPieces(0.0005, enemiesSunk);
       const goldEarned = enemiesSunk * estimate.enemy.goldReward * talentBonuses.goldMultiplier * crewBonuses.combatGoldMultiplier;
       const xpEarned = enemiesSunk * estimate.enemy.xpReward * talentBonuses.xpMultiplier * crewBonuses.combatXpMultiplier;
       const xpState = applyXp({
-        ...state,
+        ...recoveredAmmoState,
         gold: state.gold + goldEarned + passiveGold,
-        cannonballs: Math.max(0, state.cannonballs - cannonballsSpent + cannonballsRecovered),
         hull: {
           current: Math.max(0, (state.hull?.current ?? getMaxHull(state)) - hullDamageTaken),
           max: getMaxHull(state)
@@ -2339,7 +2422,7 @@ function gameStateReducer(state, action) {
       }, xpEarned);
       const idleState = addLifetimeShipsSunk(addLifetimeGold(xpState, goldEarned + passiveGold), enemiesSunk);
       const recoveredState = cannonballsRecovered > 0
-        ? addActivityLogEntry(idleState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} cannonballs while idling.`)
+        ? addActivityLogEntry(idleState, `Cannon Braces recovered ${formatRecoveredCannonballs(cannonballsRecovered)} ${selectedAmmo.name} while idling.`)
         : idleState;
       const mapState = mapsFound > 0
         ? addActivityLogEntry(recoveredState, `Your crew recovered ${mapsFound} treasure map${mapsFound === 1 ? "" : "s"} while idling.`)
@@ -2348,7 +2431,7 @@ function gameStateReducer(state, action) {
         ? addActivityLogEntry(mapState, "You discovered a Rare Map Piece.")
         : mapState;
       const stoppedState = limitedByCannonballs
-        ? addActivityLogEntry(rareMapPieceState, "Idle combat stopped: not enough cannonballs.", "warning")
+        ? addActivityLogEntry(rareMapPieceState, `Idle combat stopped: not enough ${selectedAmmo.name}.`, "warning")
         : limitedByHull
           ? addActivityLogEntry(rareMapPieceState, "Idle combat stopped: your ship was defeated.", "warning")
           : rareMapPieceState;
@@ -2426,10 +2509,11 @@ function gameStateReducer(state, action) {
       const enemiesSunk = rewards.enemiesSunk ?? rewards.shipsSunk ?? 0;
       const hullDamageTaken = rewards.hullDamageTaken ?? 0;
       const doubloonsEarned = rewards.doubloonsEarned ?? 0;
+      const ammoId = rewards.ammoId ?? getSelectedAmmoId(state);
+      const spentAmmoState = spendAmmo(state, ammoId, netCannonballsUsed);
       const baseRewardState = updateQuestProgressMany(addDoubloons(addLifetimeShipsSunk(addLifetimeGold({
-        ...state,
+        ...spentAmmoState,
         gold: state.gold + rewards.goldEarned,
-        cannonballs: Math.max(0, state.cannonballs - netCannonballsUsed),
         hull: {
           current: Math.max(0, (state.hull?.current ?? getMaxHull(state)) - hullDamageTaken),
           max: getMaxHull(state)
@@ -2469,11 +2553,10 @@ function gameStateReducer(state, action) {
         lastSeen: Date.now()
       }, 10000), "Developer tool used: added gold.", "warning");
     case "DEBUG_ADD_CANNONBALLS":
-      return addActivityLogEntry({
+      return addActivityLogEntry(addAmmo({
         ...state,
-        cannonballs: state.cannonballs + 100,
         lastSeen: Date.now()
-      }, "Developer tool used: added cannonballs.", "warning");
+      }, "iron", 100), "Developer tool used: added iron ammo bundle.", "warning");
     case "DEBUG_ADD_TALENT_POINTS":
       return addActivityLogEntry({
         ...state,

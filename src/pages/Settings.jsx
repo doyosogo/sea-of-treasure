@@ -31,9 +31,12 @@ import {
   formatNumber,
   getCurrentCannon,
   getCurrentShip,
+  getAmmoCostPer100,
   getEffectiveBallsPerBattle,
   getIdleCombatEstimate,
   getMaxHull,
+  getSelectedAmmo,
+  getTotalAmmoCount,
   getSelectedEnemyType,
   getActiveWorldEvent,
   getRepairCostPerMissingHull
@@ -51,6 +54,8 @@ function Settings({ gameState, dispatch }) {
   const currentCannon = getCurrentCannon(gameState);
   const selectedEnemy = getSelectedEnemyType(gameState);
   const activeWorldEvent = getActiveWorldEvent(gameState);
+  const selectedAmmo = getSelectedAmmo(gameState);
+  const totalAmmo = getTotalAmmoCount(gameState);
   const debugJson = useMemo(() => JSON.stringify(gameState, null, 2), [gameState]);
   const assetRegistrySummary = useMemo(() => ({
     ships: Object.keys(SHIP_IMAGES).length,
@@ -159,11 +164,11 @@ function Settings({ gameState, dispatch }) {
   function handlePreviewActiveBattles() {
     const estimate = getIdleCombatEstimate(gameState);
     const activeGold = Math.round(estimate.goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER);
-    const netGoldPerBattle = Math.max(0, activeGold - Math.round((getEffectiveBallsPerBattle(gameState) * getCurrentCannon(gameState).goldPer100Balls) / 100));
+    const netGoldPerBattle = Math.max(0, activeGold - Math.round((getEffectiveBallsPerBattle(gameState) * getAmmoCostPer100(selectedAmmo.id)) / 100));
 
     setPreview({
       title: "10 Active Battles",
-      text: `Preview only: about ${formatNumber(netGoldPerBattle * 10)} net gold, ${formatNumber(estimate.xpPerEnemy * 10)} XP, and ${formatNumber(getEffectiveBallsPerBattle(gameState) * 10)} cannonballs spent.`,
+      text: `Preview only: about ${formatNumber(netGoldPerBattle * 10)} net gold, ${formatNumber(estimate.xpPerEnemy * 10)} XP, and ${formatNumber(getEffectiveBallsPerBattle(gameState) * 10)} ammo spent.`,
       type: "info"
     });
     setStatus({ type: "warning", message: "Preview only: active battle estimate generated." });
@@ -174,7 +179,7 @@ function Settings({ gameState, dispatch }) {
 
     setPreview({
       title: "1 Hour Idle Combat",
-      text: `Preview only: about ${formatNumber(estimate.goldPerHour)} gold, ${formatNumber(estimate.xpPerHour)} XP, ${formatNumber(estimate.cannonballsPerHour)} cannonballs, and ${formatNumber(estimate.hullDamagePerHour)} hull damage.`,
+      text: `Preview only: about ${formatNumber(estimate.goldPerHour)} gold, ${formatNumber(estimate.xpPerHour)} XP, ${formatNumber(estimate.cannonballsPerHour)} ammo, and ${formatNumber(estimate.hullDamagePerHour)} hull damage.`,
       type: "info"
     });
     setStatus({ type: "warning", message: "Preview only: idle combat estimate generated." });
@@ -286,7 +291,7 @@ function Settings({ gameState, dispatch }) {
         <article className="settings-subpanel">
           <h3>Economy Summary</h3>
           <div className="summary-stat-grid">
-            <Stat label="Active Combat Net Gold" value={formatNumber(Math.max(0, Math.round(getIdleCombatEstimate(gameState).goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER - (getEffectiveBallsPerBattle(gameState) * getCurrentCannon(gameState).goldPer100Balls) / 100)))} />
+            <Stat label="Active Combat Net Gold" value={formatNumber(Math.max(0, Math.round(getIdleCombatEstimate(gameState).goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER - (getEffectiveBallsPerBattle(gameState) * getAmmoCostPer100(selectedAmmo.id)) / 100)))} />
             <Stat label="Idle Gold / Hour" value={formatNumber(getIdleCombatEstimate(gameState).goldPerHour)} />
             <Stat label="Repair Cost Estimate" value={`${formatNumber(getRepairCostPerMissingHull(gameState) * Math.max(0, getMaxHull(gameState) - gameState.hull.current))} Gold`} />
             <Stat label="Cannonball Cost / Hour" value={formatNumber(getIdleCombatEstimate(gameState).cannonballsPerHour)} />
@@ -321,7 +326,8 @@ function Settings({ gameState, dispatch }) {
           <Stat label="Doubloons" value={formatNumber(gameState.doubloons)} />
           <Stat label="XP" value={formatNumber(gameState.playerXP)} />
           <Stat label="Hull" value={`${formatNumber(gameState.hull.current)} / ${formatNumber(getMaxHull(gameState))}`} />
-          <Stat label="Cannonballs" value={formatNumber(gameState.cannonballs)} />
+          <Stat label="Selected Ammo" value={selectedAmmo.name} />
+          <Stat label="Ammo Stock" value={formatNumber(totalAmmo)} />
           <Stat label="Current Ship" value={currentShip.name} />
           <Stat label="Cannon Tier" value={`Tier ${currentCannon.tier}`} />
           <Stat label="Selected Enemy" value={selectedEnemy.name} />
@@ -344,7 +350,7 @@ function Settings({ gameState, dispatch }) {
             Add 10,000 Gold
           </button>
           <button className="chunky-button" onClick={() => dispatch({ type: "DEBUG_ADD_CANNONBALLS" })} type="button">
-            Add 100 Cannonballs
+            Add Basic Ammo Bundle
           </button>
           <button className="chunky-button" onClick={() => dispatch({ type: "DEBUG_ADD_TALENT_POINTS" })} type="button">
             Add 10 Talent Points
