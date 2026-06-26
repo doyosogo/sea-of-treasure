@@ -45,7 +45,7 @@ import {
 
 const STORAGE_KEY = "sot_save";
 
-function Settings({ gameState, dispatch }) {
+function Settings({ cloudSync, dispatch, gameState, onSyncNow }) {
   const { user, logout } = useAuth();
   const [exportedJson, setExportedJson] = useState("");
   const [importJson, setImportJson] = useState("");
@@ -229,11 +229,18 @@ function Settings({ gameState, dispatch }) {
             <div className="summary-stat-grid">
               <Stat label="Username" value={user.username} />
               <Stat label="Email" value={user.email} />
+              <Stat label="Cloud Status" value={cloudSync?.message ?? "Offline"} />
+              <Stat label="Cloud Updated" value={cloudSync?.lastUpdated ? new Date(cloudSync.lastUpdated).toLocaleString() : "Not synced yet"} />
             </div>
-            <p className="shop-note">Cloud save sync is not enabled yet. Your current game still uses local browser storage.</p>
-            <button className="chunky-button danger" onClick={logout} type="button">
-              Logout
-            </button>
+            <p className="shop-note">Cloud save backup is enabled. Local browser storage remains unchanged.</p>
+            <div className="button-row">
+              <button className="chunky-button primary" disabled={cloudSync?.status === "syncing"} onClick={onSyncNow} type="button">
+                Sync Now
+              </button>
+              <button className="chunky-button danger" onClick={logout} type="button">
+                Logout
+              </button>
+            </div>
           </>
         ) : (
           <p className="shop-note">Playing offline. Login to enable cloud saves later.</p>

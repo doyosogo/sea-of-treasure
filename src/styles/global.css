@@ -995,6 +995,45 @@ button:disabled {
   padding: 8px 4px;
 }
 
+.cloud-save-pill {
+  justify-self: end;
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  border: 2px solid rgba(217, 165, 58, 0.56);
+  padding: 8px 12px;
+  background: rgba(5, 15, 30, 0.76);
+  color: var(--cream);
+  box-shadow: 0 3px 0 rgba(3, 16, 31, 0.9);
+}
+
+.cloud-save-pill span {
+  color: rgba(246, 229, 181, 0.72);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.cloud-save-pill strong {
+  color: var(--gold-300);
+}
+
+.cloud-save-pill.error strong {
+  color: #ff9b6d;
+}
+
+.cloud-save-pill.offline strong {
+  color: rgba(246, 229, 181, 0.74);
+}
+
+.cloud-save-note {
+  justify-self: end;
+  margin: -16px 2px 0 0;
+  color: rgba(246, 229, 181, 0.78);
+  font-size: 0.86rem;
+}
+
 .dashboard-logo {
   width: min(180px, 30vw);
   max-width: 220px;

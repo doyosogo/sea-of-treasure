@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { getCloudSave, uploadCloudSave } from "./services/save.js";
 import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
 import Landing from "./pages/Landing.jsx";
@@ -44,6 +45,19 @@ function App() {
 function AppContent() {
   const { user, loading } = useAuth();
   const [offlineMode, setOfflineMode] = useState(false);
+  const hadAuthenticatedSessionRef = useRef(false);
+
+  useEffect(() => {
+    if (user) {
+      hadAuthenticatedSessionRef.current = true;
+      setOfflineMode(false);
+      return;
+    }
+
+    if (hadAuthenticatedSessionRef.current) {
+      setOfflineMode(true);
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -61,9 +75,153 @@ function AppContent() {
 }
 
 function GameApp() {
+  const { user, accessToken } = useAuth();
   const [activePage, setActivePage] = useState("dashboard");
-  const { gameState, dispatch } = useGameState();
+  const [cloudSync, setCloudSync] = useState({
+    status: user ? "syncing" : "offline",
+    message: user ? "Checking cloud save..." : "Playing offline.",
+    lastUpdated: null,
+    ready: false
+  });
+  const uploadTimerRef = useRef(null);
+  const latestSaveRef = useRef(null);
+  const uploadInFlightRef = useRef(false);
+  const cloudReadyRef = useRef(false);
+
+  const syncSaveNow = useCallback(async (saveData = latestSaveRef.current) => {
+    if (!user || !accessToken || !saveData) {
+      setCloudSync((state) => ({
+        ...state,
+        status: "offline",
+        message: "Playing offline."
+      }));
+      return;
+    }
+
+    if (uploadInFlightRef.current) {
+      return;
+    }
+
+    uploadInFlightRef.current = true;
+    setCloudSync((state) => ({
+      ...state,
+      status: "syncing",
+      message: "Syncing..."
+    }));
+
+    try {
+      const result = await uploadCloudSave(saveData, accessToken);
+      setCloudSync({
+        status: "synced",
+        message: "Synced",
+        lastUpdated: result.save?.updatedAt ?? new Date().toISOString(),
+        ready: true
+      });
+    } catch (error) {
+      console.warn("Cloud save upload failed.", error);
+      setCloudSync((state) => ({
+        ...state,
+        status: "error",
+        message: "Cloud sync failed. Will retry on next save.",
+        ready: true
+      }));
+    } finally {
+      uploadInFlightRef.current = false;
+    }
+  }, [accessToken, user]);
+
+  const handlePersist = useCallback((saveData) => {
+    latestSaveRef.current = saveData;
+
+    if (!user || !accessToken || !cloudReadyRef.current) {
+      return;
+    }
+
+    window.clearTimeout(uploadTimerRef.current);
+    uploadTimerRef.current = window.setTimeout(() => {
+      syncSaveNow(saveData);
+    }, 1500);
+  }, [accessToken, syncSaveNow, user]);
+
+  const { gameState, dispatch, applyCloudSave } = useGameState({ onPersist: handlePersist });
   const ActivePage = pageRegistry[activePage].component;
+
+  useEffect(() => {
+    latestSaveRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    cloudReadyRef.current = false;
+    window.clearTimeout(uploadTimerRef.current);
+
+    if (!user || !accessToken) {
+      setCloudSync({
+        status: "offline",
+        message: "Playing offline.",
+        lastUpdated: null,
+        ready: false
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function loadCloudSave() {
+      setCloudSync({
+        status: "syncing",
+        message: "Checking cloud save...",
+        lastUpdated: null,
+        ready: false
+      });
+
+      try {
+        const result = await getCloudSave(accessToken);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!result.save) {
+          cloudReadyRef.current = true;
+          setCloudSync({
+            status: "synced",
+            message: "No cloud save found.",
+            lastUpdated: null,
+            ready: true
+          });
+          return;
+        }
+
+        applyCloudSave(result.save.data);
+        cloudReadyRef.current = true;
+        setCloudSync({
+          status: "synced",
+          message: "Cloud save loaded.",
+          lastUpdated: result.save.updatedAt,
+          ready: true
+        });
+      } catch (error) {
+        console.warn("Cloud save download failed.", error);
+
+        if (!cancelled) {
+          cloudReadyRef.current = true;
+          setCloudSync({
+            status: "error",
+            message: "Cloud save unavailable.",
+            lastUpdated: null,
+            ready: true
+          });
+        }
+      }
+    }
+
+    loadCloudSave();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(uploadTimerRef.current);
+    };
+  }, [accessToken, applyCloudSave, user]);
 
   return (
     <div className="app-shell">
@@ -84,7 +242,13 @@ function GameApp() {
       </header>
 
       <main className="page-frame">
-        <ActivePage gameState={gameState} dispatch={dispatch} onNavigate={setActivePage} />
+        <ActivePage
+          cloudSync={cloudSync}
+          dispatch={dispatch}
+          gameState={gameState}
+          onNavigate={setActivePage}
+          onSyncNow={() => syncSaveNow(gameState)}
+        />
       </main>
 
       <OfflineSummary gameState={gameState} dispatch={dispatch} />

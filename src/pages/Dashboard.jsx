@@ -18,7 +18,7 @@ import {
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
 
-function Dashboard({ gameState, onNavigate }) {
+function Dashboard({ cloudSync, gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const activeRegion = getActiveRegion(gameState);
@@ -97,6 +97,14 @@ function Dashboard({ gameState, onNavigate }) {
             {gameState.isIdling ? "Idling" : "Docked"}
           </div>
         </header>
+
+        <div className={`cloud-save-pill ${cloudSync?.status ?? "offline"}`}>
+          <span>Cloud Save</span>
+          <strong>{getCloudStatusLabel(cloudSync)}</strong>
+        </div>
+        {cloudSync?.message && !["Synced", "Syncing...", "Playing offline."].includes(cloudSync.message) ? (
+          <p className="cloud-save-note">{cloudSync.message}</p>
+        ) : null}
 
         <section className="dashboard-panel dashboard-event-panel">
           <h2>World Event</h2>
@@ -322,6 +330,19 @@ function describeWorldEventEffects(event) {
   }
 
   return effects.length > 0 ? effects.join(" • ") : "Temporary world modifiers are active.";
+}
+
+function getCloudStatusLabel(cloudSync) {
+  switch (cloudSync?.status) {
+    case "synced":
+      return "✓ Synced";
+    case "syncing":
+      return "Syncing...";
+    case "error":
+      return "Error";
+    default:
+      return "Offline";
+  }
 }
 
 export default Dashboard;

@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { achievements } from "../data/achievements.js";
 import { enemies } from "../data/enemies.js";
 import { skills as skillDefinitions } from "../data/skills.js";
@@ -939,6 +939,77 @@ function loadSavedState() {
       lastSeen: now
     };
   }
+}
+
+function normalizeRuntimeState(parsedState, now = Date.now()) {
+  if (!parsedState || typeof parsedState !== "object") {
+    return {
+      ...initialState,
+      lastSeen: now
+    };
+  }
+
+  const restoredState = {
+    ...initialState,
+    ...parsedState,
+    cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
+    activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
+    talents: normalizeTalents(parsedState.talents),
+    skills: normalizeSkills(parsedState.skills),
+    cargo: normalizeCargo(parsedState.cargo),
+    resources: normalizeResources(parsedState.resources),
+    materials: normalizeMaterials(parsedState.materials),
+    crew: normalizeCrew(parsedState.crew),
+    ammoInventory: normalizeAmmoInventory(parsedState.ammoInventory, parsedState.cannonballs ?? 0),
+    selectedAmmoId: ammunition.some((ammo) => ammo.id === parsedState.selectedAmmoId) ? parsedState.selectedAmmoId : "iron",
+    rareMapPieces: Math.max(0, parsedState.rareMapPieces ?? 0),
+    doubloons: Math.max(0, parsedState.doubloons ?? 0),
+    craftedUpgrades: normalizeCraftedUpgrades(parsedState.craftedUpgrades),
+    quests: normalizeQuestState(parsedState.quests, now),
+    marketPrices: normalizeMarketPrices(parsedState.marketPrices),
+    marketLastRefreshed: parsedState.marketLastRefreshed ?? now,
+    marketRefreshCooldownMs: parsedState.marketRefreshCooldownMs ?? MARKET_REFRESH_COOLDOWN_MS,
+    treasureMaps: parsedState.treasureMaps ?? 3,
+    activeTreasureDig: parsedState.activeTreasureDig ?? null,
+    treasureInventory: normalizeTreasureInventory(parsedState.treasureInventory),
+    activeWorldEvent: parsedState.activeWorldEvent ?? null,
+    lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
+    worldEventsSeen: parsedState.worldEventsSeen ?? 0,
+    activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", parsedState.playerLevel ?? 1),
+    selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
+    lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
+    currentBattle: null,
+    claimedAchievements: Array.isArray(parsedState.claimedAchievements) ? parsedState.claimedAchievements : [],
+    isIdling: false,
+    idleProgressSeconds: 0,
+    pendingOfflineRewards: null,
+    offlineSummaryVisible: false,
+    lastSeen: parsedState.lastSeen ?? now
+  };
+  restoredState.cannonballs = getAmmoTotal(restoredState.ammoInventory);
+  const currentShip = getCurrentShip(restoredState);
+  const shipCapacity = currentShip.cannonCapacity ?? getShipCannonCapacity(currentShip.level);
+  const fallbackTierId = getCannonKeyByTier(parsedState.cannonTier ?? 1);
+  const normalizedInventory = normalizeCannonInventory(parsedState.cannonInventory, fallbackTierId, shipCapacity);
+  const normalizedEquippedCannons = normalizeEquippedCannons(parsedState.equippedCannons, normalizedInventory, fallbackTierId, shipCapacity);
+
+  return clampHull({
+    ...restoredState,
+    cannonInventory: normalizedInventory,
+    equippedCannons: normalizedEquippedCannons,
+    cannonTier: getHighestOwnedCannonTier({
+      ...restoredState,
+      cannonInventory: normalizedInventory,
+      equippedCannons: normalizedEquippedCannons
+    }).tier,
+    lifetimeStats: normalizeLifetimeStats(parsedState.lifetimeStats, restoredState),
+    marketCycleStartedAt: parsedState.marketCycleStartedAt ?? now,
+    marketTradeLimit: parsedState.marketTradeLimit ?? getCargoCapacity(restoredState),
+    marketTradeUsed: parsedState.marketTradeUsed ?? 0,
+    activeWorldEvent: parsedState.activeWorldEvent ?? null,
+    lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
+    worldEventsSeen: parsedState.worldEventsSeen ?? 0
+  }, parsedState.hull?.current);
 }
 
 function applyXp(state, amount) {
@@ -2625,20 +2696,40 @@ function gameStateReducer(state, action) {
         lastSeen: now
       }, `World Event Ended: ${state.activeWorldEvent.name}.`);
     }
+    case "APPLY_CLOUD_SAVE":
+      return addActivityLogEntry(normalizeRuntimeState(action.saveData, action.now ?? Date.now()), "Cloud save loaded.");
     default:
       return state;
   }
 }
 
-export function useGameState() {
+export function useGameState({ onPersist } = {}) {
   const [gameState, dispatch] = useReducer(gameStateReducer, undefined, loadSavedState);
+  const skipNextLocalPersistRef = useRef(false);
+  const runtimeCloudStateOnlyRef = useRef(false);
+  const latestPersistCallbackRef = useRef(onPersist);
 
   useEffect(() => {
+    latestPersistCallbackRef.current = onPersist;
+  }, [onPersist]);
+
+  useEffect(() => {
+    if (skipNextLocalPersistRef.current) {
+      skipNextLocalPersistRef.current = false;
+      return;
+    }
+
+    runtimeCloudStateOnlyRef.current = false;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    latestPersistCallbackRef.current?.(gameState);
   }, [gameState]);
 
   useEffect(() => {
     function handleBeforeUnload() {
+      if (runtimeCloudStateOnlyRef.current) {
+        return;
+      }
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         ...gameState,
         lastSeen: Date.now()
@@ -2677,7 +2768,13 @@ export function useGameState() {
     return () => window.clearInterval(timerId);
   }, []);
 
-  return { gameState, dispatch };
+  const applyCloudSave = useCallback((saveData) => {
+    skipNextLocalPersistRef.current = true;
+    runtimeCloudStateOnlyRef.current = true;
+    dispatch({ type: "APPLY_CLOUD_SAVE", saveData, now: Date.now() });
+  }, []);
+
+  return { gameState, dispatch, applyCloudSave };
 }
 
 export { initialState, gameStateReducer };
