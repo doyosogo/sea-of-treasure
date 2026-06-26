@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
 import {
   createAccessToken,
   createRefreshToken,
@@ -9,7 +9,6 @@ import {
   verifyRefreshToken
 } from "../utils/tokens.js";
 
-const prisma = new PrismaClient();
 const PASSWORD_SALT_ROUNDS = 12;
 
 const registerSchema = z.object({
@@ -99,7 +98,7 @@ export async function logout(request, response, next) {
       }
     });
 
-    return response.status(204).send();
+    return response.json({ success: true });
   } catch (error) {
     return next(error);
   }
@@ -131,6 +130,23 @@ export async function refresh(request, response, next) {
     const tokens = await issueTokens(storedToken.userId);
 
     return response.json({ user: storedToken.user, ...tokens });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function me(request, response, next) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: publicUserSelect()
+    });
+
+    if (!user) {
+      return response.status(401).json({ error: "Invalid or expired token." });
+    }
+
+    return response.json({ user });
   } catch (error) {
     return next(error);
   }

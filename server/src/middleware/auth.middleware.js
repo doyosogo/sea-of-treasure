@@ -10,6 +10,11 @@ export function requireAuth(request, response, next) {
 
   try {
     const payload = verifyAccessToken(token);
+
+    if (!payload.sub) {
+      return response.status(401).json({ error: "Invalid or expired token." });
+    }
+
     request.user = {
       id: payload.sub
     };

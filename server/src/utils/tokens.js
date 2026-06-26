@@ -12,7 +12,7 @@ export function createAccessToken(payload) {
 }
 
 export function createRefreshToken(payload) {
-  return jwt.sign(payload, getSecret("JWT_REFRESH_SECRET"), {
+  return jwt.sign({ ...payload, jti: crypto.randomUUID() }, getSecret("JWT_REFRESH_SECRET"), {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN
   });
 }
