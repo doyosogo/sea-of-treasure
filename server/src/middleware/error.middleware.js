@@ -27,6 +27,12 @@ export function errorMiddleware(error, _request, response, _next) {
     });
   }
 
+  if (error?.type === "entity.too.large") {
+    return response.status(413).json({
+      error: "Request payload is too large. Maximum size is 2MB."
+    });
+  }
+
   console.error(error);
 
   return response.status(500).json({

@@ -13,6 +13,7 @@ model User {
   username     String         @unique
   passwordHash String
   refreshTokens RefreshToken[]
+  saveGame     SaveGame?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -27,4 +28,14 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model SaveGame {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  version   String   @default("1.0")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -68,6 +68,18 @@ npm run dev
 
 The initial API includes authentication route scaffolding and `GET /api/health`.
 
+Cloud save API endpoints are scaffolded under authenticated routes:
+
+- `GET /api/save`
+- `PUT /api/save`
+
+To add the local database table for cloud saves:
+
+```bash
+cd server
+npx prisma migrate dev --name add_save_game
+```
+
 ## Gameplay Systems
 
 - Dashboard overview
