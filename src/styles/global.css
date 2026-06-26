@@ -24,12 +24,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(11, 35, 61, 0.96), rgba(5, 16, 31, 1)),
-    var(--navy-900);
-  background-size: 18px 18px, 18px 18px, auto;
+  background: linear-gradient(180deg, rgba(11, 35, 61, 0.96), rgba(5, 16, 31, 1)), var(--navy-900);
 }
 
 button {

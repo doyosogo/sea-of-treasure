@@ -23,7 +23,7 @@ export const craftableUpgrades = [
     id: "cannonBraces",
     name: "Cannon Braces",
     maxLevel: 10,
-    effect: "+2% chance to recover cannonballs after battle per level.",
+    effect: "+2% chance to recover spent ammo after battle per level.",
     goldCostPerLevel: 1000,
     fishCostPerLevel: 40,
     whaleOilCostPerLevel: 4,

@@ -1,4 +1,4 @@
-// Ship-wide cannon quality tiers. Cannonballs are one shared resource.
+// Ship-wide cannon quality tiers. Ammo type is selected separately in combat.
 export const BASE_CANNON_DAMAGE = 10;
 
 export const cannons = [

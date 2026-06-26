@@ -2,7 +2,7 @@ import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 const stoppedReasonMessages = {
   offline_cap_reached: "Your crew reached the 24 hour offline cap.",
-  out_of_cannonballs: "Your crew ran out of cannonballs, so progress stopped early.",
+  out_of_cannonballs: "Your crew ran out of selected ammo, so progress stopped early.",
   hull_destroyed: "Your ship was defeated while you were away. Repair your hull before sailing again."
 };
 

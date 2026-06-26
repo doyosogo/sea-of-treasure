@@ -94,7 +94,7 @@ export const dailyQuestPool = [
     id: "buy_100_cannonballs",
     type: "daily",
     title: "Supply Restock",
-    description: "Buy 100 cannonballs.",
+    description: "Buy 100 ammo.",
     target: 100,
     metric: "cannonballsBought",
     rewardGold: 500,

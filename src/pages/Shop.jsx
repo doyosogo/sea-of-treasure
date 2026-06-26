@@ -68,7 +68,7 @@ function Shop({ gameState, dispatch }) {
           <div className="shop-title-copy">
             <p className="eyebrow">Shop</p>
             <h1>Shop</h1>
-            <p>Buy ships, upgrade cannons, restock cannonballs, and craft ship improvements.</p>
+            <p>Buy ships, upgrade cannons, restock ammo, and craft ship improvements.</p>
             <p className="shop-note">Doubloon purchases will unlock in a future update.</p>
           </div>
           <div className="shop-top-stats">
@@ -81,7 +81,7 @@ function Shop({ gameState, dispatch }) {
         <div className="shop-tabs" role="tablist" aria-label="Shop categories">
           <TabButton active={activeCategory === "ships"} label="Ships" onClick={() => setActiveCategory("ships")} />
           <TabButton active={activeCategory === "cannons"} label="Cannons" onClick={() => setActiveCategory("cannons")} />
-          <TabButton active={activeCategory === "cannonballs"} label="Cannonballs" onClick={() => setActiveCategory("cannonballs")} />
+          <TabButton active={activeCategory === "cannonballs"} label="Ammo" onClick={() => setActiveCategory("cannonballs")} />
           <TabButton active={activeCategory === "improvements"} label="Ship Improvements" onClick={() => setActiveCategory("improvements")} />
         </div>
 
@@ -259,7 +259,7 @@ function Shop({ gameState, dispatch }) {
         {activeCategory === "cannonballs" && (
           <section className="shop-grid">
             <article className="shop-panel">
-              <h2><Tooltip label="Supply Store" text="Restock cannonballs here to keep combat going." position="right">Supply Store</Tooltip></h2>
+              <h2><Tooltip label="Supply Store" text="Restock ammo here to keep combat going." position="right">Supply Store</Tooltip></h2>
               <div className="shop-supply-grid">
                 <Metric icon={UI_CANNONBALLS} label="Selected Ammo" value={selectedAmmo.name} tooltip="This is the ammo type currently used in combat." />
                 <Metric icon={UI_CANNONBALLS} label="Total Ammo" value={formatNumber(totalAmmo)} tooltip="All ammo types combined in your inventory." />

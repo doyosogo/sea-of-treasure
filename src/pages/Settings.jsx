@@ -200,7 +200,12 @@ function Settings({ gameState, dispatch }) {
   }
 
   return (
-    <section className="settings-page">
+    <section
+      className="settings-page settings-scene"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5, 8, 14, 0.45), rgba(5, 8, 14, 0.72)), url(${SCENES.harbour})`
+      }}
+    >
       <div className="hero-panel pixel-panel">
         <div>
           <p className="eyebrow">Save Tools</p>
@@ -294,7 +299,7 @@ function Settings({ gameState, dispatch }) {
             <Stat label="Active Combat Net Gold" value={formatNumber(Math.max(0, Math.round(getIdleCombatEstimate(gameState).goldPerEnemy * ACTIVE_COMBAT_GOLD_BONUS_MULTIPLIER - (getEffectiveBallsPerBattle(gameState) * getAmmoCostPer100(selectedAmmo.id)) / 100)))} />
             <Stat label="Idle Gold / Hour" value={formatNumber(getIdleCombatEstimate(gameState).goldPerHour)} />
             <Stat label="Repair Cost Estimate" value={`${formatNumber(getRepairCostPerMissingHull(gameState) * Math.max(0, getMaxHull(gameState) - gameState.hull.current))} Gold`} />
-            <Stat label="Cannonball Cost / Hour" value={formatNumber(getIdleCombatEstimate(gameState).cannonballsPerHour)} />
+            <Stat label="Ammo Cost / Hour" value={formatNumber(getIdleCombatEstimate(gameState).cannonballsPerHour)} />
           </div>
         </article>
 
@@ -410,8 +415,7 @@ function isValidSaveShape(save) {
     save &&
     typeof save === "object" &&
     Number.isFinite(save.playerLevel) &&
-    Number.isFinite(save.gold) &&
-    Number.isFinite(save.currentShipId)
+    Number.isFinite(save.gold)
   );
 }
 
@@ -425,15 +429,21 @@ function Stat({ label, value }) {
 }
 
 function ResourceList({ title, values }) {
+  const entries = Object.entries(values ?? {});
+
   return (
     <div className="resource-market-card">
       <h2>{title}</h2>
-      {Object.entries(values).map(([key, value]) => (
-        <div className="resource-row" key={key}>
-          <span>{formatLabel(key)}</span>
-          <strong>{formatNumber(value)}</strong>
-        </div>
-      ))}
+      {entries.length > 0 ? (
+        entries.map(([key, value]) => (
+          <div className="resource-row" key={key}>
+            <span>{formatLabel(key)}</span>
+            <strong>{formatNumber(value)}</strong>
+          </div>
+        ))
+      ) : (
+        <p className="shop-note">No entries are present in this save section.</p>
+      )}
     </div>
   );
 }

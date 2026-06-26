@@ -2,7 +2,6 @@ import { useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
-import Fleet from "./pages/Fleet.jsx";
 import MyShip from "./pages/MyShip.jsx";
 import Crew from "./pages/Crew.jsx";
 import Quests from "./pages/Quests.jsx";
@@ -11,9 +10,7 @@ import Talents from "./pages/Talents.jsx";
 import Shop from "./pages/Shop.jsx";
 import Port from "./pages/Port.jsx";
 import Treasure from "./pages/Treasure.jsx";
-import Shipwright from "./pages/Shipwright.jsx";
 import Achievements from "./pages/Achievements.jsx";
-import Materials from "./pages/Materials.jsx";
 import Settings from "./pages/Settings.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 
@@ -29,13 +26,10 @@ const pageRegistry = {
   port: { label: "Port", component: Port },
   achievements: { label: "Achievements", component: Achievements },
   settings: { label: "Settings", component: Settings },
-  fleet: { label: "Fleet", component: Fleet },
-  shipwright: { label: "Shipwright", component: Shipwright },
-  materials: { label: "Materials", component: Materials },
   treasure: { label: "Treasure", component: Treasure }
 };
 
-const navOrder = ["dashboard", "myShip", "crew", "battle", "quests", "skills", "talents", "shop", "port", "achievements", "settings"];
+const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "talents", "shop", "port", "achievements", "settings"];
 
 function App() {
   const [activePage, setActivePage] = useState("dashboard");

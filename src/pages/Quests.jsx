@@ -57,11 +57,7 @@ function Quests({ gameState, dispatch, onNavigate }) {
             <h2>Daily Quests</h2>
             <span className="quest-section-badge">{formatNumber(dailyComplete)} complete</span>
           </div>
-          <div className="quest-card-grid">
-            {(quests.daily ?? []).map((quest) => (
-              <QuestCard key={quest.id} quest={quest} dispatch={dispatch} />
-            ))}
-          </div>
+          <QuestList quests={quests.daily ?? []} type="daily" dispatch={dispatch} />
         </section>
 
         <section className="quest-section">
@@ -69,11 +65,7 @@ function Quests({ gameState, dispatch, onNavigate }) {
             <h2>Weekly Quests</h2>
             <span className="quest-section-badge">{formatNumber(weeklyComplete)} complete</span>
           </div>
-          <div className="quest-card-grid">
-            {(quests.weekly ?? []).map((quest) => (
-              <QuestCard key={quest.id} quest={quest} dispatch={dispatch} />
-            ))}
-          </div>
+          <QuestList quests={quests.weekly ?? []} type="weekly" dispatch={dispatch} />
         </section>
 
         <button className="chunky-button quest-back-button" onClick={() => onNavigate?.("dashboard")} type="button">
@@ -81,6 +73,25 @@ function Quests({ gameState, dispatch, onNavigate }) {
         </button>
       </div>
     </section>
+  );
+}
+
+function QuestList({ quests, type, dispatch }) {
+  if (quests.length <= 0) {
+    return (
+      <div className="treasure-empty-state">
+        <strong>No {type} quests available.</strong>
+        <p>Quest orders will refresh automatically when the next reset cycle starts.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="quest-card-grid">
+      {quests.map((quest) => (
+        <QuestCard key={quest.id} quest={quest} dispatch={dispatch} />
+      ))}
+    </div>
   );
 }
 
