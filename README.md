@@ -54,6 +54,20 @@ npm run dev
 npm run build
 ```
 
+## Backend Setup
+
+The backend scaffold lives in `server/` and is not connected to the frontend yet.
+
+```bash
+cd server
+npm install
+cp .env.example .env
+npx prisma migrate dev
+npm run dev
+```
+
+The initial API includes authentication route scaffolding and `GET /api/health`.
+
 ## Gameplay Systems
 
 - Dashboard overview
