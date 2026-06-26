@@ -39,6 +39,10 @@ function Battle({ gameState, dispatch }) {
   const ammoInventory = gameState.ammoInventory ?? {};
   const selectedAmmo = ammunition.find((ammo) => ammo.id === gameState.selectedAmmoId) ?? ammunition[0];
   const totalAmmo = Object.values(ammoInventory).reduce((total, value) => total + (value ?? 0), 0);
+  const equippedCannons = combatStats.totalEquippedCannons;
+  const ammoPerVolley = getEffectiveBallsPerBattle(gameState);
+  const selectedAmmoQuantity = ammoInventory[selectedAmmo.id] ?? 0;
+  const availableVolleys = Math.floor(selectedAmmoQuantity / Math.max(1, ammoPerVolley));
   const activeEnemy = battleEnemy ?? selectedEnemyType ?? lastBattleEnemy;
   const hullProgress = combatStats.maxHull > 0 ? (combatStats.currentHull / combatStats.maxHull) * 100 : 0;
   const enemyHpProgress = battleEnemy ? (battleEnemy.currentHP / battleEnemy.maxHP) * 100 : 0;
@@ -181,27 +185,69 @@ function Battle({ gameState, dispatch }) {
                 </div>
               </div>
 
-              <div className="battle-stat-strip">
-                <Metric icon={UI_ICONS.cannonballs} label="Selected Ammo" value={selectedAmmo.name} tooltip="This ammo type is used when you fire a volley." />
-                <Metric icon={UI_ICONS.cannonballs} label="Ammo Stock" value={formatNumber(totalAmmo)} tooltip="Total ammo across all types." />
-                <Metric icon={UI_ICONS.gold} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} tooltip="Volley damage is the total damage of one firing cycle before crits." />
-                <Metric icon={UI_ICONS.xp} label="Shots Fired" value={battleEnemy ? formatNumber(currentBattle.shotsFired) : "0"} tooltip="Shots fired counts the number of volleys launched in the current battle." />
-                <Metric icon={UI_ICONS.hull} label="Repair Cost" value={formatNumber(repairCost)} tooltip="Repair cost is based on missing hull. Carpenter crew members can reduce it." />
+              <div className="battle-ammo-panel">
+                <div className="battle-ammo-panel-icon">
+                  <img alt="Ammo" src={UI_ICONS.cannonballs} />
+                </div>
+                <div className="battle-ammo-panel-copy">
+                  <p className="region-kicker">Current Ammunition</p>
+                  <h3>{selectedAmmo.name}</h3>
+                  <div className="battle-ammo-summary-grid">
+                    <div className="battle-ammo-summary-row">
+                      <span>Damage Multiplier</span>
+                      <strong>{formatNumber(selectedAmmo.damageMultiplier)}x</strong>
+                    </div>
+                    <div className="battle-ammo-summary-row">
+                      <span>Owned Quantity</span>
+                      <strong>{formatNumber(selectedAmmoQuantity)}</strong>
+                    </div>
+                    <div className="battle-ammo-summary-row">
+                      <span>Equipped Cannons</span>
+                      <strong>{formatNumber(equippedCannons)}</strong>
+                    </div>
+                    <div className="battle-ammo-summary-row">
+                      <span>Available Volleys</span>
+                      <strong>{formatNumber(availableVolleys)}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="battle-ammo-selector">
                 {ammunition.map((ammo) => (
                   <button
-                    className={ammo.id === gameState.selectedAmmoId ? "ammo-select-card selected" : "ammo-select-card"}
+                    className={[
+                      "ammo-select-card",
+                      ammo.id === gameState.selectedAmmoId ? "selected" : "",
+                      (ammoInventory[ammo.id] ?? 0) < ammoPerVolley ? "insufficient" : ""
+                    ].filter(Boolean).join(" ")}
                     key={ammo.id}
                     onClick={() => dispatch({ type: "SELECT_AMMO", ammoId: ammo.id })}
+                    aria-pressed={ammo.id === gameState.selectedAmmoId}
                     type="button"
                   >
-                    <span>{ammo.name}</span>
-                    <strong>{formatNumber(ammoInventory[ammo.id] ?? 0)}</strong>
-                    <small>{formatNumber(ammo.damageMultiplier)}x damage</small>
+                    {ammo.id === gameState.selectedAmmoId ? <span className="ammo-select-ribbon">Selected</span> : null}
+                    <span className="ammo-select-icon">
+                      <img alt="" aria-hidden="true" src={UI_ICONS.cannonballs} />
+                    </span>
+                    <span className="ammo-select-name">{ammo.name}</span>
+                    <strong className="ammo-select-multiplier">{formatNumber(ammo.damageMultiplier)}x damage</strong>
+                    <span className="ammo-select-owned">Owned: {formatNumber(ammoInventory[ammo.id] ?? 0)}</span>
+                    <span className="ammo-select-state">
+                      {ammo.id === gameState.selectedAmmoId
+                        ? "Selected"
+                        : (ammoInventory[ammo.id] ?? 0) < ammoPerVolley
+                          ? "Insufficient Ammo"
+                          : "Ready"}
+                    </span>
                   </button>
                 ))}
+              </div>
+
+              <div className="battle-stat-strip">
+                <Metric icon={UI_ICONS.gold} label="Volley Damage" value={formatNumber(combatStats.volleyDamage)} tooltip="Volley damage is the total damage of one firing cycle before crits." />
+                <Metric icon={UI_ICONS.xp} label="Shots Fired" value={battleEnemy ? formatNumber(currentBattle.shotsFired) : "0"} tooltip="Shots fired counts the number of volleys launched in the current battle." />
+                <Metric icon={UI_ICONS.hull} label="Repair Cost" value={formatNumber(repairCost)} tooltip="Repair cost is based on missing hull. Carpenter crew members can reduce it." />
               </div>
             </div>
           </div>

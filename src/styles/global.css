@@ -2128,6 +2128,197 @@ h2 {
   gap: 12px;
 }
 
+.battle-ammo-panel {
+  display: grid;
+  grid-template-columns: minmax(88px, 120px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 20px;
+  background: rgba(5, 15, 30, 0.84);
+  border: 2px solid rgba(211, 165, 58, 0.78);
+  box-shadow: 4px 4px 0 rgba(3, 16, 31, 0.92);
+}
+
+.battle-ammo-panel-icon {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  background: rgba(4, 17, 31, 0.72);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.battle-ammo-panel-icon img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.battle-ammo-panel-copy {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.battle-ammo-panel-copy h3 {
+  margin: 0;
+  color: var(--gold-300);
+  font-size: 1.4rem;
+}
+
+.battle-ammo-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.battle-ammo-summary-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(18, 49, 84, 0.58);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.battle-ammo-summary-row span {
+  color: #a9bfd4;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.battle-ammo-summary-row strong {
+  color: var(--cream);
+  font-size: 1rem;
+}
+
+.battle-ammo-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ammo-select-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  justify-items: start;
+  width: 100%;
+  padding: 14px 14px 16px;
+  text-align: left;
+  color: var(--cream);
+  font: inherit;
+  background:
+    linear-gradient(180deg, rgba(18, 49, 84, 0.76), rgba(8, 23, 41, 0.94));
+  border: 2px solid rgba(109, 85, 32, 0.82);
+  box-shadow: 3px 3px 0 rgba(3, 16, 31, 0.92);
+  cursor: pointer;
+  appearance: none;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease,
+    background 0.14s ease,
+    filter 0.14s ease;
+}
+
+.ammo-select-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-300);
+  box-shadow: 0 0 0 1px rgba(255, 211, 106, 0.2), 5px 5px 0 rgba(3, 16, 31, 0.92);
+}
+
+.ammo-select-card.selected {
+  border-color: var(--gold-300);
+  box-shadow:
+    0 0 0 1px rgba(255, 211, 106, 0.3),
+    0 0 18px rgba(255, 211, 106, 0.2),
+    4px 4px 0 rgba(3, 16, 31, 0.92);
+}
+
+.ammo-select-card.insufficient {
+  opacity: 0.68;
+  filter: grayscale(0.35);
+}
+
+.ammo-select-card:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
+
+.ammo-select-ribbon {
+  position: absolute;
+  top: 10px;
+  right: -6px;
+  padding: 4px 10px;
+  color: var(--navy-950);
+  background: linear-gradient(180deg, #ffe08c, #d9a53a);
+  border: 1px solid var(--gold-300);
+  box-shadow: 2px 2px 0 rgba(3, 16, 31, 0.9);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ammo-select-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(4, 17, 31, 0.72);
+  border: 2px solid rgba(109, 85, 32, 0.72);
+}
+
+.ammo-select-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.ammo-select-name {
+  color: var(--gold-300);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ammo-select-multiplier,
+.ammo-select-owned,
+.ammo-select-state {
+  display: block;
+  color: var(--cream);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ammo-select-state {
+  color: #d8c99c;
+}
+
+.ammo-select-card.insufficient .ammo-select-state {
+  color: #f2cc8d;
+}
+
+.ammo-select-card.selected .ammo-select-state {
+  color: var(--gold-300);
+}
+
+.ammo-select-card.selected .ammo-select-name,
+.ammo-select-card.selected .ammo-select-multiplier {
+  color: var(--gold-300);
+}
+
+@media (max-width: 1024px) {
+  .battle-ammo-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .battle-metric {
   display: flex;
   align-items: center;
@@ -4456,6 +4647,14 @@ h2 {
 
   .combat-action-button {
     flex-basis: auto;
+  }
+
+  .battle-ammo-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-ammo-selector {
+    grid-template-columns: 1fr;
   }
 
   .nav-hint-button {
