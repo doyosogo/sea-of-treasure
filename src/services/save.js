@@ -1,3 +1,5 @@
+import { ships } from "../data/ships.js";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 async function request(path, accessToken, options = {}) {
@@ -30,4 +32,20 @@ export function uploadCloudSave(save, accessToken) {
       version: "1.0"
     })
   });
+}
+
+export function getSaveSummary(save) {
+  const playerLevel = Math.max(1, Math.floor(save?.playerLevel ?? 1));
+  const gold = Math.max(0, Math.floor(save?.gold ?? 0));
+  const currentShipId = save?.currentShipId ?? null;
+  const currentShipName = ships.find((ship) => ship.id === currentShipId)?.name ?? currentShipId ?? "Unknown";
+  const lastSeen = save?.lastSeen ?? save?.updatedAt ?? null;
+
+  return {
+    playerLevel,
+    gold,
+    currentShipId,
+    currentShipName,
+    lastSeen
+  };
 }

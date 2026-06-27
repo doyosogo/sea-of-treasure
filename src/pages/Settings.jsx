@@ -45,7 +45,7 @@ import {
 
 const STORAGE_KEY = "sot_save";
 
-function Settings({ cloudSync, dispatch, gameState, onSyncNow }) {
+function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyncNow, saveConflict }) {
   const { user, logout } = useAuth();
   const [exportedJson, setExportedJson] = useState("");
   const [importJson, setImportJson] = useState("");
@@ -234,6 +234,11 @@ function Settings({ cloudSync, dispatch, gameState, onSyncNow }) {
             </div>
             <p className="shop-note">Cloud save backup is enabled. Local browser storage remains unchanged.</p>
             <div className="button-row">
+              {saveConflict?.unresolved ? (
+                <button className="chunky-button" onClick={onResolveSaveConflict} type="button">
+                  Resolve Save Conflict
+                </button>
+              ) : null}
               <button className="chunky-button primary" disabled={cloudSync?.status === "syncing"} onClick={onSyncNow} type="button">
                 Sync Now
               </button>

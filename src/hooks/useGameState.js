@@ -75,7 +75,7 @@ import {
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
 
-const STORAGE_KEY = "sot_save";
+export const STORAGE_KEY = "sot_save";
 const BASE_SKILL_XP_REWARD = 100;
 const MARKET_REFRESH_COOLDOWN_MS = MARKET_CYCLE_DURATION_MS;
 const DAY_MS = QUEST_DAILY_RESET_MS;
@@ -2706,6 +2706,7 @@ function gameStateReducer(state, action) {
 export function useGameState({ onPersist } = {}) {
   const [gameState, dispatch] = useReducer(gameStateReducer, undefined, loadSavedState);
   const skipNextLocalPersistRef = useRef(false);
+  const suppressNextPersistCallbackRef = useRef(false);
   const runtimeCloudStateOnlyRef = useRef(false);
   const latestPersistCallbackRef = useRef(onPersist);
 
@@ -2721,6 +2722,12 @@ export function useGameState({ onPersist } = {}) {
 
     runtimeCloudStateOnlyRef.current = false;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+
+    if (suppressNextPersistCallbackRef.current) {
+      suppressNextPersistCallbackRef.current = false;
+      return;
+    }
+
     latestPersistCallbackRef.current?.(gameState);
   }, [gameState]);
 
@@ -2768,9 +2775,12 @@ export function useGameState({ onPersist } = {}) {
     return () => window.clearInterval(timerId);
   }, []);
 
-  const applyCloudSave = useCallback((saveData) => {
-    skipNextLocalPersistRef.current = true;
-    runtimeCloudStateOnlyRef.current = true;
+  const applyCloudSave = useCallback((saveData, options = {}) => {
+    const persistLocalStorage = Boolean(options.persistLocalStorage);
+
+    skipNextLocalPersistRef.current = !persistLocalStorage;
+    suppressNextPersistCallbackRef.current = persistLocalStorage;
+    runtimeCloudStateOnlyRef.current = !persistLocalStorage;
     dispatch({ type: "APPLY_CLOUD_SAVE", saveData, now: Date.now() });
   }, []);
 

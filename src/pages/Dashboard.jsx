@@ -340,6 +340,8 @@ function getCloudStatusLabel(cloudSync) {
       return "Syncing...";
     case "error":
       return "Error";
+    case "conflict":
+      return "Conflict";
     default:
       return "Offline";
   }
