@@ -42,6 +42,11 @@ import {
   getActiveWorldEvent,
   getRepairCostPerMissingHull
 } from "../utils/gameEngine.js";
+import {
+  exportGameSave,
+  parseImportedSave,
+  replaceLocalSave
+} from "../utils/saveTools.js";
 
 const STORAGE_KEY = "sot_save";
 
@@ -71,15 +76,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   }), []);
 
   function handleExportSave() {
-    const json = JSON.stringify(gameState, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = "sea-of-treasure-save.json";
-    link.click();
-    URL.revokeObjectURL(url);
+    const json = exportGameSave(gameState);
     setExportedJson(json);
     setStatus({ type: "success", message: "Save exported." });
     dispatch({ type: "SAVE_EXPORTED" });
@@ -90,30 +87,14 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   }
 
   function importSaveFromJson(jsonText) {
-    let parsedSave;
+    const result = parseImportedSave(jsonText);
 
-    try {
-      parsedSave = JSON.parse(jsonText);
-    } catch {
-      setStatus({ type: "error", message: "Import failed: save JSON is not valid." });
+    if (!result.ok) {
+      setStatus({ type: "error", message: result.error });
       return;
     }
 
-    if (!isValidSaveShape(parsedSave)) {
-      setStatus({ type: "error", message: "Import failed: save is missing required fields." });
-      return;
-    }
-
-    const importedSave = {
-      ...parsedSave,
-      activityLog: [
-        { message: "Save imported.", type: "info" },
-        ...(Array.isArray(parsedSave.activityLog) ? parsedSave.activityLog : [])
-      ].slice(0, 8),
-      lastSeen: Date.now()
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(importedSave));
+    replaceLocalSave(result.save);
     setStatus({ type: "success", message: "Save imported. Reloading..." });
     window.location.reload();
   }
@@ -439,15 +420,6 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
         </article>
       )}
     </section>
-  );
-}
-
-function isValidSaveShape(save) {
-  return (
-    save &&
-    typeof save === "object" &&
-    Number.isFinite(save.playerLevel) &&
-    Number.isFinite(save.gold)
   );
 }
 

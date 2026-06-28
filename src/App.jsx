@@ -15,6 +15,7 @@ import Shop from "./pages/Shop.jsx";
 import Port from "./pages/Port.jsx";
 import Treasure from "./pages/Treasure.jsx";
 import Achievements from "./pages/Achievements.jsx";
+import Profile from "./pages/Profile.jsx";
 import Settings from "./pages/Settings.jsx";
 import { STORAGE_KEY, useGameState } from "./hooks/useGameState.js";
 
@@ -29,11 +30,12 @@ const pageRegistry = {
   shop: { label: "Shop", component: Shop },
   port: { label: "Port", component: Port },
   achievements: { label: "Achievements", component: Achievements },
+  profile: { label: "Profile", component: Profile },
   settings: { label: "Settings", component: Settings },
   treasure: { label: "Treasure", component: Treasure }
 };
 
-const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "talents", "shop", "port", "achievements", "settings"];
+const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "talents", "shop", "port", "achievements", "profile", "settings"];
 
 function App() {
   return (
@@ -232,7 +234,7 @@ function GameApp() {
         }
 
         setSaveConflict({
-          localSummary: getSaveSummary(latestSaveRef.current ?? gameState),
+          localSummary: getSaveSummary(latestSaveRef.current),
           cloudSummary: getSaveSummary(result.save.data),
           cloudSave: result.save.data,
           cloudUpdatedAt: result.save.updatedAt,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as authService from "../services/auth.js";
 
 const ACCESS_TOKEN_KEY = "sot_access_token";
@@ -58,6 +58,16 @@ export function AuthProvider({ children }) {
     setRefreshToken(null);
   }
 
+  const refreshCurrentUser = useCallback(async () => {
+    if (!accessToken) {
+      return null;
+    }
+
+    const result = await authService.getCurrentUser(accessToken);
+    setUser(result.user);
+    return result.user;
+  }, [accessToken]);
+
   async function login(credentials) {
     const result = await authService.login(credentials);
     storeSession(result);
@@ -84,8 +94,9 @@ export function AuthProvider({ children }) {
     loading,
     login,
     register,
-    logout
-  }), [user, accessToken, loading, refreshToken]);
+    logout,
+    refreshCurrentUser
+  }), [user, accessToken, loading, refreshToken, refreshCurrentUser]);
 
   return (
     <AuthContext.Provider value={value}>
