@@ -18,7 +18,7 @@ import {
 } from "../utils/gameEngine.js";
 import { skills } from "../data/skills.js";
 
-function Dashboard({ cloudSync, gameState, onNavigate }) {
+function Dashboard({ cloudSync, dispatch, gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const activeRegion = getActiveRegion(gameState);
@@ -93,15 +93,36 @@ function Dashboard({ cloudSync, gameState, onNavigate }) {
             <h1>Captain&apos;s Cabin</h1>
             <p>Overview of your voyage, ship, crew and resources.</p>
           </div>
-          <div className={gameState.isIdling ? "status-pill active" : "status-pill"}>
-            {gameState.isIdling ? "Idling" : "Docked"}
-          </div>
-        </header>
-
-        <div className={`cloud-save-pill ${cloudSync?.status ?? "offline"}`}>
-          <span>Cloud Save</span>
-          <strong>{getCloudStatusLabel(cloudSync)}</strong>
+        <div className={gameState.isIdling ? "status-pill active" : "status-pill"}>
+          {gameState.isIdling ? "Idling" : "Docked"}
         </div>
+      </header>
+
+      <div className={`cloud-save-pill ${cloudSync?.status ?? "offline"}`}>
+        <span>Cloud Save</span>
+        <strong>{getCloudStatusLabel(cloudSync)}</strong>
+      </div>
+        {gameState.pendingOfflineRewards && gameState.preferences?.showOfflineSummary === false ? (
+          <section className="dashboard-panel dashboard-offline-notice">
+            <h2>Offline Rewards Ready</h2>
+            <p className="shop-note">
+              Offline rewards were calculated while the summary modal is disabled. Claim them here or leave them for later.
+            </p>
+            <div className="dashboard-offline-notice-grid">
+              <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.pendingOfflineRewards.goldEarned ?? 0)} tooltip="Gold earned while you were away." />
+              <Metric label="XP" icon={UI_ICONS.xp} value={formatNumber(gameState.pendingOfflineRewards.xpEarned ?? 0)} tooltip="XP earned while you were away." />
+              <Metric label="Time Away" icon={UI_ICONS.xp} value={formatDuration(gameState.pendingOfflineRewards.timeAwayMs ?? 0)} tooltip="Total time the crew was away." />
+            </div>
+            <div className="button-row">
+              <button className="chunky-button primary" onClick={() => dispatch?.({ type: "CLAIM_OFFLINE_REWARDS" })} type="button">
+                Claim Rewards
+              </button>
+              <button className="chunky-button" onClick={() => dispatch?.({ type: "DISMISS_OFFLINE_REWARDS" })} type="button">
+                Dismiss
+              </button>
+            </div>
+          </section>
+        ) : null}
         {cloudSync?.message && !["Synced", "Syncing...", "Playing offline."].includes(cloudSync.message) ? (
           <p className="cloud-save-note">{cloudSync.message}</p>
         ) : null}

@@ -16,6 +16,7 @@ function Profile({ cloudSync, gameState, onNavigate }) {
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const currentRegion = getActiveRegion(gameState);
+  const preferences = gameState.preferences ?? {};
   const xpRequired = getXpRequired(gameState.playerLevel);
   const xpToNextLevel = xpRequired === Infinity ? 0 : xpRequired;
   const ownedShips = useMemo(() => ships.filter((ship) => (gameState.ownedShips ?? []).includes(ship.id)), [gameState.ownedShips]);
@@ -141,6 +142,17 @@ function Profile({ cloudSync, gameState, onNavigate }) {
               <Stat label="Current Ship" value={currentShip.name} />
               <Stat label="Current Region" value={currentRegion.name} />
               <Stat label="Cloud Save Status" value={cloudSync?.message ?? (user ? "Synced" : "Offline")} />
+            </div>
+          </article>
+
+          <article className="dashboard-panel profile-panel">
+            <h2>Preferences</h2>
+            <div className="summary-stat-grid">
+              <Stat label="UI Scale" value={formatPreferenceValue(preferences.uiScale ?? "normal")} />
+              <Stat label="Damage Numbers" value={(preferences.showDamageNumbers ?? true) ? "On" : "Off"} />
+              <Stat label="Offline Summary" value={(preferences.showOfflineSummary ?? true) ? "On" : "Off"} />
+              <Stat label="Autosave Interval" value={`${preferences.autosaveIntervalSeconds ?? 30}s`} />
+              <Stat label="Compact Mode" value={(preferences.compactMode ?? false) ? "On" : "Off"} />
             </div>
           </article>
 
@@ -310,6 +322,10 @@ function formatDate(value) {
   }
 
   return date.toLocaleString();
+}
+
+function formatPreferenceValue(value) {
+  return value.replace(/^[a-z]/, (letter) => letter.toUpperCase());
 }
 
 export default Profile;

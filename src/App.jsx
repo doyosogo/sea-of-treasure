@@ -166,13 +166,16 @@ function GameApp() {
     }
 
     window.clearTimeout(uploadTimerRef.current);
+    const autosaveDelayMs = Math.max(0, (saveData.preferences?.autosaveIntervalSeconds ?? 30) * 1000);
     uploadTimerRef.current = window.setTimeout(() => {
       syncSaveNow(saveData);
-    }, 1500);
+    }, autosaveDelayMs);
   }, [accessToken, saveConflict?.unresolved, syncSaveNow, user]);
 
   const { gameState, dispatch, applyCloudSave } = useGameState({ onPersist: handlePersist });
   const ActivePage = pageRegistry[activePage].component;
+  const uiScaleClass = `ui-scale-${gameState.preferences?.uiScale ?? "normal"}`;
+  const compactModeClass = gameState.preferences?.compactMode ? " compact-mode" : "";
 
   useEffect(() => {
     latestSaveRef.current = gameState;
@@ -305,7 +308,7 @@ function GameApp() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${uiScaleClass}${compactModeClass}`}>
       <header className="topbar">
         <div className="brand">Sea of Treasure</div>
         <nav className="main-nav" aria-label="Primary navigation">

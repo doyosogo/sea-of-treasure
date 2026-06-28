@@ -80,6 +80,17 @@ const BASE_SKILL_XP_REWARD = 100;
 const MARKET_REFRESH_COOLDOWN_MS = MARKET_CYCLE_DURATION_MS;
 const DAY_MS = QUEST_DAILY_RESET_MS;
 const WEEK_MS = QUEST_WEEKLY_RESET_MS;
+const PLAY_TIME_TICK_MS = 60 * 1000;
+
+function createInitialPreferences() {
+  return {
+    uiScale: "normal",
+    showDamageNumbers: true,
+    showOfflineSummary: true,
+    autosaveIntervalSeconds: 30,
+    compactMode: false
+  };
+}
 
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
@@ -173,6 +184,13 @@ function createInitialLifetimeStats() {
     cursedFogEventsSeen: 0,
     treasureDigsCompleted: 0,
     rareTreasuresFound: 0,
+    treasureMapsFound: 0,
+    fishCaught: 0,
+    tradingProfit: 0,
+    worldEventsCompleted: 0,
+    crewLevelsPurchased: 0,
+    totalPlayTimeMs: 0,
+    offlineTimeEarnedMs: 0,
     upgradesCrafted: 0,
     totalDoubloonsEarned: 0
   };
@@ -447,7 +465,11 @@ function refreshWorldEventStateForTime(state, now = Date.now()) {
     nextState = {
       ...state,
       activeWorldEvent: null,
-      lastWorldEventGeneratedAt: now
+      lastWorldEventGeneratedAt: now,
+      lifetimeStats: {
+        ...state.lifetimeStats,
+        worldEventsCompleted: (state.lifetimeStats?.worldEventsCompleted ?? 0) + 1
+      }
     };
     nextState = addActivityLogEntry(nextState, `World Event Ended: ${endedEventName}.`);
     updated = true;
@@ -525,6 +547,7 @@ const initialState = {
   quests: createInitialQuestState(),
   lifetimeStats: createInitialLifetimeStats(),
   claimedAchievements: [],
+  preferences: createInitialPreferences(),
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -627,8 +650,31 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
       0,
       savedStats.rareTreasuresFound ?? restoredState.treasureInventory?.length ?? 0
     ),
+    treasureMapsFound: Math.max(0, savedStats.treasureMapsFound ?? 0),
+    fishCaught: Math.max(0, savedStats.fishCaught ?? 0),
+    tradingProfit: Math.max(0, savedStats.tradingProfit ?? 0),
+    worldEventsCompleted: Math.max(0, savedStats.worldEventsCompleted ?? 0),
+    crewLevelsPurchased: Math.max(0, savedStats.crewLevelsPurchased ?? 0),
+    totalPlayTimeMs: Math.max(0, savedStats.totalPlayTimeMs ?? 0),
+    offlineTimeEarnedMs: Math.max(0, savedStats.offlineTimeEarnedMs ?? 0),
     upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades)),
     totalDoubloonsEarned: Math.max(0, savedStats.totalDoubloonsEarned ?? 0)
+  };
+}
+
+function normalizePreferences(savedPreferences = {}) {
+  const defaults = createInitialPreferences();
+  const uiScale = ["small", "normal", "large"].includes(savedPreferences.uiScale) ? savedPreferences.uiScale : defaults.uiScale;
+  const autosaveIntervalSeconds = [15, 30, 60].includes(savedPreferences.autosaveIntervalSeconds)
+    ? savedPreferences.autosaveIntervalSeconds
+    : defaults.autosaveIntervalSeconds;
+
+  return {
+    uiScale,
+    showDamageNumbers: Boolean(savedPreferences.showDamageNumbers ?? defaults.showDamageNumbers),
+    showOfflineSummary: Boolean(savedPreferences.showOfflineSummary ?? defaults.showOfflineSummary),
+    autosaveIntervalSeconds,
+    compactMode: Boolean(savedPreferences.compactMode ?? defaults.compactMode)
   };
 }
 
@@ -846,6 +892,7 @@ function loadSavedState() {
     const restoredState = {
       ...initialState,
       ...parsedState,
+      preferences: normalizePreferences(parsedState.preferences),
       cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
       talents: normalizeTalents(parsedState.talents),
@@ -904,7 +951,9 @@ function loadSavedState() {
     }, parsedState.hull?.current);
     const worldEventState = refreshWorldEventStateForTime(normalizedState, now);
 
-    if (parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible) {
+    const shouldShowOfflineSummary = restoredState.preferences.showOfflineSummary && parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible;
+
+    if (shouldShowOfflineSummary) {
       return {
         ...worldEventState,
         pendingOfflineRewards: parsedState.pendingOfflineRewards,
@@ -925,7 +974,7 @@ function loadSavedState() {
     return {
       ...worldEventState,
       pendingOfflineRewards: offlineRewards,
-      offlineSummaryVisible: true,
+      offlineSummaryVisible: restoredState.preferences.showOfflineSummary,
       lastSeen: now
     };
   } catch {
@@ -952,6 +1001,7 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
   const restoredState = {
     ...initialState,
     ...parsedState,
+    preferences: normalizePreferences(parsedState.preferences),
     cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
     activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
     talents: normalizeTalents(parsedState.talents),
@@ -1374,6 +1424,14 @@ function gameStateReducer(state, action) {
   switch (action.type) {
     case "WORLD_EVENT_TICK":
       return state;
+    case "PLAY_TIME_TICK":
+      return {
+        ...state,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          totalPlayTimeMs: (state.lifetimeStats?.totalPlayTimeMs ?? 0) + Math.max(0, action.ms ?? PLAY_TIME_TICK_MS)
+        }
+      };
     case "SELECT_ENEMY": {
       const enemy = enemies.find((enemyData) => enemyData.id === action.enemyId);
 
@@ -1630,6 +1688,19 @@ function gameStateReducer(state, action) {
         currentShipId: action.shipId,
         lastSeen: Date.now()
       });
+    case "UPDATE_PREFERENCES": {
+      const nextPreferences = normalizePreferences({
+        ...state.preferences,
+        ...(action.preferences ?? {})
+      });
+
+      return {
+        ...state,
+        preferences: nextPreferences,
+        offlineSummaryVisible: nextPreferences.showOfflineSummary ? state.offlineSummaryVisible : false,
+        lastSeen: Date.now()
+      };
+    }
     case "BUY_CANNON": {
       const cannonId = getCannonIds().includes(action.cannonId) ? action.cannonId : null;
       const cannon = cannonId ? getCannonById(cannonId) : null;
@@ -1827,6 +1898,10 @@ function gameStateReducer(state, action) {
       const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          tradingProfit: (state.lifetimeStats?.tradingProfit ?? 0) + goldEarned
+        },
         talentPoints: state.talentPoints + levelsGained,
         skills: {
           ...state.skills,
@@ -1857,6 +1932,10 @@ function gameStateReducer(state, action) {
       const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          tradingProfit: (state.lifetimeStats?.tradingProfit ?? 0) + goldEarned
+        },
         resources: {
           ...state.resources,
           fish: state.resources.fish - quantity
@@ -1881,6 +1960,10 @@ function gameStateReducer(state, action) {
       const questProgressState = updateQuestProgressMany(addLifetimeGold({
         ...state,
         gold: state.gold + goldEarned,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          tradingProfit: (state.lifetimeStats?.tradingProfit ?? 0) + goldEarned
+        },
         resources: {
           ...state.resources,
           whaleOil: state.resources.whaleOil - quantity
@@ -2045,7 +2128,8 @@ function gameStateReducer(state, action) {
         lifetimeStats: {
           ...state.lifetimeStats,
           treasureDigsCompleted: (state.lifetimeStats?.treasureDigsCompleted ?? 0) + 1,
-          rareTreasuresFound: (state.lifetimeStats?.rareTreasuresFound ?? 0) + (rareFound ? 1 : 0)
+          rareTreasuresFound: (state.lifetimeStats?.rareTreasuresFound ?? 0) + (rareFound ? 1 : 0),
+          treasureMapsFound: (state.lifetimeStats?.treasureMapsFound ?? 0) + 0
         },
         skills: {
           ...state.skills,
@@ -2134,6 +2218,10 @@ function gameStateReducer(state, action) {
           fish: state.resources.fish + fishingReward.fish,
           whaleOil: state.resources.whaleOil + fishingReward.whaleOil
         } : state.resources,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          fishCaught: (state.lifetimeStats?.fishCaught ?? 0) + (fishingReward?.fish ?? 0)
+        },
         skills: {
           ...state.skills,
           [skillDefinition.id]: rewardedSkillState
@@ -2268,7 +2356,11 @@ function gameStateReducer(state, action) {
         : "";
       const loggedState = addActivityLogEntry(updateQuestProgressMany({
         ...doubloonRewardState,
-        treasureMaps: rewardedState.treasureMaps + mapsFound
+        treasureMaps: rewardedState.treasureMaps + mapsFound,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          treasureMapsFound: (state.lifetimeStats?.treasureMapsFound ?? 0) + mapsFound
+        }
       }, {
         shipsSunk: 1,
         activeBattlesWon: 1,
@@ -2352,6 +2444,10 @@ function gameStateReducer(state, action) {
           [crewMember.id]: {
             level: currentLevel + 1
           }
+        },
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          crewLevelsPurchased: (state.lifetimeStats?.crewLevelsPurchased ?? 0) + 1
         },
         lastSeen: Date.now()
       }, `${crewMember.role} promoted to Lv. ${currentLevel + 1}.`);
@@ -2489,6 +2585,10 @@ function gameStateReducer(state, action) {
         totalShipsSunk: state.totalShipsSunk + enemiesSunk,
         treasureMaps: state.treasureMaps + mapsFound,
         rareMapPieces: state.rareMapPieces + rareMapPiecesFound,
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          treasureMapsFound: (state.lifetimeStats?.treasureMapsFound ?? 0) + mapsFound
+        },
         lastSeen: action.now ?? Date.now()
       }, xpEarned);
       const idleState = addLifetimeShipsSunk(addLifetimeGold(xpState, goldEarned + passiveGold), enemiesSunk);
@@ -2592,6 +2692,11 @@ function gameStateReducer(state, action) {
         totalShipsSunk: state.totalShipsSunk + enemiesSunk,
         treasureMaps: state.treasureMaps + (rewards.mapsFound ?? 0),
         rareMapPieces: state.rareMapPieces + (rewards.rareMapPiecesFound ?? 0),
+        lifetimeStats: {
+          ...state.lifetimeStats,
+          offlineTimeEarnedMs: (state.lifetimeStats?.offlineTimeEarnedMs ?? 0) + (rewards.effectiveTimeMs ?? 0),
+          treasureMapsFound: (state.lifetimeStats?.treasureMapsFound ?? 0) + (rewards.mapsFound ?? 0)
+        },
         pendingOfflineRewards: null,
         offlineSummaryVisible: false,
         lastSeen: Date.now()
@@ -2771,6 +2876,14 @@ export function useGameState({ onPersist } = {}) {
     const timerId = window.setInterval(() => {
       dispatch({ type: "WORLD_EVENT_TICK", now: Date.now() });
     }, 60 * 1000);
+
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      dispatch({ type: "PLAY_TIME_TICK", ms: PLAY_TIME_TICK_MS });
+    }, PLAY_TIME_TICK_MS);
 
     return () => window.clearInterval(timerId);
   }, []);

@@ -63,6 +63,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   const activeWorldEvent = getActiveWorldEvent(gameState);
   const selectedAmmo = getSelectedAmmo(gameState);
   const totalAmmo = getTotalAmmoCount(gameState);
+  const preferences = gameState.preferences ?? {};
   const debugJson = useMemo(() => JSON.stringify(gameState, null, 2), [gameState]);
   const assetRegistrySummary = useMemo(() => ({
     ships: Object.keys(SHIP_IMAGES).length,
@@ -182,6 +183,13 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
     setStatus({ type: "warning", message: "Preview only: offline claim estimate generated." });
   }
 
+  function updatePreferences(nextPreferences) {
+    dispatch({
+      type: "UPDATE_PREFERENCES",
+      preferences: nextPreferences
+    });
+  }
+
   return (
     <section
       className="settings-page settings-scene"
@@ -231,6 +239,80 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
         ) : (
           <p className="shop-note">Playing offline. Login to enable cloud saves later.</p>
         )}
+      </article>
+
+      <article className="pixel-panel settings-panel">
+        <h2>Player Preferences</h2>
+        <p className="shop-note">
+          These preferences are stored in your save and travel with exports and cloud sync.
+        </p>
+
+        <div className="settings-preferences-grid">
+          <PreferenceGroup label="UI Scale" note="Adjust the overall interface size.">
+            {["small", "normal", "large"].map((scale) => (
+              <button
+                className={preferences.uiScale === scale ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={scale}
+                onClick={() => updatePreferences({ uiScale: scale })}
+                type="button"
+              >
+                {scale}
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Show Damage Numbers" note="Stored for future combat UI polish.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.showDamageNumbers === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ showDamageNumbers: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Show Offline Summary" note="If disabled, claim offline rewards from the Dashboard notice instead.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.showOfflineSummary === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ showOfflineSummary: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Autosave Interval" note="Controls how quickly cloud sync uploads after a save change.">
+            {[15, 30, 60].map((seconds) => (
+              <button
+                className={preferences.autosaveIntervalSeconds === seconds ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={seconds}
+                onClick={() => updatePreferences({ autosaveIntervalSeconds: seconds })}
+                type="button"
+              >
+                {seconds}s
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Compact Mode" note="Reduces spacing while keeping the interface readable.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.compactMode === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ compactMode: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+        </div>
       </article>
 
       <article className="pixel-panel settings-panel">
@@ -428,6 +510,20 @@ function Stat({ label, value }) {
     <div className="stat-box">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function PreferenceGroup({ label, note, children }) {
+  return (
+    <div className="settings-preference-group">
+      <div className="settings-preference-copy">
+        <strong>{label}</strong>
+        <span>{note}</span>
+      </div>
+      <div className="settings-toggle-row">
+        {children}
+      </div>
     </div>
   );
 }

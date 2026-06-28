@@ -41,6 +41,109 @@ button:disabled {
   min-height: 100vh;
 }
 
+.app-shell.ui-scale-small {
+  font-size: 0.97rem;
+}
+
+.app-shell.ui-scale-large {
+  font-size: 1.03rem;
+}
+
+.app-shell.ui-scale-small .page-frame,
+.app-shell.ui-scale-small .dashboard-shell,
+.app-shell.ui-scale-small .profile-shell,
+.app-shell.ui-scale-small .settings-page,
+.app-shell.ui-scale-small .battle-shell,
+.app-shell.ui-scale-small .shop-shell,
+.app-shell.ui-scale-small .harbour-shell,
+.app-shell.ui-scale-small .treasure-shell,
+.app-shell.ui-scale-small .quests-shell,
+.app-shell.ui-scale-small .crew-shell,
+.app-shell.ui-scale-small .skills-shell,
+.app-shell.ui-scale-small .talents-shell,
+.app-shell.ui-scale-small .achievements-shell,
+.app-shell.ui-scale-small .my-ship-shell {
+  gap: 20px;
+}
+
+.app-shell.ui-scale-small .dashboard-panel,
+.app-shell.ui-scale-small .pixel-panel,
+.app-shell.ui-scale-small .panel,
+.app-shell.ui-scale-small .settings-panel,
+.app-shell.ui-scale-small .profile-panel {
+  padding: 18px;
+}
+
+.app-shell.ui-scale-small .stat-box,
+.app-shell.ui-scale-small .resource-row,
+.app-shell.ui-scale-small .chunky-button {
+  font-size: 0.96rem;
+}
+
+.app-shell.ui-scale-large {
+  font-size: 1.03rem;
+}
+
+.app-shell.ui-scale-large .dashboard-panel,
+.app-shell.ui-scale-large .pixel-panel,
+.app-shell.ui-scale-large .panel,
+.app-shell.ui-scale-large .settings-panel,
+.app-shell.ui-scale-large .profile-panel {
+  padding: 26px;
+}
+
+.app-shell.ui-scale-large .dashboard-shell,
+.app-shell.ui-scale-large .profile-shell,
+.app-shell.ui-scale-large .settings-page,
+.app-shell.ui-scale-large .battle-shell,
+.app-shell.ui-scale-large .shop-shell,
+.app-shell.ui-scale-large .harbour-shell,
+.app-shell.ui-scale-large .treasure-shell,
+.app-shell.ui-scale-large .quests-shell,
+.app-shell.ui-scale-large .crew-shell,
+.app-shell.ui-scale-large .skills-shell,
+.app-shell.ui-scale-large .talents-shell,
+.app-shell.ui-scale-large .achievements-shell,
+.app-shell.ui-scale-large .my-ship-shell {
+  gap: 28px;
+}
+
+.compact-mode .page-frame {
+  margin: 24px auto;
+}
+
+.compact-mode .dashboard-main-grid,
+.compact-mode .dashboard-secondary-grid,
+.compact-mode .profile-grid,
+.compact-mode .profile-subgrid,
+.compact-mode .dashboard-main-grid,
+.compact-mode .settings-preferences-grid {
+  gap: 16px;
+}
+
+.compact-mode .dashboard-panel,
+.compact-mode .pixel-panel,
+.compact-mode .panel,
+.compact-mode .settings-panel,
+.compact-mode .profile-panel {
+  gap: 12px;
+  padding: 16px;
+}
+
+.compact-mode .stat-box,
+.compact-mode .resource-row,
+.compact-mode .settings-preference-group {
+  min-height: 0;
+}
+
+.compact-mode .stat-box {
+  padding: 10px 12px;
+}
+
+.compact-mode .button-row {
+  gap: 8px;
+}
+
 .app-loading-screen,
 .landing-page {
   min-height: 100vh;
@@ -1197,6 +1300,29 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.dashboard-offline-notice {
+  display: grid;
+  gap: 14px;
+  min-width: 300px;
+  padding: 22px;
+  color: var(--cream);
+  background: rgba(5, 15, 30, 0.78);
+  border: 3px solid rgba(211, 165, 58, 0.78);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+}
+
+.dashboard-offline-notice h2 {
+  margin: 0;
+  color: var(--gold-300);
+}
+
+.dashboard-offline-notice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
 .profile-progress-block {
   display: grid;
   gap: 10px;
@@ -2100,6 +2226,51 @@ h2 {
   display: grid;
   gap: 14px;
   padding: 20px;
+}
+
+.settings-preferences-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-preference-group {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(7, 18, 34, 0.54);
+  border: 1px solid rgba(211, 165, 58, 0.2);
+}
+
+.settings-preference-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-preference-copy strong {
+  color: var(--gold-200);
+  font-family: "Courier New", Courier, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.settings-preference-copy span {
+  color: rgba(246, 229, 181, 0.78);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.settings-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preference-option-button {
+  min-width: 92px;
+}
+
+.preference-option-button.active {
+  box-shadow: 4px 4px 0 var(--shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .save-textarea {

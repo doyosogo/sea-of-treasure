@@ -9,7 +9,7 @@ const stoppedReasonMessages = {
 function OfflineSummary({ gameState, dispatch }) {
   const rewards = gameState.pendingOfflineRewards;
 
-  if (!gameState.offlineSummaryVisible || !rewards) {
+  if (!gameState.preferences?.showOfflineSummary || !gameState.offlineSummaryVisible || !rewards) {
     return null;
   }
 
