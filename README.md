@@ -80,6 +80,10 @@ cd server
 npx prisma migrate dev --name add_save_game
 ```
 
+## Deployment
+
+See [docs/deployment.md](docs/deployment.md) for Docker setup, environment variables, migration steps, and hosting notes for the frontend, backend, and database.
+
 ## Gameplay Systems
 
 - Dashboard overview
