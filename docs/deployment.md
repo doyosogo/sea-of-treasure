@@ -51,6 +51,8 @@ npm run dev
 - `PORT`
 - `CLIENT_ORIGIN`
 
+The backend validates these variables at startup with a zod schema. If one is missing or malformed, the server exits before opening its port.
+
 ## Database Migration
 
 When a migration exists, apply it before exposing the backend publicly:
@@ -61,6 +63,8 @@ npx prisma migrate deploy
 ```
 
 For local schema work, continue using Prisma migrate dev.
+
+The Docker compose stack expects the database to be ready before the backend starts. If you are using a fresh database, run the initial Prisma migration before sending traffic.
 
 ## Production Deployment Overview
 
@@ -82,6 +86,8 @@ For local schema work, continue using Prisma migrate dev.
 - Ensure the backend has access to `DATABASE_URL`.
 - Keep JWT secrets unique per environment.
 - Set `CLIENT_ORIGIN` to the production frontend origin.
+- The backend exposes `GET /api/health` and `GET /api/health/db` for readiness checks.
+- The server handles `SIGINT` and `SIGTERM` by closing the HTTP listener and disconnecting Prisma cleanly.
 
 ## Database Hosting Notes
 
