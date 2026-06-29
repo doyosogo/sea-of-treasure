@@ -30,6 +30,20 @@ const CANNON_TIER_BY_ID = Object.fromEntries(cannons.map((cannon) => [cannon.id,
 const AMMO_ORDER = ammunition.map((ammo) => ammo.id);
 const AMMO_BY_ID = Object.fromEntries(ammunition.map((ammo) => [ammo.id, ammo]));
 const CREW_BY_ID = Object.fromEntries(crewMembers.map((crewMember) => [crewMember.id, crewMember]));
+const CAPTAIN_PROMOTION_LEVELS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+const CAPTAIN_RANK_TITLES = {
+  1: "Cabin Boy",
+  5: "Sailor",
+  10: "Boatswain",
+  15: "Lieutenant",
+  20: "Commander",
+  25: "Captain",
+  30: "Commodore",
+  35: "Rear Admiral",
+  40: "Vice Admiral",
+  45: "Admiral",
+  50: "Grand Admiral"
+};
 
 export function getXpRequired(level) {
   return levels.find((levelData) => levelData.level === level)?.xpRequired ?? Infinity;
@@ -37,6 +51,56 @@ export function getXpRequired(level) {
 
 export function getCurrentShip(gameState) {
   return ships.find((ship) => ship.id === gameState.currentShipId) ?? ships[0];
+}
+
+export function getCaptainPromotionLevels() {
+  return [...CAPTAIN_PROMOTION_LEVELS];
+}
+
+export function getCaptainRankTitle(level = 1) {
+  const normalizedLevel = Math.max(1, Math.floor(level ?? 1));
+
+  for (let index = CAPTAIN_PROMOTION_LEVELS.length - 1; index >= 0; index -= 1) {
+    const promotionLevel = CAPTAIN_PROMOTION_LEVELS[index];
+
+    if (normalizedLevel >= promotionLevel) {
+      return CAPTAIN_RANK_TITLES[promotionLevel];
+    }
+  }
+
+  return CAPTAIN_RANK_TITLES[1];
+}
+
+export function getCaptainPromotionsEarned(level = 1) {
+  const normalizedLevel = Math.max(1, Math.floor(level ?? 1));
+  return CAPTAIN_PROMOTION_LEVELS.filter((promotionLevel) => normalizedLevel >= promotionLevel).length;
+}
+
+export function getCaptainNextPromotionLevel(level = 1) {
+  const normalizedLevel = Math.max(1, Math.floor(level ?? 1));
+  return CAPTAIN_PROMOTION_LEVELS.find((promotionLevel) => promotionLevel > normalizedLevel) ?? null;
+}
+
+export function getCaptainLevelsRemaining(level = 1) {
+  const nextPromotionLevel = getCaptainNextPromotionLevel(level);
+  return nextPromotionLevel ? Math.max(0, nextPromotionLevel - Math.max(1, Math.floor(level ?? 1))) : 0;
+}
+
+export function getCaptainPromotionHistory(gameState) {
+  if (!Array.isArray(gameState?.captainProgression?.promotionHistory)) {
+    return CAPTAIN_PROMOTION_LEVELS.filter((promotionLevel) => (gameState?.playerLevel ?? 1) >= promotionLevel);
+  }
+
+  return [...new Set(gameState.captainProgression.promotionHistory)]
+    .filter((promotionLevel) => CAPTAIN_PROMOTION_LEVELS.includes(promotionLevel))
+    .sort((left, right) => left - right);
+}
+
+export function getCaptainPermanentSlots(gameState) {
+  const savedSlots = gameState?.captainProgression?.permanentCannonSlots;
+  const derivedSlots = getCaptainPromotionsEarned(gameState?.playerLevel ?? 1);
+
+  return Math.max(0, Math.min(10, Number.isFinite(savedSlots) ? savedSlots : derivedSlots));
 }
 
 export function getAmmoInventory(gameState) {
@@ -745,7 +809,9 @@ export function getCargoCapacity(gameState) {
 }
 
 export function getCannonCapacity(gameState) {
-  return getCurrentShip(gameState).cannonCapacity ?? getCurrentShip(gameState).cannons ?? 0;
+  const currentShip = getCurrentShip(gameState);
+  const captainBonus = getCaptainPermanentSlots(gameState);
+  return (currentShip.cannonCapacity ?? currentShip.cannons ?? 0) + captainBonus;
 }
 
 export function getUsedCargo(gameState) {

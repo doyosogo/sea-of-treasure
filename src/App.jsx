@@ -20,6 +20,7 @@ import Achievements from "./pages/Achievements.jsx";
 import Profile from "./pages/Profile.jsx";
 import Settings from "./pages/Settings.jsx";
 import { STORAGE_KEY, useGameState } from "./hooks/useGameState.js";
+import { getCaptainRankTitle } from "./utils/gameEngine.js";
 
 const pageRegistry = {
   dashboard: { label: "Dashboard", component: Dashboard },
@@ -100,6 +101,7 @@ function GameApp() {
   const localSaveAtLoginRef = useRef(null);
   const activeWorldEventIdRef = useRef(null);
   const worldEventWatcherReadyRef = useRef(false);
+  const captainPromotionHistoryLengthRef = useRef(null);
 
   if (user && localSaveAtLoginRef.current === null) {
     localSaveAtLoginRef.current = Boolean(localStorage.getItem(STORAGE_KEY));
@@ -201,6 +203,32 @@ function GameApp() {
     activeWorldEventIdRef.current = activeWorldEventId;
     worldEventWatcherReadyRef.current = true;
   }, [gameState.activeWorldEvent?.id, gameState.activeWorldEvent?.name, showInfo]);
+
+  useEffect(() => {
+    const promotionHistory = gameState.captainProgression?.promotionHistory ?? [];
+
+    if (captainPromotionHistoryLengthRef.current === null) {
+      captainPromotionHistoryLengthRef.current = promotionHistory.length;
+      return;
+    }
+
+    const previousLength = captainPromotionHistoryLengthRef.current;
+
+    if (promotionHistory.length > previousLength) {
+      const newPromotions = promotionHistory.slice(previousLength);
+
+      for (const promotionLevel of newPromotions) {
+        const rankTitle = getCaptainRankTitle(promotionLevel);
+        showSuccess({
+          title: "PROMOTION",
+          message: "Congratulations!",
+          detail: `You have been promoted to:\n${rankTitle}\n\nReward:\n+1 Permanent Cannon Slot`
+        });
+      }
+    }
+
+    captainPromotionHistoryLengthRef.current = promotionHistory.length;
+  }, [gameState.captainProgression?.promotionHistory, showSuccess]);
 
   useEffect(() => {
     cloudReadyRef.current = false;

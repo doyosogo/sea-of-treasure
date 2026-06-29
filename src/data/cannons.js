@@ -10,7 +10,7 @@ export const cannons = [
     unlockLevel: 1,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 250,
+    purchaseCost: 700,
     goldUpgradeCost: 0,
     materialUpgradeCost: null
   },
@@ -19,16 +19,16 @@ export const cannons = [
     tier: 2,
     name: "Steel Cannon",
     damageMultiplier: 1.2,
-    unlockLevel: 3,
+    unlockLevel: 5,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 7500,
-    goldUpgradeCost: 25000,
+    purchaseCost: 2200,
+    goldUpgradeCost: 12000,
     materialUpgradeCost: {
-      gold: 8000,
-      gunpowder: 20,
-      cannonParts: 5,
-      navigationCharts: 5
+      gold: 2400,
+      gunpowder: 16,
+      cannonParts: 4,
+      navigationCharts: 4
     }
   },
   {
@@ -36,17 +36,17 @@ export const cannons = [
     tier: 3,
     name: "Silver Cannon",
     damageMultiplier: 1.4,
-    unlockLevel: 6,
+    unlockLevel: 8,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 35000,
-    goldUpgradeCost: 150000,
+    purchaseCost: 7000,
+    goldUpgradeCost: 50000,
     materialUpgradeCost: {
-      gold: 40000,
-      gunpowder: 80,
-      cannonParts: 20,
-      navigationCharts: 20,
-      compassFragments: 5
+      gold: 9000,
+      gunpowder: 60,
+      cannonParts: 15,
+      navigationCharts: 15,
+      compassFragments: 4
     }
   },
   {
@@ -54,18 +54,18 @@ export const cannons = [
     tier: 4,
     name: "Golden Cannon",
     damageMultiplier: 1.6,
-    unlockLevel: 9,
+    unlockLevel: 15,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 150000,
-    goldUpgradeCost: 750000,
+    purchaseCost: 25000,
+    goldUpgradeCost: 140000,
     materialUpgradeCost: {
-      gold: 180000,
-      gunpowder: 250,
-      cannonParts: 60,
-      navigationCharts: 60,
-      compassFragments: 15,
-      ancientRelics: 10
+      gold: 30000,
+      gunpowder: 180,
+      cannonParts: 45,
+      navigationCharts: 45,
+      compassFragments: 12,
+      ancientRelics: 8
     }
   },
   {
@@ -73,19 +73,19 @@ export const cannons = [
     tier: 5,
     name: "Diamond Cannon",
     damageMultiplier: 2,
-    unlockLevel: 12,
+    unlockLevel: 27,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 650000,
-    goldUpgradeCost: 3500000,
+    purchaseCost: 70000,
+    goldUpgradeCost: 420000,
     materialUpgradeCost: {
-      gold: 750000,
-      gunpowder: 700,
-      cannonParts: 150,
-      navigationCharts: 150,
-      compassFragments: 40,
-      ancientRelics: 30,
-      tradeSeals: 10
+      gold: 85000,
+      gunpowder: 450,
+      cannonParts: 110,
+      navigationCharts: 110,
+      compassFragments: 28,
+      ancientRelics: 22,
+      tradeSeals: 8
     }
   },
   {
@@ -93,19 +93,19 @@ export const cannons = [
     tier: 6,
     name: "Leviathan Cannon",
     damageMultiplier: 2.5,
-    unlockLevel: 15,
+    unlockLevel: 39,
     ballsPerBattle: 1,
     goldPer100Balls: 100,
-    purchaseCost: 2500000,
-    goldUpgradeCost: 25000000,
+    purchaseCost: 180000,
+    goldUpgradeCost: 900000,
     materialUpgradeCost: {
-      gold: 5000000,
-      rareMapPieces: 10,
-      gunpowder: 1500,
-      cannonParts: 300,
-      ancientRelics: 100,
-      whaleOil: 100,
-      tradeSeals: 25
+      gold: 220000,
+      rareMapPieces: 8,
+      gunpowder: 900,
+      cannonParts: 200,
+      ancientRelics: 60,
+      whaleOil: 60,
+      tradeSeals: 18
     }
   }
 ];

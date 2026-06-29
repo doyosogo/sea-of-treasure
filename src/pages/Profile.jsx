@@ -6,7 +6,7 @@ import { regions } from "../data/regions.js";
 import { ships } from "../data/ships.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
-import { formatDuration, formatNumber, getActiveRegion, getCurrentCannon, getCurrentShip, getEquippedCannons, getAmmoInventory, getCannonInventory, getXpRequired } from "../utils/gameEngine.js";
+import { formatDuration, formatNumber, getActiveRegion, getCaptainLevelsRemaining, getCaptainNextPromotionLevel, getCaptainPermanentSlots, getCaptainRankTitle, getCurrentCannon, getCurrentShip, getEquippedCannons, getAmmoInventory, getCannonInventory, getXpRequired } from "../utils/gameEngine.js";
 import { exportGameSave, parseImportedSave, replaceLocalSave } from "../utils/saveTools.js";
 
 function Profile({ cloudSync, gameState, onNavigate }) {
@@ -36,6 +36,18 @@ function Profile({ cloudSync, gameState, onNavigate }) {
     current: region.id === currentRegion.id,
     unlocked: gameState.playerLevel >= region.requiredLevel
   })), [currentRegion.id, gameState.playerLevel]);
+  const captainPromotionHistory = useMemo(() => (
+    Array.isArray(gameState.captainProgression?.promotionHistory)
+      ? [...new Set(gameState.captainProgression.promotionHistory)].sort((left, right) => left - right)
+      : []
+  ), [gameState.captainProgression?.promotionHistory]);
+  const currentCaptainRank = getCaptainRankTitle(gameState.playerLevel);
+  const captainPromotionLevel = getCaptainNextPromotionLevel(gameState.playerLevel);
+  const captainLevelsRemaining = getCaptainLevelsRemaining(gameState.playerLevel);
+  const captainPermanentSlots = getCaptainPermanentSlots(gameState);
+  const storedExperience = Math.max(0, gameState.storedExperience ?? 0);
+  const lifetimeExperience = Math.max(0, gameState.lifetimeStats?.totalExperienceEarned ?? 0);
+  const isMaxLevel = gameState.playerLevel >= 50;
 
   useEffect(() => {
     if (!user) {
@@ -150,6 +162,34 @@ function Profile({ cloudSync, gameState, onNavigate }) {
               <Stat label="Current Ship" value={currentShip.name} />
               <Stat label="Current Region" value={currentRegion.name} />
               <Stat label="Cloud Save Status" value={cloudSync?.message ?? (user ? "Synced" : "Offline")} />
+            </div>
+          </article>
+
+          <article className="dashboard-panel profile-panel captain-panel">
+            <h2>Captain Progression</h2>
+            <div className="summary-stat-grid">
+              <Stat label="Captain Rank" value={currentCaptainRank} />
+              <Stat label="Current Level" value={formatNumber(gameState.playerLevel)} />
+              <Stat label="Permanent Cannon Slots" value={`+${formatNumber(captainPermanentSlots)}`} />
+              <Stat label={isMaxLevel ? "Maximum Rank Achieved" : "Next Promotion"} value={isMaxLevel ? currentCaptainRank : `Lv. ${captainPromotionLevel ?? "Max"}`} />
+              <Stat label="Levels Remaining" value={isMaxLevel ? "0" : formatNumber(captainLevelsRemaining)} />
+              <Stat label="Lifetime XP" value={formatNumber(lifetimeExperience)} />
+              <Stat label="Stored XP" value={formatNumber(storedExperience)} />
+              <Stat label="Promotion Count" value={formatNumber(captainPromotionHistory.length)} />
+            </div>
+            <div className="profile-history-card">
+              <h3>Promotion History</h3>
+              {captainPromotionHistory.length > 0 ? (
+                <div className="profile-promotion-history">
+                  {captainPromotionHistory.map((level) => (
+                    <span className="profile-promotion-pill" key={level}>
+                      Lv. {level} - {getCaptainRankTitle(level)}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="shop-note">No promotions earned yet.</p>
+              )}
             </div>
           </article>
 

@@ -102,6 +102,13 @@ function createInitialSaveMeta() {
   };
 }
 
+function createInitialCaptainProgression() {
+  return {
+    permanentCannonSlots: 0,
+    promotionHistory: []
+  };
+}
+
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
     skill.id,
@@ -187,6 +194,7 @@ function getShipCannonCapacity(shipLevel) {
 function createInitialLifetimeStats() {
   return {
     totalGoldEarned: 0,
+    totalExperienceEarned: 0,
     totalShipsSunk: 0,
     totalBossesDefeated: 0,
     defeatedLeviathan: false,
@@ -559,6 +567,8 @@ const initialState = {
   claimedAchievements: [],
   preferences: createInitialPreferences(),
   saveMeta: createInitialSaveMeta(),
+  captainProgression: createInitialCaptainProgression(),
+  storedExperience: 0,
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -648,9 +658,13 @@ function setCannonOwnership(state, cannonId, amount) {
 
 function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
   const craftedUpgrades = normalizeCraftedUpgrades(restoredState.craftedUpgrades);
+  const totalExperienceEarned = Number.isFinite(savedStats.totalExperienceEarned)
+    ? Math.max(0, savedStats.totalExperienceEarned)
+    : estimateLifetimeExperience(restoredState);
 
   return {
     totalGoldEarned: Math.max(0, savedStats.totalGoldEarned ?? 0),
+    totalExperienceEarned,
     totalShipsSunk: Math.max(0, savedStats.totalShipsSunk ?? restoredState.totalShipsSunk ?? 0),
     totalBossesDefeated: Math.max(0, savedStats.totalBossesDefeated ?? 0),
     defeatedLeviathan: Boolean(savedStats.defeatedLeviathan ?? false),
@@ -671,6 +685,17 @@ function normalizeLifetimeStats(savedStats = {}, restoredState = initialState) {
     upgradesCrafted: Math.max(0, savedStats.upgradesCrafted ?? sumCraftedUpgradeLevels(craftedUpgrades)),
     totalDoubloonsEarned: Math.max(0, savedStats.totalDoubloonsEarned ?? 0)
   };
+}
+
+function estimateLifetimeExperience(restoredState = initialState) {
+  const normalizedPlayerLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(restoredState.playerLevel ?? 1)));
+  let totalExperience = Math.max(0, restoredState.storedExperience ?? 0) + Math.max(0, restoredState.playerXP ?? 0);
+
+  for (let level = 1; level < normalizedPlayerLevel; level += 1) {
+    totalExperience += getXpRequired(level);
+  }
+
+  return totalExperience;
 }
 
 function normalizePreferences(savedPreferences = {}) {
@@ -699,6 +724,32 @@ function normalizeSaveMeta(savedMeta = {}, restoredState = initialState, now = D
     createdAt,
     updatedAt,
     lastBackupAt
+  };
+}
+
+function normalizeCaptainProgression(savedCaptainProgression = {}, playerLevel = 1) {
+  const normalizedPlayerLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(playerLevel ?? 1)));
+  const promotionLevels = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+  const derivedPromotionHistory = promotionLevels.filter((promotionLevel) => normalizedPlayerLevel >= promotionLevel);
+  const savedHistory = Array.isArray(savedCaptainProgression.promotionHistory)
+    ? savedCaptainProgression.promotionHistory
+      .map((promotionLevel) => Math.max(0, Math.floor(promotionLevel ?? 0)))
+      .filter((promotionLevel) => promotionLevels.includes(promotionLevel) && promotionLevel <= normalizedPlayerLevel)
+    : [];
+  const promotionHistory = [...new Set([...derivedPromotionHistory, ...savedHistory])].sort((left, right) => left - right);
+  const permanentCannonSlots = Math.max(
+    0,
+    Math.min(
+      10,
+      Number.isFinite(savedCaptainProgression.permanentCannonSlots)
+        ? Math.max(savedCaptainProgression.permanentCannonSlots, promotionHistory.length)
+        : promotionHistory.length
+    )
+  );
+
+  return {
+    permanentCannonSlots,
+    promotionHistory
   };
 }
 
@@ -913,11 +964,15 @@ function loadSavedState() {
     }
 
     const parsedState = JSON.parse(savedState);
+    const normalizedPlayerLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(parsedState.playerLevel ?? 1)));
     const restoredState = {
       ...initialState,
       ...parsedState,
+      playerLevel: normalizedPlayerLevel,
       preferences: normalizePreferences(parsedState.preferences),
       saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
+      captainProgression: normalizeCaptainProgression(parsedState.captainProgression, normalizedPlayerLevel),
+      storedExperience: Math.max(0, parsedState.storedExperience ?? initialState.storedExperience ?? 0),
       cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
       talents: normalizeTalents(parsedState.talents),
@@ -941,7 +996,7 @@ function loadSavedState() {
       activeWorldEvent: parsedState.activeWorldEvent ?? null,
       lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
       worldEventsSeen: parsedState.worldEventsSeen ?? 0,
-      activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", parsedState.playerLevel ?? 1),
+      activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", normalizedPlayerLevel),
       selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
       lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
       currentBattle: parsedState.currentBattle ?? null,
@@ -952,8 +1007,7 @@ function loadSavedState() {
       offlineSummaryVisible: false
     };
     restoredState.cannonballs = getAmmoTotal(restoredState.ammoInventory);
-    const currentShip = getCurrentShip(restoredState);
-    const shipCapacity = currentShip.cannonCapacity ?? getShipCannonCapacity(currentShip.level);
+    const shipCapacity = getCannonCapacity(restoredState);
     const fallbackTierId = getCannonKeyByTier(parsedState.cannonTier ?? 1);
     const normalizedInventory = normalizeCannonInventory(parsedState.cannonInventory, fallbackTierId, shipCapacity);
     const normalizedEquippedCannons = normalizeEquippedCannons(parsedState.equippedCannons, normalizedInventory, fallbackTierId, shipCapacity);
@@ -1023,12 +1077,16 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
     };
   }
 
-    const restoredState = {
-      ...initialState,
-      ...parsedState,
-      preferences: normalizePreferences(parsedState.preferences),
-      saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
-      cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
+  const normalizedPlayerLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(parsedState.playerLevel ?? 1)));
+  const restoredState = {
+    ...initialState,
+    ...parsedState,
+    playerLevel: normalizedPlayerLevel,
+    preferences: normalizePreferences(parsedState.preferences),
+    saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
+    captainProgression: normalizeCaptainProgression(parsedState.captainProgression, normalizedPlayerLevel),
+    storedExperience: Math.max(0, parsedState.storedExperience ?? initialState.storedExperience ?? 0),
+    cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
     activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
     talents: normalizeTalents(parsedState.talents),
     skills: normalizeSkills(parsedState.skills),
@@ -1051,7 +1109,7 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
     activeWorldEvent: parsedState.activeWorldEvent ?? null,
     lastWorldEventGeneratedAt: parsedState.lastWorldEventGeneratedAt ?? now,
     worldEventsSeen: parsedState.worldEventsSeen ?? 0,
-    activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", parsedState.playerLevel ?? 1),
+    activeRegionId: normalizeActiveRegionId(parsedState.activeRegionId ?? "coastalWaters", normalizedPlayerLevel),
     selectedEnemyId: parsedState.selectedEnemyId ?? "smugglerCutter",
     lastBattleEnemyId: parsedState.lastBattleEnemyId ?? null,
     currentBattle: null,
@@ -1063,8 +1121,7 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
     lastSeen: parsedState.lastSeen ?? now
   };
   restoredState.cannonballs = getAmmoTotal(restoredState.ammoInventory);
-  const currentShip = getCurrentShip(restoredState);
-  const shipCapacity = currentShip.cannonCapacity ?? getShipCannonCapacity(currentShip.level);
+  const shipCapacity = getCannonCapacity(restoredState);
   const fallbackTierId = getCannonKeyByTier(parsedState.cannonTier ?? 1);
   const normalizedInventory = normalizeCannonInventory(parsedState.cannonInventory, fallbackTierId, shipCapacity);
   const normalizedEquippedCannons = normalizeEquippedCannons(parsedState.equippedCannons, normalizedInventory, fallbackTierId, shipCapacity);
@@ -1088,17 +1145,54 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
   }, parsedState.hull?.current);
 }
 
-function applyXp(state, amount) {
-  if (state.playerLevel >= MAX_PLAYER_LEVEL) {
+function advanceCaptainProgression(gameState, previousLevel, nextLevel) {
+  const currentProgression = normalizeCaptainProgression(gameState.captainProgression, previousLevel);
+  const promotionLevels = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+  const newlyEarnedPromotions = promotionLevels.filter((promotionLevel) => promotionLevel > previousLevel && promotionLevel <= nextLevel);
+
+  if (newlyEarnedPromotions.length <= 0) {
     return {
-      ...state,
-      playerLevel: MAX_PLAYER_LEVEL,
-      playerXP: 0
+      permanentCannonSlots: Math.max(0, Math.min(10, currentProgression.permanentCannonSlots)),
+      promotionHistory: currentProgression.promotionHistory
     };
   }
 
-  let playerLevel = state.playerLevel;
-  let playerXP = state.playerXP + amount;
+  const promotionHistory = [...currentProgression.promotionHistory];
+
+  for (const promotionLevel of newlyEarnedPromotions) {
+    if (!promotionHistory.includes(promotionLevel)) {
+      promotionHistory.push(promotionLevel);
+    }
+  }
+
+  promotionHistory.sort((left, right) => left - right);
+
+  return {
+    permanentCannonSlots: Math.max(0, Math.min(10, Math.max(currentProgression.permanentCannonSlots, promotionHistory.length))),
+    promotionHistory
+  };
+}
+
+function applyXp(state, amount) {
+  const gainedExperience = Math.max(0, amount ?? 0);
+  const previousLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(state.playerLevel ?? 1)));
+  const baseLifetimeStats = {
+    ...state.lifetimeStats,
+    totalExperienceEarned: (state.lifetimeStats?.totalExperienceEarned ?? 0) + gainedExperience
+  };
+
+  if (previousLevel >= MAX_PLAYER_LEVEL) {
+    return {
+      ...state,
+      playerLevel: MAX_PLAYER_LEVEL,
+      playerXP: 0,
+      storedExperience: (state.storedExperience ?? 0) + gainedExperience,
+      lifetimeStats: baseLifetimeStats
+    };
+  }
+
+  let playerLevel = previousLevel;
+  let playerXP = (state.playerXP ?? 0) + gainedExperience;
   let talentPoints = state.talentPoints;
 
   while (playerLevel < MAX_PLAYER_LEVEL && playerXP >= getXpRequired(playerLevel)) {
@@ -1107,15 +1201,20 @@ function applyXp(state, amount) {
     talentPoints += 4;
   }
 
-  if (playerLevel >= MAX_PLAYER_LEVEL) {
-    playerXP = 0;
-  }
+  const reachedMaxLevel = playerLevel >= MAX_PLAYER_LEVEL;
+  const storedExperience = reachedMaxLevel
+    ? (state.storedExperience ?? 0) + Math.max(0, playerXP)
+    : (state.storedExperience ?? 0);
+  const captainProgression = advanceCaptainProgression(state, previousLevel, playerLevel);
 
   return {
     ...state,
     playerLevel,
-    playerXP,
-    talentPoints
+    playerXP: reachedMaxLevel ? 0 : playerXP,
+    storedExperience,
+    talentPoints,
+    captainProgression,
+    lifetimeStats: baseLifetimeStats
   };
 }
 
@@ -2478,18 +2577,26 @@ function gameStateReducer(state, action) {
         lastSeen: Date.now()
       }, `${crewMember.role} promoted to Lv. ${currentLevel + 1}.`);
     }
-    case "LEVEL_UP":
+    case "LEVEL_UP": {
       if (state.playerLevel >= MAX_PLAYER_LEVEL) {
         return state;
       }
 
+      const nextLevel = Math.min(MAX_PLAYER_LEVEL, state.playerLevel + 1);
+      const captainProgression = advanceCaptainProgression(state, state.playerLevel, nextLevel);
+      const reachedMaxLevel = nextLevel >= MAX_PLAYER_LEVEL;
+      const currentPlayerXP = Math.max(0, state.playerXP ?? 0);
+
       return {
         ...state,
-        playerLevel: state.playerLevel + 1,
+        playerLevel: nextLevel,
         playerXP: 0,
+        storedExperience: reachedMaxLevel ? (state.storedExperience ?? 0) + currentPlayerXP : (state.storedExperience ?? 0),
         talentPoints: state.talentPoints + 4,
+        captainProgression,
         lastSeen: Date.now()
       };
+    }
     case "START_IDLE":
       if (state.currentBattle) {
         return addActivityLogEntry(state, "Finish your current battle before idling.", "warning");

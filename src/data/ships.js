@@ -26,7 +26,7 @@ export const ships = [
     shipsPerHour: 56,
     xpPerShip: 85,
     goldPerShip: 60,
-    purchaseCost: 8000
+    purchaseCost: 10908
   },
   {
     id: 3,
@@ -40,7 +40,7 @@ export const ships = [
     shipsPerHour: 52,
     xpPerShip: 150,
     goldPerShip: 120,
-    purchaseCost: 35000
+    purchaseCost: 27852
   },
   {
     id: 4,
@@ -54,7 +54,7 @@ export const ships = [
     shipsPerHour: 49,
     xpPerShip: 260,
     goldPerShip: 240,
-    purchaseCost: 150000
+    purchaseCost: 70845
   },
   {
     id: 5,
@@ -68,7 +68,7 @@ export const ships = [
     shipsPerHour: 46,
     xpPerShip: 430,
     goldPerShip: 420,
-    purchaseCost: 500000
+    purchaseCost: 160770
   },
   {
     id: 6,
@@ -82,7 +82,7 @@ export const ships = [
     shipsPerHour: 43,
     xpPerShip: 700,
     goldPerShip: 720,
-    purchaseCost: 1500000
+    purchaseCost: 540000
   },
   {
     id: 7,
@@ -96,7 +96,7 @@ export const ships = [
     shipsPerHour: 40,
     xpPerShip: 1100,
     goldPerShip: 1200,
-    purchaseCost: 4000000
+    purchaseCost: 1100000
   },
   {
     id: 8,
@@ -110,7 +110,7 @@ export const ships = [
     shipsPerHour: 37,
     xpPerShip: 1700,
     goldPerShip: 2000,
-    purchaseCost: 10000000
+    purchaseCost: 2700000
   },
   {
     id: 9,
@@ -124,7 +124,7 @@ export const ships = [
     shipsPerHour: 34,
     xpPerShip: 2600,
     goldPerShip: 3300,
-    purchaseCost: 25000000
+    purchaseCost: 6800000
   },
   {
     id: 10,
@@ -138,7 +138,7 @@ export const ships = [
     shipsPerHour: 31,
     xpPerShip: 4000,
     goldPerShip: 5400,
-    purchaseCost: 65000000
+    purchaseCost: 15200000
   },
   {
     id: 11,
@@ -152,7 +152,7 @@ export const ships = [
     shipsPerHour: 28,
     xpPerShip: 6200,
     goldPerShip: 8800,
-    purchaseCost: 160000000
+    purchaseCost: 34700000
   },
   {
     id: 12,
@@ -165,8 +165,8 @@ export const ships = [
     mapName: "Whispering Deep",
     shipsPerHour: 26,
     xpPerShip: 9000,
-    goldPerShip: 14500,
-    purchaseCost: 400000000
+    goldPerShip: 16000,
+    purchaseCost: 79000000
   },
   {
     id: 13,
@@ -180,7 +180,7 @@ export const ships = [
     shipsPerHour: 24,
     xpPerShip: 12500,
     goldPerShip: 23500,
-    purchaseCost: 950000000
+    purchaseCost: 180000000
   },
   {
     id: 14,
@@ -194,7 +194,7 @@ export const ships = [
     shipsPerHour: 22,
     xpPerShip: 17000,
     goldPerShip: 38000,
-    purchaseCost: 2200000000
+    purchaseCost: 410000000
   },
   {
     id: 15,
@@ -208,6 +208,6 @@ export const ships = [
     shipsPerHour: 20,
     xpPerShip: 23000,
     goldPerShip: 60000,
-    purchaseCost: 5000000000
+    purchaseCost: 940000000
   }
 ];
