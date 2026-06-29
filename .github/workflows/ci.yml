@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://sea_user:sea_password@localhost:5432/sea_of_treasure?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      PORT: "3001"
+      CLIENT_ORIGIN: http://localhost:5173
+      NODE_ENV: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run frontend build
+        run: npm run build
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://sea_user:sea_password@localhost:5432/sea_of_treasure?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      PORT: "3001"
+      CLIENT_ORIGIN: http://localhost:5173
+      NODE_ENV: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: server
+        run: npm run prisma:generate
+
+      - name: Run backend tests
+        working-directory: server
+        run: npm test

@@ -1,5 +1,9 @@
 # Sea of Treasure
 
+![Build](https://img.shields.io/badge/build-GitHub%20Actions-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-22%20LTS-339933)
+
 Sea of Treasure is a browser-based pirate idle RPG inspired by naval battle games and idle progression systems.
 
 It is built as a React and Vite frontend with localStorage persistence, level 50 progression, offline progression, combat, skills, crew, crafting, trading, quests, achievements, regions, bosses, world events, and a full save-management workflow.
@@ -25,9 +29,9 @@ It is built as a React and Vite frontend with localStorage persistence, level 50
 
 ## Current Status
 
-This repository currently contains a frontend-only, local-save vertical slice.
+This repository currently contains a frontend-first playable slice with a backend scaffold for authentication, cloud saves, health checks, and deployment hardening.
 
-The game is playable end to end in the browser without a backend. Progress is stored locally in the browser via `localStorage`. See [docs/frontend-status.md](docs/frontend-status.md) for the current frontend readiness summary.
+The game is still playable end to end in the browser without a backend. Progress is stored locally in the browser via `localStorage`. See [docs/frontend-status.md](docs/frontend-status.md) for the current frontend readiness summary.
 
 ### Planned backend work
 
@@ -35,6 +39,39 @@ The game is playable end to end in the browser without a backend. Progress is st
 - Cloud save sync
 - User profiles
 - Deployment and backend hardening
+
+## Project Structure
+
+```text
+SeaOfTreasure/
+├─ src/                  # Frontend app, pages, hooks, styles, data
+├─ public/               # Static assets and scene artwork
+├─ server/               # Express, Prisma, auth, save API, tests
+├─ docs/                 # API, deployment, testing, and status docs
+├─ .github/              # CI, issue templates, PR template, Dependabot
+└─ README.md             # Project overview and setup
+```
+
+## Backend Architecture
+
+```text
+React/Vite frontend
+  -> Auth context and save sync
+  -> VITE_API_URL
+Express API
+  -> /api/auth/*
+  -> /api/save
+  -> /api/health
+  -> Prisma client
+  -> PostgreSQL
+```
+
+## Documentation
+
+- [API docs](docs/api.md)
+- [Deployment docs](docs/deployment.md)
+- [Backend testing docs](docs/backend-local-testing.md)
+- [Frontend status](docs/frontend-status.md)
 
 ## Installation
 
@@ -66,7 +103,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-The initial API includes authentication route scaffolding and `GET /api/health`.
+The initial API includes authentication routes, cloud save routes, and `GET /api/health`.
 
 Cloud save API endpoints are scaffolded under authenticated routes:
 
@@ -83,6 +120,29 @@ npx prisma migrate dev --name add_save_game
 ## Deployment
 
 See [docs/deployment.md](docs/deployment.md) for Docker setup, environment variables, migration steps, and hosting notes for the frontend, backend, and database.
+
+## Testing
+
+Backend tests live under `server/tests/` and use Node's built-in test runner.
+
+```bash
+cd server
+npm test
+```
+
+Other useful commands:
+
+- `npm run test:watch`
+- `npm run test:coverage`
+
+The tests cover auth validation, save API behavior, and health endpoints. Database-dependent checks are mocked or skipped so the suite can run without a live database.
+
+## CI
+
+GitHub Actions runs frontend builds and backend tests on every push and pull request.
+
+- Frontend: `npm run build`
+- Backend: `cd server && npm ci && npm run prisma:generate && npm test`
 
 ## Gameplay Systems
 
