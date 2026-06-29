@@ -40,6 +40,10 @@ function Battle({ gameState, dispatch }) {
   const selectedAmmo = ammunition.find((ammo) => ammo.id === gameState.selectedAmmoId) ?? ammunition[0];
   const totalAmmo = Object.values(ammoInventory).reduce((total, value) => total + (value ?? 0), 0);
   const equippedCannons = combatStats.totalEquippedCannons;
+  const unlockedBosses = bosses.filter((boss) => {
+    const region = regions.find((regionData) => regionData.id === boss.regionId);
+    return gameState.playerLevel >= (region?.requiredLevel ?? 1);
+  });
   const ammoPerVolley = getEffectiveBallsPerBattle(gameState);
   const selectedAmmoQuantity = ammoInventory[selectedAmmo.id] ?? 0;
   const availableVolleys = Math.floor(selectedAmmoQuantity / Math.max(1, ammoPerVolley));
@@ -361,6 +365,12 @@ function Battle({ gameState, dispatch }) {
               <h2>Bosses</h2>
               <span className="resource-counter">Regional Challenges</span>
             </div>
+            {unlockedBosses.length <= 0 ? (
+              <div className="battle-empty-state">
+                <strong>No boss is unlocked yet.</strong>
+                <p>Reach the next region milestone and your first boss fight will open automatically.</p>
+              </div>
+            ) : null}
             <div className="enemy-card-grid battle-boss-grid">
               {bosses.map((boss) => {
                 const region = regions.find((regionData) => regionData.id === boss.regionId);

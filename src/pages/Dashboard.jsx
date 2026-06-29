@@ -144,7 +144,7 @@ function Dashboard({ cloudSync, dispatch, gameState, onNavigate }) {
               </p>
             </div>
           ) : (
-            <p className="empty-log">No world event is active right now. The seas are calm until the next event stirs.</p>
+            <p className="empty-log">No world event is active right now. The Admiralty reports calm seas until the next disturbance appears.</p>
           )}
         </section>
 

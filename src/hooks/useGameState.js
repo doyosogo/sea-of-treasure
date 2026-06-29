@@ -109,6 +109,15 @@ function createInitialCaptainProgression() {
   };
 }
 
+function createInitialTutorial() {
+  return {
+    completed: false,
+    currentStep: "welcome",
+    dismissedHints: [],
+    bonusClaimed: false
+  };
+}
+
 function createInitialSkills() {
   return Object.fromEntries(skillDefinitions.map((skill) => [
     skill.id,
@@ -568,6 +577,7 @@ const initialState = {
   preferences: createInitialPreferences(),
   saveMeta: createInitialSaveMeta(),
   captainProgression: createInitialCaptainProgression(),
+  tutorial: createInitialTutorial(),
   storedExperience: 0,
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
@@ -698,6 +708,29 @@ function estimateLifetimeExperience(restoredState = initialState) {
   return totalExperience;
 }
 
+function applyTutorialStarterBonus(state) {
+  const tutorial = normalizeTutorial(state.tutorial, null);
+
+  if (tutorial.completed || tutorial.bonusClaimed) {
+    return {
+      ...state,
+      tutorial
+    };
+  }
+
+  const bonusState = addAmmo({
+    ...state,
+    gold: state.gold + 500,
+    treasureMaps: state.treasureMaps + 1,
+    tutorial: {
+      ...tutorial,
+      bonusClaimed: true
+    }
+  }, "iron", 50);
+
+  return addActivityLogEntry(bonusState, "Admiralty gifts received: starter gold, ammunition, and a treasure map.");
+}
+
 function normalizePreferences(savedPreferences = {}) {
   const defaults = createInitialPreferences();
   const uiScale = ["small", "normal", "large"].includes(savedPreferences.uiScale) ? savedPreferences.uiScale : defaults.uiScale;
@@ -750,6 +783,29 @@ function normalizeCaptainProgression(savedCaptainProgression = {}, playerLevel =
   return {
     permanentCannonSlots,
     promotionHistory
+  };
+}
+
+function normalizeTutorial(savedTutorial = {}, parsedState = null) {
+  const hasSavedTutorial = savedTutorial && typeof savedTutorial === "object" && Object.keys(savedTutorial).length > 0;
+  const oldSaveWithoutTutorial = Boolean(parsedState && !hasSavedTutorial);
+  const completed = oldSaveWithoutTutorial
+    ? true
+    : Boolean(savedTutorial.completed ?? false);
+  const currentStep = completed
+    ? "complete"
+    : ["welcome", "battle", "ship", "skills", "port", "shop", "battle-final"].includes(savedTutorial.currentStep)
+      ? savedTutorial.currentStep
+      : "welcome";
+  const dismissedHints = Array.isArray(savedTutorial.dismissedHints)
+    ? [...new Set(savedTutorial.dismissedHints)].filter((hintId) => ["battle", "crew", "shop", "port"].includes(hintId))
+    : [];
+
+  return {
+    completed,
+    currentStep,
+    dismissedHints,
+    bonusClaimed: oldSaveWithoutTutorial ? true : Boolean(savedTutorial.bonusClaimed ?? false)
   };
 }
 
@@ -952,15 +1008,16 @@ function loadSavedState() {
   try {
     const savedState = localStorage.getItem(STORAGE_KEY);
     if (!savedState) {
-      return {
+      return applyTutorialStarterBonus({
         ...initialState,
         marketPrices: generateMarketPrices(),
         marketLastRefreshed: now,
         marketCycleStartedAt: now,
         marketTradeLimit: getCargoCapacity(initialState),
         marketTradeUsed: 0,
+        tutorial: normalizeTutorial(initialState.tutorial, null),
         lastSeen: now
-      };
+      });
     }
 
     const parsedState = JSON.parse(savedState);
@@ -972,6 +1029,7 @@ function loadSavedState() {
       preferences: normalizePreferences(parsedState.preferences),
       saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
       captainProgression: normalizeCaptainProgression(parsedState.captainProgression, normalizedPlayerLevel),
+      tutorial: normalizeTutorial(parsedState.tutorial, parsedState),
       storedExperience: Math.max(0, parsedState.storedExperience ?? initialState.storedExperience ?? 0),
       cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
@@ -1029,35 +1087,36 @@ function loadSavedState() {
       worldEventsSeen: parsedState.worldEventsSeen ?? 0
     }, parsedState.hull?.current);
     const worldEventState = refreshWorldEventStateForTime(normalizedState, now);
+    const bonusAppliedState = applyTutorialStarterBonus(worldEventState);
 
     const shouldShowOfflineSummary = restoredState.preferences.showOfflineSummary && parsedState.pendingOfflineRewards && parsedState.offlineSummaryVisible;
 
     if (shouldShowOfflineSummary) {
       return {
-        ...worldEventState,
+        ...bonusAppliedState,
         pendingOfflineRewards: parsedState.pendingOfflineRewards,
         offlineSummaryVisible: true,
         lastSeen: now
       };
     }
 
-    const offlineRewards = calcOfflineProgress(worldEventState.lastSeen, now, worldEventState);
+    const offlineRewards = calcOfflineProgress(bonusAppliedState.lastSeen, now, bonusAppliedState);
 
     if (!offlineRewards) {
       return {
-        ...worldEventState,
+        ...bonusAppliedState,
         lastSeen: now
       };
     }
 
     return {
-      ...worldEventState,
+      ...bonusAppliedState,
       pendingOfflineRewards: offlineRewards,
       offlineSummaryVisible: restoredState.preferences.showOfflineSummary,
       lastSeen: now
     };
   } catch {
-    return {
+    return applyTutorialStarterBonus({
       ...initialState,
       marketPrices: generateMarketPrices(),
       marketLastRefreshed: now,
@@ -1065,16 +1124,16 @@ function loadSavedState() {
       marketTradeLimit: getCargoCapacity(initialState),
       marketTradeUsed: 0,
       lastSeen: now
-    };
+    });
   }
 }
 
 function normalizeRuntimeState(parsedState, now = Date.now()) {
   if (!parsedState || typeof parsedState !== "object") {
-    return {
+    return applyTutorialStarterBonus({
       ...initialState,
       lastSeen: now
-    };
+    });
   }
 
   const normalizedPlayerLevel = Math.max(1, Math.min(MAX_PLAYER_LEVEL, Math.floor(parsedState.playerLevel ?? 1)));
@@ -1171,6 +1230,50 @@ function advanceCaptainProgression(gameState, previousLevel, nextLevel) {
     permanentCannonSlots: Math.max(0, Math.min(10, Math.max(currentProgression.permanentCannonSlots, promotionHistory.length))),
     promotionHistory
   };
+}
+
+function advanceTutorialStep(state, nextStep) {
+  const tutorial = normalizeTutorial(state.tutorial, null);
+
+  if (tutorial.completed) {
+    return state;
+  }
+
+  const allowedSteps = ["welcome", "battle", "ship", "skills", "port", "shop", "battle-final", "complete"];
+  const normalizedStep = allowedSteps.includes(nextStep) ? nextStep : tutorial.currentStep;
+
+  if (normalizedStep === tutorial.currentStep) {
+    return state;
+  }
+
+  return {
+    ...state,
+    tutorial: {
+      ...tutorial,
+      currentStep: normalizedStep,
+      completed: normalizedStep === "complete"
+    }
+  };
+}
+
+function completeTutorial(state) {
+  const tutorial = normalizeTutorial(state.tutorial, null);
+
+  if (tutorial.completed) {
+    return state;
+  }
+
+  const rewardState = addDoubloons(addAmmo({
+    ...state,
+    gold: state.gold + 250,
+    tutorial: {
+      ...tutorial,
+      completed: true,
+      currentStep: "complete"
+    }
+  }, "iron", 25), 1);
+
+  return addActivityLogEntry(rewardState, "Tutorial complete. The Admiralty awarded your final training rewards.");
 }
 
 function applyXp(state, amount) {
@@ -1718,10 +1821,16 @@ function gameStateReducer(state, action) {
         const rareMapPieceState = rareMapPiecesFound > 0
           ? addActivityLogEntry(recoveredState, "You discovered a Rare Map Piece.")
           : recoveredState;
+        const tutorialStep = state.tutorial?.currentStep ?? "complete";
+        const postTutorialVictoryState = tutorialStep === "battle"
+          ? advanceTutorialStep(rareMapPieceState, "ship")
+          : tutorialStep === "battle-final"
+            ? completeTutorial(rareMapPieceState)
+            : rareMapPieceState;
 
         return mapFound > 0
-          ? addActivityLogEntry(rareMapPieceState, "Found a treasure map among the wreckage.")
-          : rareMapPieceState;
+          ? addActivityLogEntry(postTutorialVictoryState, "Found a treasure map among the wreckage.")
+          : postTutorialVictoryState;
       }
 
       const incomingDamage = Math.max(1, enemy.damage * (1 - combatStats.incomingDamageReduction) * combatStats.incomingDamageTakenMultiplier);
@@ -1760,6 +1869,33 @@ function gameStateReducer(state, action) {
         ? addActivityLogEntry(updatedState, "Critical hit.")
         : updatedState;
     }
+    case "SET_TUTORIAL_STEP": {
+      const tutorial = normalizeTutorial(state.tutorial, null);
+      const nextStep = ["welcome", "battle", "ship", "skills", "port", "shop", "battle-final", "complete"].includes(action.step)
+        ? action.step
+        : tutorial.currentStep;
+
+      return {
+        ...state,
+        tutorial: {
+          ...tutorial,
+          currentStep: nextStep,
+          completed: nextStep === "complete"
+        },
+        lastSeen: Date.now()
+      };
+    }
+    case "DISMISS_TUTORIAL_HINT":
+      return {
+        ...state,
+        tutorial: {
+          ...normalizeTutorial(state.tutorial, null),
+          dismissedHints: [...new Set([...(state.tutorial?.dismissedHints ?? []), action.hintId])].filter(Boolean)
+        },
+        lastSeen: Date.now()
+      };
+    case "COMPLETE_TUTORIAL":
+      return completeTutorial(state);
     case "REPAIR_HULL": {
       const clampedState = clampHull(state);
       const missingHull = clampedState.hull.max - clampedState.hull.current;
@@ -2041,7 +2177,11 @@ function gameStateReducer(state, action) {
         goldEarned
       });
 
-      return addActivityLogEntry(questProgressState, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
+      const updatedState = (state.tutorial?.currentStep ?? "complete") === "port"
+        ? advanceTutorialStep(questProgressState, "shop")
+        : questProgressState;
+
+      return addActivityLogEntry(updatedState, `Sold ${quantity} ${good.name}. +${Math.round(tradingXpGained)} Trading XP.${levelText}`);
     }
     case "SELL_FISH": {
       const quantity = action.quantity === "all"
@@ -2184,7 +2324,11 @@ function gameStateReducer(state, action) {
         cannonballsBought: quantity
       });
 
-      return addActivityLogEntry(questProgressState, `Bought ${formatNumber(quantity)} ${ammo.name}.`);
+      const updatedState = (state.tutorial?.currentStep ?? "complete") === "shop"
+        ? advanceTutorialStep(questProgressState, "battle-final")
+        : questProgressState;
+
+      return addActivityLogEntry(updatedState, `Bought ${formatNumber(quantity)} ${ammo.name}.`);
     }
     case "START_TREASURE_DIG": {
       const site = treasureSites.find((treasureSite) => treasureSite.id === action.siteId);
@@ -2358,7 +2502,11 @@ function gameStateReducer(state, action) {
         fishGained: fishingReward?.fish ?? 0
       });
 
-      return addActivityLogEntry(questProgressState, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${materialText}${levelText}`);
+      const updatedState = skillDefinition.id === "fishing" && (state.tutorial?.currentStep ?? "complete") === "skills"
+        ? advanceTutorialStep(questProgressState, "port")
+        : questProgressState;
+
+      return addActivityLogEntry(updatedState, `${skillDefinition.actionName} complete: +${Math.round(skillXpReward)} ${skillDefinition.name} XP.${goldText}${fishText}${whaleOilText}${materialText}${levelText}`);
     }
     case "CANCEL_SKILL_ACTION": {
       const skillDefinition = skillDefinitions.find((skill) => skill.id === action.skillId);

@@ -289,7 +289,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
             </div>
           </>
         ) : (
-          <p className="shop-note">Playing offline. Login to enable cloud saves later.</p>
+          <p className="shop-note">No cloud save yet. You are playing offline, and logging in later will enable cloud backups in the Admiralty vault.</p>
         )}
       </article>
 

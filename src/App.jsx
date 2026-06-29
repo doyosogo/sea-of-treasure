@@ -19,6 +19,7 @@ import Treasure from "./pages/Treasure.jsx";
 import Achievements from "./pages/Achievements.jsx";
 import Profile from "./pages/Profile.jsx";
 import Settings from "./pages/Settings.jsx";
+import TutorialOverlay from "./components/TutorialOverlay.jsx";
 import { STORAGE_KEY, useGameState } from "./hooks/useGameState.js";
 import { getCaptainRankTitle } from "./utils/gameEngine.js";
 
@@ -102,6 +103,7 @@ function GameApp() {
   const activeWorldEventIdRef = useRef(null);
   const worldEventWatcherReadyRef = useRef(false);
   const captainPromotionHistoryLengthRef = useRef(null);
+  const tutorialCompletedRef = useRef(null);
 
   if (user && localSaveAtLoginRef.current === null) {
     localSaveAtLoginRef.current = Boolean(localStorage.getItem(STORAGE_KEY));
@@ -229,6 +231,26 @@ function GameApp() {
 
     captainPromotionHistoryLengthRef.current = promotionHistory.length;
   }, [gameState.captainProgression?.promotionHistory, showSuccess]);
+
+  useEffect(() => {
+    const tutorial = gameState.tutorial ?? { completed: true };
+    const isCompleted = Boolean(tutorial.completed);
+
+    if (tutorialCompletedRef.current === null) {
+      tutorialCompletedRef.current = isCompleted;
+      return;
+    }
+
+    if (!tutorialCompletedRef.current && isCompleted) {
+      showSuccess({
+        title: "Tutorial Complete",
+        message: "The Admiralty is pleased with your progress.",
+        detail: "Gold, ammo, and a Doubloon have been awarded."
+      });
+    }
+
+    tutorialCompletedRef.current = isCompleted;
+  }, [gameState.tutorial?.completed, showSuccess]);
 
   useEffect(() => {
     cloudReadyRef.current = false;
@@ -390,6 +412,13 @@ function GameApp() {
           saveConflict={saveConflict}
         />
       </main>
+
+      <TutorialOverlay
+        activePage={activePage}
+        dispatch={dispatch}
+        gameState={gameState}
+        onNavigate={setActivePage}
+      />
 
       <SaveConflictModal
         conflict={saveConflict?.open ? saveConflict : null}

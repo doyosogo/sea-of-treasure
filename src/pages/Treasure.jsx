@@ -64,6 +64,12 @@ function Treasure({ gameState, dispatch }) {
               <Metric icon={UI_XP} label="Treasure Hunting Level" value={formatNumber(treasureSkill.level)} tooltip="Treasure Hunting skill level unlocks longer and more rewarding dig sites." />
               <Metric icon={UI_GOLD} label="Rare Finds" value={formatNumber(treasureCount)} tooltip="Rare finds are special treasures uncovered by your crew." />
             </div>
+            {gameState.treasureMaps <= 0 ? (
+              <div className="treasure-empty-state treasure-note">
+                <strong>No treasure maps on hand.</strong>
+                <p>Earn more from combat or events, then return here to start a new dig.</p>
+              </div>
+            ) : null}
           </article>
 
           <article className="treasure-panel treasure-active-panel">

@@ -269,6 +269,91 @@ button:disabled {
   }
 }
 
+.tutorial-overlay {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 900;
+  width: min(420px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.tutorial-panel,
+.tutorial-hint {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  background: rgba(7, 21, 39, 0.95);
+  border: 2px solid rgba(211, 165, 58, 0.85);
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.9);
+}
+
+.tutorial-panel {
+  pointer-events: auto;
+}
+
+.tutorial-panel h2,
+.tutorial-hint p {
+  margin: 0;
+}
+
+.tutorial-panel h2 {
+  color: var(--gold-300);
+  font-size: 1.2rem;
+}
+
+.tutorial-note {
+  margin: 0;
+  color: #c8d9ec;
+  line-height: 1.4;
+}
+
+.tutorial-step-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(246, 229, 181, 0.76);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.tutorial-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tutorial-hint {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 860;
+  width: min(320px, calc(100vw - 36px));
+  pointer-events: auto;
+}
+
+.tutorial-hint .eyebrow {
+  margin: 0;
+}
+
+.tutorial-hint button {
+  justify-self: end;
+}
+
+.battle-empty-state {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 18px;
+  text-align: center;
+  background: rgba(4, 17, 31, 0.66);
+  border: 2px dashed rgba(211, 165, 58, 0.55);
+}
+
+.battle-empty-state strong {
+  color: var(--gold-300);
+}
+
 .landing-page {
   position: relative;
   display: grid;

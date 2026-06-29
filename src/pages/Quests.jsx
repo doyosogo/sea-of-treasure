@@ -82,8 +82,8 @@ function QuestList({ quests, type, dispatch, onClaim }) {
   if (quests.length <= 0) {
     return (
       <div className="treasure-empty-state">
-        <strong>No {type} quests available.</strong>
-        <p>Quest orders will refresh automatically when the next reset cycle starts.</p>
+        <strong>No {type} quests are active.</strong>
+        <p>New orders will arrive with the next reset. Your progress is safe, so you can sail on and come back later.</p>
       </div>
     );
   }
