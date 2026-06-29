@@ -74,6 +74,7 @@ import {
   rollEnemyMapDrops,
   rollTreasureMapDrops
 } from "../utils/gameEngine.js";
+import { writeLocalSave } from "../utils/saveTools.js";
 
 export const STORAGE_KEY = "sot_save";
 const BASE_SKILL_XP_REWARD = 100;
@@ -89,6 +90,15 @@ function createInitialPreferences() {
     showOfflineSummary: true,
     autosaveIntervalSeconds: 30,
     compactMode: false
+  };
+}
+
+function createInitialSaveMeta() {
+  return {
+    schemaVersion: "1.0",
+    createdAt: null,
+    updatedAt: null,
+    lastBackupAt: null
   };
 }
 
@@ -548,6 +558,7 @@ const initialState = {
   lifetimeStats: createInitialLifetimeStats(),
   claimedAchievements: [],
   preferences: createInitialPreferences(),
+  saveMeta: createInitialSaveMeta(),
   marketPrices: generateMarketPrices(),
   marketLastRefreshed: Date.now(),
   marketCycleStartedAt: Date.now(),
@@ -675,6 +686,19 @@ function normalizePreferences(savedPreferences = {}) {
     showOfflineSummary: Boolean(savedPreferences.showOfflineSummary ?? defaults.showOfflineSummary),
     autosaveIntervalSeconds,
     compactMode: Boolean(savedPreferences.compactMode ?? defaults.compactMode)
+  };
+}
+
+function normalizeSaveMeta(savedMeta = {}, restoredState = initialState, now = Date.now()) {
+  const createdAt = savedMeta.createdAt ?? restoredState.saveMeta?.createdAt ?? null;
+  const updatedAt = savedMeta.updatedAt ?? savedMeta.lastSeen ?? restoredState.saveMeta?.updatedAt ?? null;
+  const lastBackupAt = savedMeta.lastBackupAt ?? restoredState.saveMeta?.lastBackupAt ?? null;
+
+  return {
+    schemaVersion: typeof savedMeta.schemaVersion === "string" ? savedMeta.schemaVersion : "1.0",
+    createdAt,
+    updatedAt,
+    lastBackupAt
   };
 }
 
@@ -893,6 +917,7 @@ function loadSavedState() {
       ...initialState,
       ...parsedState,
       preferences: normalizePreferences(parsedState.preferences),
+      saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
       cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
       activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
       talents: normalizeTalents(parsedState.talents),
@@ -998,11 +1023,12 @@ function normalizeRuntimeState(parsedState, now = Date.now()) {
     };
   }
 
-  const restoredState = {
-    ...initialState,
-    ...parsedState,
-    preferences: normalizePreferences(parsedState.preferences),
-    cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
+    const restoredState = {
+      ...initialState,
+      ...parsedState,
+      preferences: normalizePreferences(parsedState.preferences),
+      saveMeta: normalizeSaveMeta({ ...(parsedState.saveMeta ?? {}), lastSeen: parsedState.lastSeen }, initialState, now),
+      cannonTier: Math.min(6, Math.max(1, parsedState.cannonTier ?? 1)),
     activityLog: Array.isArray(parsedState.activityLog) ? parsedState.activityLog : [],
     talents: normalizeTalents(parsedState.talents),
     skills: normalizeSkills(parsedState.skills),
@@ -2826,14 +2852,24 @@ export function useGameState({ onPersist } = {}) {
     }
 
     runtimeCloudStateOnlyRef.current = false;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    const now = Date.now();
+    const persistedSave = {
+      ...gameState,
+      saveMeta: {
+        schemaVersion: gameState.saveMeta?.schemaVersion ?? "1.0",
+        createdAt: gameState.saveMeta?.createdAt ?? now,
+        updatedAt: now,
+        lastBackupAt: localStorage.getItem(STORAGE_KEY) ? now : gameState.saveMeta?.lastBackupAt ?? null
+      }
+    };
+    writeLocalSave(persistedSave);
 
     if (suppressNextPersistCallbackRef.current) {
       suppressNextPersistCallbackRef.current = false;
       return;
     }
 
-    latestPersistCallbackRef.current?.(gameState);
+    latestPersistCallbackRef.current?.(persistedSave);
   }, [gameState]);
 
   useEffect(() => {
@@ -2842,10 +2878,16 @@ export function useGameState({ onPersist } = {}) {
         return;
       }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      writeLocalSave({
         ...gameState,
+        saveMeta: {
+          schemaVersion: gameState.saveMeta?.schemaVersion ?? "1.0",
+          createdAt: gameState.saveMeta?.createdAt ?? Date.now(),
+          updatedAt: Date.now(),
+          lastBackupAt: localStorage.getItem(STORAGE_KEY) ? Date.now() : gameState.saveMeta?.lastBackupAt ?? null
+        },
         lastSeen: Date.now()
-      }));
+      });
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload);

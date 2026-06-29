@@ -44,14 +44,20 @@ import {
 } from "../utils/gameEngine.js";
 import {
   exportGameSave,
+  getStoredBackupSave,
+  getStoredSave,
   parseImportedSave,
-  replaceLocalSave
+  replaceLocalSave,
+  restoreBackupSave,
+  deleteBackupSave
 } from "../utils/saveTools.js";
+import { useNotifications } from "../context/NotificationContext.jsx";
 
 const STORAGE_KEY = "sot_save";
 
 function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyncNow, saveConflict }) {
   const { user, logout } = useAuth();
+  const { showError, showInfo, showSuccess, showWarning } = useNotifications();
   const [exportedJson, setExportedJson] = useState("");
   const [importJson, setImportJson] = useState("");
   const [status, setStatus] = useState(null);
@@ -64,6 +70,8 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   const selectedAmmo = getSelectedAmmo(gameState);
   const totalAmmo = getTotalAmmoCount(gameState);
   const preferences = gameState.preferences ?? {};
+  const localSaveSnapshot = getStoredSave();
+  const backupSaveSnapshot = getStoredBackupSave();
   const debugJson = useMemo(() => JSON.stringify(gameState, null, 2), [gameState]);
   const assetRegistrySummary = useMemo(() => ({
     ships: Object.keys(SHIP_IMAGES).length,
@@ -81,6 +89,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
     setExportedJson(json);
     setStatus({ type: "success", message: "Save exported." });
     dispatch({ type: "SAVE_EXPORTED" });
+    showSuccess("Save exported.");
   }
 
   function handleImportSave() {
@@ -92,12 +101,14 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
 
     if (!result.ok) {
       setStatus({ type: "error", message: result.error });
+      showError(result.error);
       return;
     }
 
     replaceLocalSave(result.save);
     setStatus({ type: "success", message: "Save imported. Reloading..." });
-    window.location.reload();
+    showSuccess("Save imported.");
+    window.setTimeout(() => window.location.reload(), 250);
   }
 
   function handleUploadSaveFile(event) {
@@ -109,6 +120,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
 
     if (!file.name.toLowerCase().endsWith(".json")) {
       setStatus({ type: "error", message: "Import failed: please upload a .json save file." });
+      showError("Import failed: please upload a .json save file.");
       event.target.value = "";
       return;
     }
@@ -118,6 +130,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
     reader.onload = () => {
       if (typeof reader.result !== "string") {
         setStatus({ type: "error", message: "Import failed: save file could not be read." });
+        showError("Import failed: save file could not be read.");
         return;
       }
 
@@ -127,6 +140,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
 
     reader.onerror = () => {
       setStatus({ type: "error", message: "Import failed: save file could not be read." });
+      showError("Import failed: save file could not be read.");
     };
 
     reader.readAsText(file);
@@ -138,11 +152,48 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
       setResetArmed(true);
       setStatus({ type: "warning", message: "Click Reset Save again to permanently erase this save." });
       dispatch({ type: "SAVE_RESET_REQUESTED" });
+      showWarning("Reset Save armed.");
       return;
     }
 
     localStorage.removeItem(STORAGE_KEY);
     window.location.reload();
+  }
+
+  function handleRestoreBackup() {
+    if (!backupSaveSnapshot) {
+      setStatus({ type: "warning", message: "No backup save is available." });
+      showWarning("No backup save is available.");
+      return;
+    }
+
+    const confirmed = window.confirm("Restore the backup save and replace the current local save?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    if (!restoreBackupSave()) {
+      setStatus({ type: "warning", message: "No backup save is available." });
+      showWarning("No backup save is available.");
+      return;
+    }
+
+    setStatus({ type: "success", message: "Backup restored. Reloading..." });
+    showSuccess("Backup restored.");
+    window.setTimeout(() => window.location.reload(), 250);
+  }
+
+  function handleDeleteBackup() {
+    if (!backupSaveSnapshot) {
+      setStatus({ type: "warning", message: "No backup save is available." });
+      showWarning("No backup save is available.");
+      return;
+    }
+
+    deleteBackupSave();
+    setStatus({ type: "success", message: "Backup deleted." });
+    showInfo("Backup deleted.");
   }
 
   function handlePreviewActiveBattles() {
@@ -220,6 +271,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
               <Stat label="Email" value={user.email} />
               <Stat label="Cloud Status" value={cloudSync?.message ?? "Offline"} />
               <Stat label="Cloud Updated" value={cloudSync?.lastUpdated ? new Date(cloudSync.lastUpdated).toLocaleString() : "Not synced yet"} />
+              <Stat label="Local Updated" value={formatSaveTimestamp(localSaveSnapshot?.saveMeta?.updatedAt ?? localSaveSnapshot?.lastSeen ?? gameState.saveMeta?.updatedAt ?? gameState.lastSeen)} />
             </div>
             <p className="shop-note">Cloud save backup is enabled. Local browser storage remains unchanged.</p>
             <div className="button-row">
@@ -239,6 +291,44 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
         ) : (
           <p className="shop-note">Playing offline. Login to enable cloud saves later.</p>
         )}
+      </article>
+
+      <article className="pixel-panel settings-panel">
+        <h2>Save Recovery</h2>
+        <p className="shop-note">
+          Use the backup copy if a local save is corrupted or you want to roll back the latest overwrite.
+        </p>
+        <div className="summary-stat-grid">
+          <Stat label="Current Save Updated" value={formatSaveTimestamp(localSaveSnapshot?.saveMeta?.updatedAt ?? localSaveSnapshot?.lastSeen ?? gameState.saveMeta?.updatedAt ?? gameState.lastSeen)} />
+          <Stat label="Backup Save Updated" value={formatSaveTimestamp(backupSaveSnapshot?.saveMeta?.updatedAt ?? backupSaveSnapshot?.lastSeen)} />
+        </div>
+        <div className="button-row">
+          <button className="chunky-button primary" onClick={handleRestoreBackup} type="button">
+            Restore Backup
+          </button>
+          <button className="chunky-button" onClick={handleDeleteBackup} type="button">
+            Delete Backup
+          </button>
+        </div>
+      </article>
+
+      <article className="pixel-panel settings-panel">
+        <h2>Notification Preview</h2>
+        <p className="shop-note">Trigger sample notifications to verify the toast layer.</p>
+        <div className="button-row">
+          <button className="chunky-button primary" onClick={() => showSuccess("Success preview.")} type="button">
+            Success
+          </button>
+          <button className="chunky-button" onClick={() => showWarning("Warning preview.")} type="button">
+            Warning
+          </button>
+          <button className="chunky-button danger" onClick={() => showError("Error preview.")} type="button">
+            Error
+          </button>
+          <button className="chunky-button" onClick={() => showInfo("Info preview.")} type="button">
+            Info
+          </button>
+        </div>
       </article>
 
       <article className="pixel-panel settings-panel">
@@ -550,6 +640,20 @@ function ResourceList({ title, values }) {
 
 function formatLabel(value) {
   return value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatSaveTimestamp(value) {
+  if (!value) {
+    return "No save yet";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString();
 }
 
 export default Settings;

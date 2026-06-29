@@ -1,5 +1,6 @@
 import { LOGO, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import {
   formatNumber,
   getAchievementProgress,
@@ -10,6 +11,7 @@ import {
 const categories = ["Combat", "World", "Progression", "Fleet", "Economy", "Skills", "Treasure", "Crafting"];
 
 function Achievements({ gameState, dispatch }) {
+  const { showSuccess } = useNotifications();
   const claimedAchievements = gameState.claimedAchievements ?? [];
   const claimableAchievements = getClaimableAchievements(gameState);
   const totalShipsSunk = gameState.lifetimeStats?.totalShipsSunk ?? gameState.totalShipsSunk ?? 0;
@@ -82,6 +84,7 @@ function Achievements({ gameState, dispatch }) {
                     gameState={gameState}
                     status="Claimable"
                     dispatch={dispatch}
+                    onClaim={(rewardText) => showSuccess("Achievement Unlocked", { detail: `${achievement.name} • ${rewardText}` })}
                     key={achievement.id}
                   />
                 ))}
@@ -113,6 +116,7 @@ function Achievements({ gameState, dispatch }) {
                             gameState={gameState}
                             status={status}
                             dispatch={dispatch}
+                            onClaim={(rewardText) => showSuccess("Achievement Unlocked", { detail: `${achievement.name} • ${rewardText}` })}
                             key={achievement.id}
                           />
                         );
@@ -128,7 +132,7 @@ function Achievements({ gameState, dispatch }) {
   );
 }
 
-function AchievementCard({ achievement, gameState, status, dispatch }) {
+function AchievementCard({ achievement, gameState, status, dispatch, onClaim }) {
   const progress = getAchievementProgress(achievement, gameState);
   const claimable = status === "Claimable";
   const claimed = status === "Claimed";
@@ -166,7 +170,10 @@ function AchievementCard({ achievement, gameState, status, dispatch }) {
       <button
         className="chunky-button primary"
         disabled={!claimable}
-        onClick={() => dispatch({ type: "CLAIM_ACHIEVEMENT", achievementId: achievement.id })}
+        onClick={() => {
+          dispatch({ type: "CLAIM_ACHIEVEMENT", achievementId: achievement.id });
+          onClaim?.(formatAchievementReward(achievement));
+        }}
         type="button"
       >
         {claimed ? "Claimed" : "Claim Reward"}
@@ -185,6 +192,24 @@ function RewardRow({ icon, label, value }) {
       <strong>{formatNumber(value)}</strong>
     </div>
   );
+}
+
+function formatAchievementReward(achievement) {
+  const parts = [];
+
+  if ((achievement.rewardGold ?? 0) > 0) {
+    parts.push(`+${formatNumber(achievement.rewardGold)} Gold`);
+  }
+
+  if ((achievement.rewardTalentPoints ?? 0) > 0) {
+    parts.push(`+${formatNumber(achievement.rewardTalentPoints)} Talent Points`);
+  }
+
+  if ((achievement.rewardDoubloons ?? 0) > 0) {
+    parts.push(`+${formatNumber(achievement.rewardDoubloons)} Doubloons`);
+  }
+
+  return parts.join(" • ") || "Reward claimed";
 }
 
 function StatChip({ icon, label, value }) {

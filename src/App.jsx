@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import OfflineSummary from "./components/OfflineSummary.jsx";
+import NotificationToast from "./components/NotificationToast.jsx";
 import SaveConflictModal from "./components/SaveConflictModal.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { NotificationProvider, useNotifications } from "./context/NotificationContext.jsx";
 import { getCloudSave, getSaveSummary, uploadCloudSave } from "./services/save.js";
 import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
@@ -39,14 +41,17 @@ const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { showInfo } = useNotifications();
   const [offlineMode, setOfflineMode] = useState(false);
   const hadAuthenticatedSessionRef = useRef(false);
 
@@ -71,7 +76,7 @@ function AppContent() {
   }
 
   if (!user && !offlineMode) {
-    return <Landing onPlayOffline={() => setOfflineMode(true)} />;
+    return <Landing onPlayOffline={() => { setOfflineMode(true); showInfo("Offline mode entered."); }} />;
   }
 
   return <GameApp />;
@@ -79,6 +84,7 @@ function AppContent() {
 
 function GameApp() {
   const { user, accessToken } = useAuth();
+  const { showError, showInfo, showSuccess } = useNotifications();
   const [activePage, setActivePage] = useState("dashboard");
   const [saveConflict, setSaveConflict] = useState(null);
   const [cloudSync, setCloudSync] = useState({
@@ -92,6 +98,8 @@ function GameApp() {
   const uploadInFlightRef = useRef(false);
   const cloudReadyRef = useRef(false);
   const localSaveAtLoginRef = useRef(null);
+  const activeWorldEventIdRef = useRef(null);
+  const worldEventWatcherReadyRef = useRef(false);
 
   if (user && localSaveAtLoginRef.current === null) {
     localSaveAtLoginRef.current = Boolean(localStorage.getItem(STORAGE_KEY));
@@ -139,6 +147,7 @@ function GameApp() {
 
     try {
       const result = await uploadCloudSave(saveData, accessToken);
+      showSuccess("Cloud save synced.");
       setCloudSync({
         status: "synced",
         message: "Synced",
@@ -147,6 +156,7 @@ function GameApp() {
       });
     } catch (error) {
       console.warn("Cloud save upload failed.", error);
+      showError("Cloud save failed.");
       setCloudSync((state) => ({
         ...state,
         status: "error",
@@ -156,7 +166,7 @@ function GameApp() {
     } finally {
       uploadInFlightRef.current = false;
     }
-  }, [accessToken, saveConflict?.unresolved, user]);
+  }, [accessToken, saveConflict?.unresolved, showError, showSuccess, user]);
 
   const handlePersist = useCallback((saveData) => {
     latestSaveRef.current = saveData;
@@ -180,6 +190,17 @@ function GameApp() {
   useEffect(() => {
     latestSaveRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    const activeWorldEventId = gameState.activeWorldEvent?.id ?? null;
+
+    if (worldEventWatcherReadyRef.current && activeWorldEventId && activeWorldEventIdRef.current !== activeWorldEventId) {
+      showInfo("World event began.", { detail: gameState.activeWorldEvent?.name ?? "A new event is active." });
+    }
+
+    activeWorldEventIdRef.current = activeWorldEventId;
+    worldEventWatcherReadyRef.current = true;
+  }, [gameState.activeWorldEvent?.id, gameState.activeWorldEvent?.name, showInfo]);
 
   useEffect(() => {
     cloudReadyRef.current = false;
@@ -215,6 +236,7 @@ function GameApp() {
 
         if (!result.save) {
           cloudReadyRef.current = true;
+          showInfo("No cloud save found.");
           setCloudSync({
             status: "synced",
             message: "No cloud save found.",
@@ -227,6 +249,7 @@ function GameApp() {
         if (!localSaveAtLoginRef.current) {
           applyCloudSave(result.save.data, { persistLocalStorage: true });
           cloudReadyRef.current = true;
+          showSuccess("Cloud save loaded.");
           setCloudSync({
             status: "synced",
             message: "Cloud save loaded.",
@@ -255,6 +278,7 @@ function GameApp() {
 
         if (!cancelled) {
           cloudReadyRef.current = true;
+          showError("Cloud save unavailable.");
           setCloudSync({
             status: "error",
             message: "Cloud save unavailable.",
@@ -282,6 +306,7 @@ function GameApp() {
       setSaveConflict((current) => (current ? { ...current, open: false, unresolved: false } : current));
       cloudReadyRef.current = true;
       await syncSaveNow(gameState, { force: true });
+      showSuccess("Conflict resolved.", { detail: "Using local save." });
       return;
     }
 
@@ -289,6 +314,7 @@ function GameApp() {
       applyCloudSave(saveConflict.cloudSave, { persistLocalStorage: true });
       cloudReadyRef.current = true;
       setSaveConflict(null);
+      showSuccess("Conflict resolved.", { detail: "Using cloud save." });
       setCloudSync({
         status: "synced",
         message: "Synced",
@@ -344,6 +370,7 @@ function GameApp() {
         onUseLocal={() => handleResolveSaveConflict("local")}
       />
       <OfflineSummary gameState={gameState} dispatch={dispatch} />
+      <NotificationToast />
     </div>
   );
 }

@@ -5,11 +5,13 @@ import { cannons } from "../data/cannons.js";
 import { regions } from "../data/regions.js";
 import { ships } from "../data/ships.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import { formatDuration, formatNumber, getActiveRegion, getCurrentCannon, getCurrentShip, getEquippedCannons, getAmmoInventory, getCannonInventory, getXpRequired } from "../utils/gameEngine.js";
 import { exportGameSave, parseImportedSave, replaceLocalSave } from "../utils/saveTools.js";
 
 function Profile({ cloudSync, gameState, onNavigate }) {
   const { user, logout, refreshCurrentUser } = useAuth();
+  const { showError, showSuccess } = useNotifications();
   const [status, setStatus] = useState(null);
   const fileInputRef = useRef(null);
   const refreshedAccountRef = useRef(false);
@@ -54,6 +56,7 @@ function Profile({ cloudSync, gameState, onNavigate }) {
   function handleExportSave() {
     const json = exportGameSave(gameState);
     setStatus({ type: "success", message: "Save exported." });
+    showSuccess("Save exported.");
     return json;
   }
 
@@ -70,6 +73,7 @@ function Profile({ cloudSync, gameState, onNavigate }) {
 
     if (!file.name.toLowerCase().endsWith(".json")) {
       setStatus({ type: "error", message: "Import failed: please upload a .json save file." });
+      showError("Import failed: please upload a .json save file.");
       event.target.value = "";
       return;
     }
@@ -79,6 +83,7 @@ function Profile({ cloudSync, gameState, onNavigate }) {
     reader.onload = () => {
       if (typeof reader.result !== "string") {
         setStatus({ type: "error", message: "Import failed: save file could not be read." });
+        showError("Import failed: save file could not be read.");
         return;
       }
 
@@ -86,16 +91,19 @@ function Profile({ cloudSync, gameState, onNavigate }) {
 
       if (!result.ok) {
         setStatus({ type: "error", message: result.error });
+        showError(result.error);
         return;
       }
 
       replaceLocalSave(result.save);
       setStatus({ type: "success", message: "Save imported. Reloading..." });
-      window.location.reload();
+      showSuccess("Save imported.");
+      window.setTimeout(() => window.location.reload(), 250);
     };
 
     reader.onerror = () => {
       setStatus({ type: "error", message: "Import failed: save file could not be read." });
+      showError("Import failed: save file could not be read.");
     };
 
     reader.readAsText(file);

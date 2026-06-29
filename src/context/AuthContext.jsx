@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as authService from "../services/auth.js";
+import { useNotifications } from "./NotificationContext.jsx";
 
 const ACCESS_TOKEN_KEY = "sot_access_token";
 const REFRESH_TOKEN_KEY = "sot_refresh_token";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const { showInfo, showSuccess, showWarning } = useNotifications();
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem(REFRESH_TOKEN_KEY));
@@ -27,6 +29,9 @@ export function AuthProvider({ children }) {
           setUser(result.user);
         }
       } catch {
+        if (!cancelled) {
+          showWarning("Session expired.");
+        }
         clearSession();
       } finally {
         if (!cancelled) {
@@ -71,12 +76,14 @@ export function AuthProvider({ children }) {
   async function login(credentials) {
     const result = await authService.login(credentials);
     storeSession(result);
+    showSuccess("Logged in.");
     return result;
   }
 
   async function register(credentials) {
     const result = await authService.register(credentials);
     storeSession(result);
+    showSuccess("Registration successful.");
     return result;
   }
 
@@ -85,6 +92,7 @@ export function AuthProvider({ children }) {
       await authService.logout(refreshToken);
     } finally {
       clearSession();
+      showInfo("Logged out.");
     }
   }
 

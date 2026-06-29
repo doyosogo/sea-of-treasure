@@ -1,8 +1,10 @@
 import { LOGO, RESOURCE_ICONS, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { QUEST_DAILY_RESET_MS, QUEST_WEEKLY_RESET_MS } from "../data/balance.js";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 function Quests({ gameState, dispatch, onNavigate }) {
+  const { showSuccess } = useNotifications();
   const quests = gameState.quests ?? { daily: [], weekly: [], lastDailyReset: Date.now(), lastWeeklyReset: Date.now() };
   const dailyResetRemaining = Math.max(0, (quests.lastDailyReset ?? Date.now()) + QUEST_DAILY_RESET_MS - Date.now());
   const weeklyResetRemaining = Math.max(0, (quests.lastWeeklyReset ?? Date.now()) + QUEST_WEEKLY_RESET_MS - Date.now());
@@ -57,7 +59,7 @@ function Quests({ gameState, dispatch, onNavigate }) {
             <h2>Daily Quests</h2>
             <span className="quest-section-badge">{formatNumber(dailyComplete)} complete</span>
           </div>
-          <QuestList quests={quests.daily ?? []} type="daily" dispatch={dispatch} />
+          <QuestList quests={quests.daily ?? []} type="daily" dispatch={dispatch} onClaim={(quest) => showSuccess("Quest Reward Claimed", { detail: `${quest.title} • ${formatQuestReward(quest)}` })} />
         </section>
 
         <section className="quest-section">
@@ -65,7 +67,7 @@ function Quests({ gameState, dispatch, onNavigate }) {
             <h2>Weekly Quests</h2>
             <span className="quest-section-badge">{formatNumber(weeklyComplete)} complete</span>
           </div>
-          <QuestList quests={quests.weekly ?? []} type="weekly" dispatch={dispatch} />
+          <QuestList quests={quests.weekly ?? []} type="weekly" dispatch={dispatch} onClaim={(quest) => showSuccess("Quest Reward Claimed", { detail: `${quest.title} • ${formatQuestReward(quest)}` })} />
         </section>
 
         <button className="chunky-button quest-back-button" onClick={() => onNavigate?.("dashboard")} type="button">
@@ -76,7 +78,7 @@ function Quests({ gameState, dispatch, onNavigate }) {
   );
 }
 
-function QuestList({ quests, type, dispatch }) {
+function QuestList({ quests, type, dispatch, onClaim }) {
   if (quests.length <= 0) {
     return (
       <div className="treasure-empty-state">
@@ -87,15 +89,15 @@ function QuestList({ quests, type, dispatch }) {
   }
 
   return (
-    <div className="quest-card-grid">
+      <div className="quest-card-grid">
       {quests.map((quest) => (
-        <QuestCard key={quest.id} quest={quest} dispatch={dispatch} />
+        <QuestCard key={quest.id} quest={quest} dispatch={dispatch} onClaim={onClaim} />
       ))}
     </div>
   );
 }
 
-function QuestCard({ quest, dispatch }) {
+function QuestCard({ quest, dispatch, onClaim }) {
   const progress = Math.min(quest.target, quest.progress ?? 0);
   const status = quest.claimed ? "Claimed" : progress >= quest.target ? "Complete" : "In Progress";
   const statusClass = status === "In Progress" ? "in-progress" : status.toLowerCase();
@@ -135,7 +137,10 @@ function QuestCard({ quest, dispatch }) {
       <button
         className="chunky-button primary"
         disabled={!canClaim}
-        onClick={() => dispatch({ type: "CLAIM_QUEST_REWARD", questId: quest.id })}
+        onClick={() => {
+          dispatch({ type: "CLAIM_QUEST_REWARD", questId: quest.id });
+          onClaim?.(quest);
+        }}
         type="button"
       >
         {quest.claimed ? "Claimed" : "Claim Reward"}
@@ -221,6 +226,32 @@ function formatMaterialName(materialId) {
   };
 
   return names[materialId] ?? materialId;
+}
+
+function formatQuestReward(quest) {
+  const parts = [];
+
+  if ((quest.rewardGold ?? 0) > 0) {
+    parts.push(`+${formatNumber(quest.rewardGold)} Gold`);
+  }
+
+  if ((quest.rewardDoubloons ?? 0) > 0) {
+    parts.push(`+${formatNumber(quest.rewardDoubloons)} Doubloons`);
+  }
+
+  if ((quest.rewardTalentPoints ?? 0) > 0) {
+    parts.push(`+${formatNumber(quest.rewardTalentPoints)} Talent Points`);
+  }
+
+  if (quest.rewardMaterials) {
+    parts.push(
+      Object.entries(quest.rewardMaterials)
+        .map(([materialId, amount]) => `${formatNumber(amount)} ${formatMaterialName(materialId)}`)
+        .join(", ")
+    );
+  }
+
+  return parts.filter(Boolean).join(" • ") || "Reward claimed";
 }
 
 export default Quests;

@@ -157,6 +157,117 @@ button:disabled {
   font-size: 1.2rem;
 }
 
+.notification-center {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
+}
+
+.notification-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--cream);
+  text-align: left;
+  background: rgba(5, 15, 30, 0.96);
+  border: 2px solid rgba(211, 165, 58, 0.78);
+  box-shadow: 5px 5px 0 rgba(3, 16, 31, 0.92);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: notification-enter 180ms ease-out;
+}
+
+.notification-toast strong,
+.notification-toast span,
+.notification-toast small {
+  display: block;
+}
+
+.notification-toast strong {
+  color: var(--gold-300);
+  font-family: "Courier New", Courier, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.notification-toast span {
+  margin-top: 4px;
+  color: var(--cream);
+}
+
+.notification-toast small {
+  margin-top: 4px;
+  color: rgba(246, 229, 181, 0.76);
+}
+
+.notification-accent {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  background: rgba(18, 49, 84, 0.9);
+  border: 1px solid rgba(211, 165, 58, 0.48);
+  font-family: "Courier New", Courier, monospace;
+  font-weight: 700;
+}
+
+.notification-accent.success {
+  color: #81d4ae;
+  background: rgba(14, 54, 37, 0.92);
+}
+
+.notification-accent.info {
+  color: #8ed0ff;
+  background: rgba(14, 34, 57, 0.92);
+}
+
+.notification-accent.warning {
+  color: #ffcf74;
+  background: rgba(62, 46, 12, 0.92);
+}
+
+.notification-accent.error {
+  color: #ff9b6d;
+  background: rgba(66, 21, 18, 0.92);
+}
+
+.notification-toast.success {
+  border-color: rgba(129, 212, 174, 0.45);
+}
+
+.notification-toast.info {
+  border-color: rgba(142, 208, 255, 0.45);
+}
+
+.notification-toast.warning {
+  border-color: rgba(255, 207, 116, 0.45);
+}
+
+.notification-toast.error {
+  border-color: rgba(255, 155, 109, 0.45);
+}
+
+@keyframes notification-enter {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .landing-page {
   position: relative;
   display: grid;
