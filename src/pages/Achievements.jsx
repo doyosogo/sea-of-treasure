@@ -1,5 +1,6 @@
 import { LOGO, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { achievements } from "../data/achievements.js";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import {
   formatNumber,
@@ -155,9 +156,7 @@ function AchievementCard({ achievement, gameState, status, dispatch, onClaim }) 
           {formatNumber(progress.current)} / {formatNumber(progress.target)}
         </strong>
       </div>
-      <div className="progress-track legend-progress-track" aria-label={`${achievement.name} progress`}>
-        <div className="progress-fill" style={{ width: `${progress.percentage}%` }} />
-      </div>
+      <ProgressBar ariaLabel={`${achievement.name} progress`} trackClassName="legend-progress-track" value={progress.percentage} />
 
       <div className="legend-reward-grid">
         <RewardRow icon={UI_GOLD} label="Gold" value={achievement.rewardGold} />

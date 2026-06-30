@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import ProgressBar from "./ProgressBar.jsx";
 
 const tutorialSteps = {
   welcome: {
@@ -134,6 +135,12 @@ function TutorialOverlay({ activePage, dispatch, gameState, onNavigate }) {
             <span>Step {getTutorialStepNumber(tutorial.currentStep)} of 7</span>
             <span>{isOnTargetPage ? "You are in the right place." : `Go to ${getTutorialPageLabel(step.targetPage)}`}</span>
           </div>
+
+          <ProgressBar
+            ariaLabel="Tutorial progress"
+            trackClassName="tutorial-progress-track"
+            value={Math.min(100, (getTutorialStepNumber(tutorial.currentStep) / 7) * 100)}
+          />
 
           {(showContinueAction || showNavigationAction) ? (
             <div className="tutorial-action-row">

@@ -7,6 +7,7 @@ import {
   UI_HULL
 } from "../data/assets.js";
 import Tooltip from "../components/Tooltip.jsx";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { cannons } from "../data/cannons.js";
 import {
   formatNumber,
@@ -99,9 +100,7 @@ function MyShip({ gameState, dispatch }) {
         <section className="shipyard-grid">
           <article className="shipyard-panel">
             <h2>Hull</h2>
-            <div className="progress-track hull-track" aria-label="Hull percentage">
-              <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullPercent)}%` }} />
-            </div>
+            <ProgressBar ariaLabel="Hull percentage" fillClassName="hull-fill" trackClassName="hull-track" value={Math.min(100, hullPercent)} />
             <div className="shipyard-card-stats">
               <Metric icon={UI_HULL} label="Current Hull" value={`${formatNumber(combatStats.currentHull)} / ${formatNumber(combatStats.maxHull)}`} tooltip="Hull is your ship health. If it reaches zero, combat ends." />
               <Metric icon={UI_HULL} label="Base Hull" value={formatNumber(baseHull)} tooltip="Base hull comes from the ship's level before bonuses." />

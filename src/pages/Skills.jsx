@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SCENES, SKILL_ICONS, UI_XP, UI_TALENT_POINTS } from "../data/assets.js";
 import { skills } from "../data/skills.js";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 function getSkillXpRequired(skillDefinition, skillState) {
@@ -86,9 +87,7 @@ function Skills({ gameState, dispatch, onNavigate }) {
                     </span>
                     <span>Duration {formatDuration(skill.actionTimeSeconds * 1000)}</span>
                   </div>
-                  <div className="progress-track" aria-label={`${skill.name} XP progress`}>
-                    <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
-                  </div>
+                  <ProgressBar ariaLabel={`${skill.name} XP progress`} value={Math.min(100, xpProgress)} />
                 </div>
 
                 <p className="academy-card-copy">{skill.description}</p>

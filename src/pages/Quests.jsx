@@ -1,6 +1,7 @@
 import { LOGO, RESOURCE_ICONS, SCENES, UI_DOUBLOONS, UI_GOLD, UI_TALENT_POINTS, UI_XP } from "../data/assets.js";
 import { QUEST_DAILY_RESET_MS, QUEST_WEEKLY_RESET_MS } from "../data/balance.js";
 import { useNotifications } from "../context/NotificationContext.jsx";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { formatDuration, formatNumber } from "../utils/gameEngine.js";
 
 function Quests({ gameState, dispatch, onNavigate }) {
@@ -119,9 +120,7 @@ function QuestCard({ quest, dispatch, onClaim }) {
         <span>Progress</span>
         <strong>{formatNumber(progress)} / {formatNumber(quest.target)}</strong>
       </div>
-      <div className="progress-track quest-progress-track" aria-label={`${quest.title} progress`}>
-        <div className="progress-fill" style={{ width: `${Math.min(100, (progress / quest.target) * 100)}%` }} />
-      </div>
+      <ProgressBar ariaLabel={`${quest.title} progress`} trackClassName="quest-progress-track" value={Math.min(100, (progress / quest.target) * 100)} />
 
       <div className="quest-reward-grid">
         <RewardRow icon={UI_GOLD} label="Gold" value={quest.rewardGold} />

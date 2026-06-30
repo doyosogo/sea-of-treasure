@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as authService from "../services/auth.js";
 import { useNotifications } from "./NotificationContext.jsx";
+import audioManager from "../services/audioManager.js";
 
 const ACCESS_TOKEN_KEY = "sot_access_token";
 const REFRESH_TOKEN_KEY = "sot_refresh_token";
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
     const result = await authService.login(credentials);
     storeSession(result);
     showSuccess("Logged in.");
+    audioManager.playSfx("login");
     return result;
   }
 
@@ -84,6 +86,7 @@ export function AuthProvider({ children }) {
     const result = await authService.register(credentials);
     storeSession(result);
     showSuccess("Registration successful.");
+    audioManager.playSfx("login");
     return result;
   }
 
@@ -93,6 +96,7 @@ export function AuthProvider({ children }) {
     } finally {
       clearSession();
       showInfo("Logged out.");
+      audioManager.playSfx("logout");
     }
   }
 

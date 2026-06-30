@@ -18,11 +18,11 @@ function Landing({ onPlayOffline }) {
   const [loginForm, setLoginForm] = useState(initialLogin);
   const [registerForm, setRegisterForm] = useState(initialRegister);
   const [status, setStatus] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(null);
 
   async function handleLogin(event) {
     event.preventDefault();
-    setSubmitting(true);
+    setSubmitting("login");
     setStatus(null);
 
     try {
@@ -30,13 +30,13 @@ function Landing({ onPlayOffline }) {
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   }
 
   async function handleRegister(event) {
     event.preventDefault();
-    setSubmitting(true);
+    setSubmitting("register");
     setStatus(null);
 
     try {
@@ -44,7 +44,7 @@ function Landing({ onPlayOffline }) {
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   }
 
@@ -81,9 +81,9 @@ function Landing({ onPlayOffline }) {
             value={loginForm.password}
           />
         </label>
-        <button className="landing-button" disabled={submitting} type="submit">
-          Login
-        </button>
+          <button className={submitting === "login" ? "landing-button loading" : "landing-button"} disabled={submitting !== null} type="submit">
+            {submitting === "login" ? <LoadingLabel label="Logging in" /> : "Login"}
+          </button>
       </form>
 
       <div className="landing-center">
@@ -134,10 +134,10 @@ function Landing({ onPlayOffline }) {
               value={registerForm.password}
             />
           </label>
-          <button className="landing-button large" disabled={submitting} type="submit">
-            Register
+          <button className={submitting === "register" ? "landing-button large loading" : "landing-button large"} disabled={submitting !== null} type="submit">
+            {submitting === "register" ? <LoadingLabel label="Registering" /> : "Register"}
           </button>
-          <button className="landing-offline-button" onClick={onPlayOffline} type="button">
+          <button className={submitting !== null ? "landing-offline-button loading" : "landing-offline-button"} disabled={submitting !== null} onClick={onPlayOffline} type="button">
             Play Offline
           </button>
         </form>
@@ -145,5 +145,16 @@ function Landing({ onPlayOffline }) {
     </section>
   );
 }
+
+function LoadingLabel({ label }) {
+  return (
+    <span className="button-loading">
+      <span className="button-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+Landing.backgroundMusic = "menu";
 
 export default Landing;

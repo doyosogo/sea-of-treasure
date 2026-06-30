@@ -2,6 +2,7 @@ import { ENEMY_IMAGES, LOGO, RESOURCE_ICONS, SCENES, SHIP_IMAGES, SKILL_ICONS, U
 import { achievements } from "../data/achievements.js";
 import { crewMembers } from "../data/crew.js";
 import { QUEST_DAILY_RESET_MS } from "../data/balance.js";
+import ProgressBar from "../components/ProgressBar.jsx";
 import Tooltip from "../components/Tooltip.jsx";
 import {
   formatNumber,
@@ -156,9 +157,7 @@ function Dashboard({ cloudSync, dispatch, gameState, onNavigate }) {
                 <span>Level {gameState.playerLevel}</span>
                 <span>{xpLabel}</span>
               </div>
-              <div className="progress-track" aria-label="XP progress">
-                <div className="progress-fill" style={{ width: `${Math.min(100, xpProgress)}%` }} />
-              </div>
+              <ProgressBar ariaLabel="XP progress" value={Math.min(100, xpProgress)} />
             </div>
             <div className="dashboard-stat-stack">
               <Metric label="Gold" icon={UI_ICONS.gold} value={formatNumber(gameState.gold)} tooltip="Gold is earned from combat, trading, quests, and events. Spend it on ships, cannons, repairs, and upgrades." />
@@ -221,9 +220,7 @@ function Dashboard({ cloudSync, dispatch, gameState, onNavigate }) {
                       <span>Level {skill.level}</span>
                     </div>
                   </div>
-                  <div className="progress-track skill-progress-track" aria-label={`${skill.name} XP progress`}>
-                    <div className="progress-fill" style={{ width: `${skill.progress}%` }} />
-                  </div>
+                  <ProgressBar ariaLabel={`${skill.name} XP progress`} trackClassName="skill-progress-track" value={skill.progress} />
                 </div>
               ))}
             </div>

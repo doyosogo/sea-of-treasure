@@ -63,6 +63,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   const [status, setStatus] = useState(null);
   const [preview, setPreview] = useState(null);
   const [resetArmed, setResetArmed] = useState(false);
+  const [importing, setImporting] = useState(false);
   const currentShip = getCurrentShip(gameState);
   const currentCannon = getCurrentCannon(gameState);
   const selectedEnemy = getSelectedEnemyType(gameState);
@@ -93,6 +94,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
   }
 
   function handleImportSave() {
+    setImporting(true);
     importSaveFromJson(importJson);
   }
 
@@ -102,6 +104,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
     if (!result.ok) {
       setStatus({ type: "error", message: result.error });
       showError(result.error);
+      setImporting(false);
       return;
     }
 
@@ -125,12 +128,14 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
       return;
     }
 
+    setImporting(true);
     const reader = new FileReader();
 
     reader.onload = () => {
       if (typeof reader.result !== "string") {
         setStatus({ type: "error", message: "Import failed: save file could not be read." });
         showError("Import failed: save file could not be read.");
+        setImporting(false);
         return;
       }
 
@@ -141,6 +146,7 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
     reader.onerror = () => {
       setStatus({ type: "error", message: "Import failed: save file could not be read." });
       showError("Import failed: save file could not be read.");
+      setImporting(false);
     };
 
     reader.readAsText(file);
@@ -280,8 +286,8 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
                   Resolve Save Conflict
                 </button>
               ) : null}
-              <button className="chunky-button primary" disabled={cloudSync?.status === "syncing"} onClick={onSyncNow} type="button">
-                Sync Now
+              <button className={cloudSync?.status === "syncing" ? "chunky-button primary loading" : "chunky-button primary"} disabled={cloudSync?.status === "syncing"} onClick={onSyncNow} type="button">
+                {cloudSync?.status === "syncing" ? <LoadingLabel label="Syncing" /> : "Sync Now"}
               </button>
               <button className="chunky-button danger" onClick={logout} type="button">
                 Logout
@@ -406,6 +412,67 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
       </article>
 
       <article className="pixel-panel settings-panel">
+        <h2>Audio</h2>
+        <p className="shop-note">
+          Audio settings are saved locally, included in cloud sync, and respected across the interface.
+        </p>
+
+        <div className="settings-audio-grid">
+          <AudioSlider
+            label="Music Volume"
+            value={preferences.musicVolume ?? 70}
+            onChange={(value) => updatePreferences({ musicVolume: value })}
+          />
+          <AudioSlider
+            label="SFX Volume"
+            value={preferences.sfxVolume ?? 70}
+            onChange={(value) => updatePreferences({ sfxVolume: value })}
+          />
+        </div>
+
+        <div className="settings-preferences-grid settings-audio-toggle-grid">
+          <PreferenceGroup label="Mute Music" note="Silences background music until you turn it back on.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.muteMusic === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ muteMusic: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Mute SFX" note="Silences button, combat, and reward sound effects.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.muteSfx === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ muteSfx: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+
+          <PreferenceGroup label="Master Mute" note="Stops music and sound effects together.">
+            {["on", "off"].map((value) => (
+              <button
+                className={preferences.masterMute === (value === "on") ? "chunky-button primary preference-option-button active" : "chunky-button preference-option-button"}
+                key={value}
+                onClick={() => updatePreferences({ masterMute: value === "on" })}
+                type="button"
+              >
+                {value}
+              </button>
+            ))}
+          </PreferenceGroup>
+        </div>
+      </article>
+
+      <article className="pixel-panel settings-panel">
         <h2>Export Save</h2>
         <p className="shop-note">Download your current save or copy the JSON manually.</p>
         <button className="chunky-button primary" onClick={handleExportSave} type="button">
@@ -441,8 +508,8 @@ function Settings({ cloudSync, dispatch, gameState, onResolveSaveConflict, onSyn
           placeholder="Paste Save JSON"
           value={importJson}
         />
-        <button className="chunky-button primary" onClick={handleImportSave} type="button">
-          Import Save
+        <button className={importing ? "chunky-button primary loading" : "chunky-button primary"} disabled={importing} onClick={handleImportSave} type="button">
+          {importing ? <LoadingLabel label="Importing" /> : "Import Save"}
         </button>
       </article>
 
@@ -618,6 +685,26 @@ function PreferenceGroup({ label, note, children }) {
   );
 }
 
+function AudioSlider({ label, value, onChange }) {
+  return (
+    <div className="settings-audio-slider">
+      <div className="settings-audio-slider-copy">
+        <strong>{label}</strong>
+        <span>{formatNumber(value)}%</span>
+      </div>
+      <input
+        aria-label={label}
+        className="settings-range"
+        max="100"
+        min="0"
+        onChange={(event) => onChange?.(Number(event.target.value))}
+        type="range"
+        value={value}
+      />
+    </div>
+  );
+}
+
 function ResourceList({ title, values }) {
   const entries = Object.entries(values ?? {});
 
@@ -654,6 +741,15 @@ function formatSaveTimestamp(value) {
   }
 
   return date.toLocaleString();
+}
+
+function LoadingLabel({ label }) {
+  return (
+    <span className="button-loading">
+      <span className="button-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </span>
+  );
 }
 
 export default Settings;

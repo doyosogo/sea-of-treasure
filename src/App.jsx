@@ -4,6 +4,7 @@ import NotificationToast from "./components/NotificationToast.jsx";
 import SaveConflictModal from "./components/SaveConflictModal.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { NotificationProvider, useNotifications } from "./context/NotificationContext.jsx";
+import audioManager from "./services/audioManager.js";
 import { getCloudSave, getSaveSummary, uploadCloudSave } from "./services/save.js";
 import Dashboard from "./pages/Dashboard.jsx";
 import Battle from "./pages/Battle.jsx";
@@ -24,19 +25,19 @@ import { STORAGE_KEY, useGameState } from "./hooks/useGameState.js";
 import { getCaptainRankTitle } from "./utils/gameEngine.js";
 
 const pageRegistry = {
-  dashboard: { label: "Dashboard", component: Dashboard },
-  myShip: { label: "My Ship", component: MyShip },
-  crew: { label: "Crew", component: Crew },
-  battle: { label: "Battle", component: Battle },
-  quests: { label: "Quests", component: Quests },
-  skills: { label: "Skills", component: Skills },
-  talents: { label: "Talents", component: Talents },
-  shop: { label: "Shop", component: Shop },
-  port: { label: "Port", component: Port },
-  achievements: { label: "Achievements", component: Achievements },
-  profile: { label: "Profile", component: Profile },
-  settings: { label: "Settings", component: Settings },
-  treasure: { label: "Treasure", component: Treasure }
+  dashboard: { label: "Dashboard", component: Dashboard, backgroundMusic: "captain-cabin" },
+  myShip: { label: "My Ship", component: MyShip, backgroundMusic: "shipyard" },
+  crew: { label: "Crew", component: Crew, backgroundMusic: "academy" },
+  battle: { label: "Battle", component: Battle, backgroundMusic: "combat" },
+  quests: { label: "Quests", component: Quests, backgroundMusic: "orders" },
+  skills: { label: "Skills", component: Skills, backgroundMusic: "academy" },
+  talents: { label: "Talents", component: Talents, backgroundMusic: "academy" },
+  shop: { label: "Shop", component: Shop, backgroundMusic: "market" },
+  port: { label: "Port", component: Port, backgroundMusic: "harbour" },
+  achievements: { label: "Achievements", component: Achievements, backgroundMusic: "legends" },
+  profile: { label: "Profile", component: Profile, backgroundMusic: "captain-cabin" },
+  settings: { label: "Settings", component: Settings, backgroundMusic: "captain-cabin" },
+  treasure: { label: "Treasure", component: Treasure, backgroundMusic: "treasure" }
 };
 
 const navOrder = ["dashboard", "myShip", "battle", "quests", "crew", "skills", "talents", "shop", "port", "achievements", "profile", "settings"];
@@ -69,10 +70,19 @@ function AppContent() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!loading && !user && !offlineMode) {
+      audioManager.playMusic("menu", { fadeMs: 450 });
+    }
+  }, [loading, offlineMode, user]);
+
   if (loading) {
     return (
       <div className="app-loading-screen">
-        <span>Loading Sea of Treasure...</span>
+        <span className="button-loading">
+          <span className="button-spinner" aria-hidden="true" />
+          <span>Loading Sea of Treasure...</span>
+        </span>
       </div>
     );
   }
@@ -104,6 +114,10 @@ function GameApp() {
   const worldEventWatcherReadyRef = useRef(false);
   const captainPromotionHistoryLengthRef = useRef(null);
   const tutorialCompletedRef = useRef(null);
+  const previousBattleStateRef = useRef(null);
+  const previousPlayerLevelRef = useRef(null);
+  const previousActivityLogRef = useRef(null);
+  const previousTreasureCountRef = useRef(null);
 
   if (user && localSaveAtLoginRef.current === null) {
     localSaveAtLoginRef.current = Boolean(localStorage.getItem(STORAGE_KEY));
@@ -152,6 +166,7 @@ function GameApp() {
     try {
       const result = await uploadCloudSave(saveData, accessToken);
       showSuccess("Cloud save synced.");
+      audioManager.playSfx("cloud-sync-success");
       setCloudSync({
         status: "synced",
         message: "Synced",
@@ -161,6 +176,7 @@ function GameApp() {
     } catch (error) {
       console.warn("Cloud save upload failed.", error);
       showError("Cloud save failed.");
+      audioManager.playSfx("cloud-sync-failure");
       setCloudSync((state) => ({
         ...state,
         status: "error",
@@ -188,12 +204,37 @@ function GameApp() {
 
   const { gameState, dispatch, applyCloudSave } = useGameState({ onPersist: handlePersist });
   const ActivePage = pageRegistry[activePage].component;
+  const activeMusicTrack = pageRegistry[activePage]?.backgroundMusic ?? null;
+  const audioPreferences = gameState.preferences ?? {};
   const uiScaleClass = `ui-scale-${gameState.preferences?.uiScale ?? "normal"}`;
   const compactModeClass = gameState.preferences?.compactMode ? " compact-mode" : "";
 
   useEffect(() => {
     latestSaveRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    audioManager.setMusicVolume(audioPreferences.musicVolume ?? 70);
+    audioManager.setSfxVolume(audioPreferences.sfxVolume ?? 70);
+    audioManager.setMusicMuted(Boolean(audioPreferences.muteMusic));
+    audioManager.setSfxMuted(Boolean(audioPreferences.muteSfx));
+    audioManager.setMasterMute(Boolean(audioPreferences.masterMute));
+
+    if (!audioPreferences.masterMute) {
+      if (activeMusicTrack) {
+        audioManager.playMusic(activeMusicTrack, { fadeMs: 400 });
+      } else {
+        audioManager.stopMusic({ fadeMs: 250 });
+      }
+    }
+  }, [
+    activeMusicTrack,
+    audioPreferences.masterMute,
+    audioPreferences.musicVolume,
+    audioPreferences.muteMusic,
+    audioPreferences.muteSfx,
+    audioPreferences.sfxVolume
+  ]);
 
   useEffect(() => {
     const activeWorldEventId = gameState.activeWorldEvent?.id ?? null;
@@ -226,6 +267,7 @@ function GameApp() {
           message: "Congratulations!",
           detail: `You have been promoted to:\n${rankTitle}\n\nReward:\n+1 Permanent Cannon Slot`
         });
+        audioManager.playSfx("captain-promotion");
       }
     }
 
@@ -251,6 +293,107 @@ function GameApp() {
 
     tutorialCompletedRef.current = isCompleted;
   }, [gameState.tutorial?.completed, showSuccess]);
+
+  useEffect(() => {
+    const battleActive = Boolean(gameState.currentBattle);
+
+    if (previousBattleStateRef.current === null) {
+      previousBattleStateRef.current = battleActive;
+      return;
+    }
+
+    if (!previousBattleStateRef.current && battleActive) {
+      audioManager.playSfx("battle-start");
+    }
+
+    if (previousBattleStateRef.current && !battleActive) {
+      const latestMessage = gameState.activityLog?.[0]?.message ?? "";
+
+      if (latestMessage.startsWith("Victory:")) {
+        audioManager.playSfx("victory");
+      } else if (latestMessage.includes("Battle lost")) {
+        audioManager.playSfx("defeat");
+      }
+    }
+
+    previousBattleStateRef.current = battleActive;
+  }, [gameState.activityLog, gameState.currentBattle]);
+
+  useEffect(() => {
+    const currentLevel = gameState.playerLevel ?? 1;
+
+    if (previousPlayerLevelRef.current === null) {
+      previousPlayerLevelRef.current = currentLevel;
+      return;
+    }
+
+    if (currentLevel > previousPlayerLevelRef.current) {
+      audioManager.playSfx("level-up");
+    }
+
+    previousPlayerLevelRef.current = currentLevel;
+  }, [gameState.playerLevel]);
+
+  useEffect(() => {
+    const currentLogMessage = gameState.activityLog?.[0]?.message ?? null;
+
+    if (previousActivityLogRef.current === null) {
+      previousActivityLogRef.current = currentLogMessage;
+      return;
+    }
+
+    if (currentLogMessage && currentLogMessage !== previousActivityLogRef.current) {
+      if (currentLogMessage.startsWith("Bought ") || currentLogMessage.startsWith("Crafted ")) {
+        audioManager.playSfx("purchase");
+      } else if (currentLogMessage.startsWith("Quest completed:")) {
+        audioManager.playSfx("quest-complete");
+      } else if (currentLogMessage.startsWith("Achievement claimed:")) {
+        audioManager.playSfx("achievement-claimed");
+      } else if (currentLogMessage.includes("Idle combat defeated")) {
+        audioManager.playSfx("victory");
+      } else if (currentLogMessage.includes("Idle combat stopped")) {
+        audioManager.playSfx("defeat");
+      } else if (
+        currentLogMessage.includes("treasure map") ||
+        currentLogMessage.includes("Rare Map Piece") ||
+        currentLogMessage.includes("treasure dig complete")
+      ) {
+        audioManager.playSfx("treasure-found");
+      }
+    }
+
+    previousActivityLogRef.current = currentLogMessage;
+  }, [gameState.activityLog]);
+
+  useEffect(() => {
+    const currentTreasureCount = gameState.treasureInventory?.length ?? 0;
+
+    if (previousTreasureCountRef.current === null) {
+      previousTreasureCountRef.current = currentTreasureCount;
+      return;
+    }
+
+    if (currentTreasureCount > previousTreasureCountRef.current) {
+      audioManager.playSfx("treasure-found");
+    }
+
+    previousTreasureCountRef.current = currentTreasureCount;
+  }, [gameState.treasureInventory?.length]);
+
+  useEffect(() => {
+    function handleClick(event) {
+      const target = event.target instanceof Element ? event.target.closest("button") : null;
+
+      if (!target || target.disabled) {
+        return;
+      }
+
+      audioManager.playSfx("ui-click");
+    }
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, []);
 
   useEffect(() => {
     cloudReadyRef.current = false;

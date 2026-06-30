@@ -990,9 +990,34 @@ export function calcXpPerHour(gameState) {
 }
 
 export function formatNumber(value) {
+  const numericValue = Number(value ?? 0);
+
+  if (!Number.isFinite(numericValue)) {
+    return "0";
+  }
+
+  const absoluteValue = Math.abs(numericValue);
+  const sign = numericValue < 0 ? "-" : "";
+
+  if (absoluteValue >= 1_000_000_000) {
+    return `${sign}${(absoluteValue / 1_000_000_000).toFixed(2)}B`;
+  }
+
+  if (absoluteValue >= 1_000_000) {
+    return `${sign}${(absoluteValue / 1_000_000).toFixed(2)}M`;
+  }
+
+  if (absoluteValue >= 1_000) {
+    return `${sign}${(absoluteValue / 1_000).toFixed(2)}K`;
+  }
+
+  if (Number.isInteger(numericValue)) {
+    return new Intl.NumberFormat("en-US").format(numericValue);
+  }
+
   return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: value >= 100 ? 0 : 1
-  }).format(value);
+    maximumFractionDigits: absoluteValue >= 100 ? 0 : 1
+  }).format(numericValue);
 }
 
 export function formatDuration(ms) {

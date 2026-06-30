@@ -89,7 +89,12 @@ function createInitialPreferences() {
     showDamageNumbers: true,
     showOfflineSummary: true,
     autosaveIntervalSeconds: 30,
-    compactMode: false
+    compactMode: false,
+    musicVolume: 70,
+    sfxVolume: 70,
+    muteMusic: false,
+    muteSfx: false,
+    masterMute: false
   };
 }
 
@@ -737,13 +742,26 @@ function normalizePreferences(savedPreferences = {}) {
   const autosaveIntervalSeconds = [15, 30, 60].includes(savedPreferences.autosaveIntervalSeconds)
     ? savedPreferences.autosaveIntervalSeconds
     : defaults.autosaveIntervalSeconds;
+  const clampVolume = (value, fallback) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return fallback;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(numericValue)));
+  };
 
   return {
     uiScale,
     showDamageNumbers: Boolean(savedPreferences.showDamageNumbers ?? defaults.showDamageNumbers),
     showOfflineSummary: Boolean(savedPreferences.showOfflineSummary ?? defaults.showOfflineSummary),
     autosaveIntervalSeconds,
-    compactMode: Boolean(savedPreferences.compactMode ?? defaults.compactMode)
+    compactMode: Boolean(savedPreferences.compactMode ?? defaults.compactMode),
+    musicVolume: clampVolume(savedPreferences.musicVolume, defaults.musicVolume),
+    sfxVolume: clampVolume(savedPreferences.sfxVolume, defaults.sfxVolume),
+    muteMusic: Boolean(savedPreferences.muteMusic ?? defaults.muteMusic),
+    muteSfx: Boolean(savedPreferences.muteSfx ?? defaults.muteSfx),
+    masterMute: Boolean(savedPreferences.masterMute ?? defaults.masterMute)
   };
 }
 

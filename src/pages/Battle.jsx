@@ -5,6 +5,7 @@ import {
   UI_ICONS
 } from "../data/assets.js";
 import Tooltip from "../components/Tooltip.jsx";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { ammunition } from "../data/ammunition.js";
 import { regions } from "../data/regions.js";
 import {
@@ -174,9 +175,7 @@ function Battle({ gameState, dispatch }) {
                       : "Choose an enemy below to begin battle"}
                   </span>
                 </div>
-                <div className="progress-track enemy-hp-track" aria-label="Enemy hull">
-                  <div className="progress-fill enemy-hp-fill" style={{ width: `${battleEnemy ? Math.min(100, enemyHpProgress) : 0}%` }} />
-                </div>
+                <ProgressBar ariaLabel="Enemy hull" fillClassName="enemy-hp-fill" trackClassName="enemy-hp-track" value={battleEnemy ? Math.min(100, enemyHpProgress) : 0} />
               </div>
 
               <div className="battle-meter">
@@ -184,9 +183,7 @@ function Battle({ gameState, dispatch }) {
                   <span>Player Hull</span>
                   <span>{formatNumber(combatStats.currentHull)} / {formatNumber(combatStats.maxHull)}</span>
                 </div>
-                <div className="progress-track hull-track" aria-label="Hull integrity">
-                  <div className="progress-fill hull-fill" style={{ width: `${Math.min(100, hullProgress)}%` }} />
-                </div>
+                <ProgressBar ariaLabel="Hull integrity" fillClassName="hull-fill" trackClassName="hull-track" value={Math.min(100, hullProgress)} />
               </div>
 
               <div className="battle-ammo-panel">

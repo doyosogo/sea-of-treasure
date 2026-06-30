@@ -6,6 +6,7 @@ import { regions } from "../data/regions.js";
 import { ships } from "../data/ships.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
+import ProgressBar from "../components/ProgressBar.jsx";
 import { formatDuration, formatNumber, getActiveRegion, getCaptainLevelsRemaining, getCaptainNextPromotionLevel, getCaptainPermanentSlots, getCaptainRankTitle, getCurrentCannon, getCurrentShip, getEquippedCannons, getAmmoInventory, getCannonInventory, getXpRequired } from "../utils/gameEngine.js";
 import { exportGameSave, parseImportedSave, replaceLocalSave } from "../utils/saveTools.js";
 
@@ -229,9 +230,10 @@ function Profile({ cloudSync, gameState, onNavigate }) {
                 <span>Level {formatNumber(gameState.playerLevel)}</span>
                 <span>{xpRequired === Infinity ? "Max Level" : `${formatNumber(gameState.playerXP)} / ${formatNumber(xpToNextLevel)} XP`}</span>
               </div>
-              <div className="progress-track" aria-label="Profile XP progress">
-                <div className="progress-fill" style={{ width: xpRequired === Infinity ? "100%" : `${Math.min(100, (gameState.playerXP / xpRequired) * 100)}%` }} />
-              </div>
+              <ProgressBar
+                ariaLabel="Profile XP progress"
+                value={xpRequired === Infinity ? 100 : Math.min(100, (gameState.playerXP / xpRequired) * 100)}
+              />
             </div>
 
             <div className="profile-subgrid">
